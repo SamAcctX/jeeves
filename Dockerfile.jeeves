@@ -1,0 +1,395 @@
+FROM ubuntu:latest AS base
+
+# Set environment variables
+ENV DEBIAN_FRONTEND=noninteractive
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+ENV PYTHONUNBUFFERED=1
+
+# Install system dependencies and Python
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+        software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        ca-certificates \
+        wget \
+        curl \
+        git \
+        bash \
+        vim \
+        nano \
+        less \
+        zsh \
+        jq \
+        sudo \
+        tmux \
+        python3 \
+        python3-pip \
+        python3-venv \
+        python3-dev \
+        openssl && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+# ============================================================================
+# Create Python venv and add to PATH
+# ============================================================================
+RUN python3 -m venv /opt/venv
+
+# Update PATH to prioritize venv python instead of system python
+ENV PATH="/opt/venv/bin:${PATH}"
+
+# Upgrade pip and other utils in venv
+RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
+        pip \
+        setuptools \
+        wheel \
+        ninja \
+        meson \
+        build
+
+# Install latest Node.js LTS
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
+    apt-get install -y --no-install-recommends \
+        nodejs && \
+    npm install -g npm@latest pnpm && \
+    npm cache clear --force && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+
+FROM base AS opencode-builder
+# Manual versioning since we're building from source...
+ENV OPENCODE_VERSION=0.0.0-jeeves
+# Env var to toggle desktop app build inclusion
+ARG BUILD_DESKTOP
+ENV BUILD_DESKTOP=$BUILD_DESKTOP
+
+
+# Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
+# As of 18 Jan 2026, opencode requires bun 1.3.5 exactly...
+RUN npm install -g bun@1.3.5 && \
+    npm cache clear --force
+
+RUN git config --global http.postBuffer 524288000 \
+    && git config --global http.version HTTP/1.1
+
+# Clone repo
+RUN git clone --depth=1 --recurse-submodules --shallow-submodules --remote-submodules https://github.com/anomalyco/opencode.git /app/opencode \
+    && chmod -R 777 /app/opencode
+
+WORKDIR /app/opencode
+
+# Some branding overrides, just because...
+RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
+RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
+
+# CLI/TUI/WebUI build
+RUN bun install
+RUN ./packages/opencode/script/build.ts 
+
+RUN \
+    if [  "$BUILD_DESKTOP" = "true" ]; then \
+        echo "BUILD_DESKTOP env variable is set. Running opencode desktop build step."; \
+        # Install additional deps \
+        apt update; \
+        apt install -y  --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            build-essential \
+            curl \
+            wget \
+            file \
+            libxdo-dev \
+            libssl-dev \
+            libayatana-appindicator3-dev \
+            librsvg2-dev \
+            rustup \
+            # For win desktop \
+            lld \
+            llvm \
+            nsis \
+            clang \
+            pkg-config \
+            libglib2.0-dev \
+            libgtk-3-dev \
+            libgdk-pixbuf-2.0-dev \
+            unzip; \
+        # apt clean up \
+        apt-get clean; \
+        rustup default stable; \
+        # For win desktop builder \
+        cargo install --locked cargo-xwin; \
+        rustup target add x86_64-pc-windows-msvc; \
+        # Stage opencode bin sidecar pre-compile \
+        mkdir -p /app/opencode/packages/desktop/src-tauri/sidecars; \
+        cp /app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode \
+           /app/opencode/packages/desktop/src-tauri/sidecars/opencode-cli-x86_64-unknown-linux-gnu; \
+        cp /app/opencode/packages/opencode/dist/opencode-windows-x64/bin/opencode.exe \
+           /app/opencode/packages/desktop/src-tauri/sidecars/opencode-cli-x86_64-pc-windows-msvc; \
+        # Add .exe extension for Windows sidecar (required by Tauri) \
+        cp /app/opencode/packages/opencode/dist/opencode-windows-x64/bin/opencode.exe \
+           /app/opencode/packages/desktop/src-tauri/sidecars/opencode-cli-x86_64-pc-windows-msvc.exe; \
+        # run desktop builder (Linux) \
+        cd /app/opencode/packages/desktop; \
+        bun run tauri build --config src-tauri/tauri.prod.conf.json; \
+        # run desktop builder (Windows) \
+        bash -c \
+            'export PATH="$HOME/.bun/bin:$HOME/.cargo/bin:$PATH" && \
+            # source "$HOME/.cargo/env" && \
+            bun run tauri build --config src-tauri/tauri.prod.conf.json \
+                --runner cargo-xwin \
+                --target x86_64-pc-windows-msvc'; \
+        # final temp cleanup \
+        rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*; \
+    else \
+        echo "Environment variable is not set. Skipping opencode desktop build step."; \
+        # Create empty folders so the COPY command in the runtime stage doesn't fail \
+        mkdir -p \
+            /app/opencode/packages/desktop/src-tauri/target/release/bundle/deb \
+            /app/opencode/packages/desktop/src-tauri/target/release/bundle/rpm \
+            /app/opencode/packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis; \
+    fi
+
+WORKDIR /app/opencode
+
+FROM base AS runtime
+
+# ============================================================================
+# Create non-root user with support for UID:GID mapping
+# ============================================================================
+ARG UID=1000
+ARG GID=1000
+
+# Create group and user, handling existing UID/GID
+RUN if getent group ${GID}; then \
+        groupmod -n jeeves $(getent group ${GID} | cut -d: -f1); \
+    else \
+        groupadd -r -g ${GID} jeeves; \
+    fi && \
+    if id -u ${UID} >/dev/null 2>&1; then \
+        existing_user=$(id -nu ${UID}); \
+        usermod -l jeeves -d /home/jeeves -m "$existing_user" 2>/dev/null || true; \
+        groupmod -n jeeves "$existing_user" 2>/dev/null || true; \
+    else \
+        useradd -r -u ${UID} -g jeeves -m -s /bin/bash -d /home/jeeves jeeves; \
+    fi && \
+    #useradd -m -s /usr/bin/zsh jeeves && \
+    echo '# zshrc (container default)' > /home/jeeves/.zshrc && \
+    chown jeeves:jeeves /home/jeeves/.zshrc && \
+    usermod -aG sudo jeeves && \
+    echo "jeeves ALL=(ALL) NOPASSWD:ALL" > /etc/sudoers.d/jeeves && \
+    chmod 0440 /etc/sudoers.d/jeeves
+
+# ============================================================================
+# Configure environment
+# ============================================================================
+ENV WORKSPACE=/workspace
+ENV HOME=/home/jeeves
+ENV PYTHONUNBUFFERED=1
+
+# Ensure venv is used for python/pip
+ENV VIRTUAL_ENV=/opt/venv
+
+# ============================================================================
+# Create and stage helper scripts
+# ============================================================================
+
+# Helper for tmux shell session create/reattach
+RUN cat << 'EOF' > /usr/local/bin/jeeves-shell
+#!/usr/bin/env sh
+set -e
+
+SESSION_NAME=main
+
+# If already inside tmux, just start a normal shell
+if [ -n "$TMUX" ]; then
+  exec "${SHELL:-/bin/bash}"
+fi
+
+# Attach to existing session or create it
+exec tmux new-session -A -s "$SESSION_NAME"
+EOF
+
+RUN chmod +x /usr/local/bin/jeeves-shell
+
+# tmux hook for bash auto-attach
+# Can be disabled by setting the env var DISABLE_TMUX=1
+RUN cat << 'EOF' >> /etc/bash.bashrc
+
+# --- opencode tmux auto-attach ---
+# Skip if:
+# - not an interactive TTY
+# - already inside tmux
+# - explicitly disabled
+if [ -t 1 ] && [ -z "$TMUX" ] && [ -z "$DISABLE_TMUX" ]; then
+  exec /usr/local/bin/jeeves-shell
+fi
+# --- end opencode tmux auto-attach ---
+
+EOF
+
+# same for zsh shell
+RUN cat << 'EOF' >> /etc/zsh/zshrc
+
+# --- opencode tmux auto-attach ---
+# Skip if:
+# - not an interactive TTY
+# - already inside tmux
+# - explicitly disabled
+if [[ -t 1 && -z "$TMUX" && -z "$DISABLE_TMUX" ]]; then
+  exec /usr/local/bin/jeeves-shell
+fi
+# --- end opencode tmux auto-attach ---
+
+EOF
+
+
+# ============================================================================
+# Setup directories with proper permissions
+# ============================================================================
+RUN mkdir -p /workspace && \
+    chown -R jeeves:jeeves /workspace && \
+    chown -R jeeves:jeeves /home/jeeves && \
+    chown -R jeeves:jeeves /opt/venv
+
+# Switch to non-root user
+USER jeeves
+
+# env to hopefully push the `~/.claude.json` into the `~/.claude` folder for easier volume mapping
+ENV CLAUDE_CONFIG_DIR="/home/jeeves/.claude"
+
+# Since claude has no build stage, run the installer script
+RUN curl -fsSL https://claude.ai/install.sh | bash -s -- latest
+# Add ~/.local/bin to path, since this is where claude installs and we can't change that, 
+# we'll manually move the bin ourselves to a more standard location...
+RUN sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
+    sudo chmod 755 /usr/local/bin/claude
+
+#Linux CLI Binary, copied to path location as well since we will use it interactively
+COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/usr/local/bin/opencode"]
+COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/app/dist/opencode"]
+# Linux GUI (Debian/Ubuntu Package)
+COPY --from=opencode-builder ["/app/opencode/packages/desktop/src-tauri/target/release/bundle/deb/OpenCode Jeeves*.deb", "/app/dist/"]
+# Linux GUI (RPM/Fedora Package)
+COPY --from=opencode-builder ["/app/opencode/packages/desktop/src-tauri/target/release/bundle/rpm/OpenCode Jeeves*.rpm", "/app/dist/"]
+# Windows GUI (Standalone Executable)
+COPY --from=opencode-builder ["/app/opencode/packages/desktop/src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/OpenCode Jeeves*.exe", "/app/dist/"]
+
+RUN sudo chmod 0755 /usr/local/bin/opencode
+
+# ============================================================================
+# Stage OOB configuration files before bind mounts would hide them
+# ============================================================================
+# Create OOB config staging directory
+RUN sudo mkdir -p /opt/oob-config/.config/opencode /opt/oob-config/.claude
+
+# Copy any existing config files generated by installations to OOB staging
+RUN if [ -d "/home/jeeves/.config/opencode" ] && [ "$(ls -A /home/jeeves/.config/opencode 2>/dev/null)" ]; then \
+        sudo cp -r /home/jeeves/.config/opencode/* /opt/oob-config/.config/opencode/; \
+    fi
+
+RUN if [ -d "/home/jeeves/.claude" ] && [ "$(ls -A /home/jeeves/.claude 2>/dev/null)" ]; then \
+        sudo cp -r /home/jeeves/.claude/* /opt/oob-config/.claude/; \
+    fi
+
+# Make sure the OOB config directories have proper permissions
+RUN sudo chown -R jeeves:jeeves /opt/oob-config
+
+# ============================================================================
+# Install PRD Creator Toolkit
+# ============================================================================
+# Switch to root for installation
+USER root
+
+# Create directory for PRD Creator files
+RUN mkdir -p /opt/jeeves/prd-creator
+
+# Copy PRD Creator files
+COPY jeeves/prd-creator-prompt.md /opt/jeeves/prd-creator/
+COPY jeeves/README.md /opt/jeeves/prd-creator/
+COPY jeeves/TOOLKIT-README.md /opt/jeeves/
+
+# Copy PRD Creator helper script to PATH
+COPY jeeves/prd-creator.sh /usr/local/bin/prd-creator
+COPY jeeves/prd-creator-uninstall.sh /usr/local/bin/prd-creator-uninstall
+
+# Set permissions
+RUN chmod +x /usr/local/bin/prd-creator && \
+    chown -R jeeves:jeeves /opt/jeeves
+
+# Switch back to jeeves user
+USER jeeves
+
+# ============================================================================
+# Create embedded entrypoint script for config initialization
+# ============================================================================
+# Temp switch to root
+USER root
+
+RUN sudo cat << 'EOF' > /usr/local/bin/entrypoint.sh
+#!/bin/bash
+set -e
+
+# Function to copy OOB config if directory is empty
+copy_oob_if_empty() {
+    local target_dir="$1"
+    local oob_dir="$2"
+    local config_name="$3"
+    
+    if [ -d "$target_dir" ]; then
+        # Check if directory is empty (no files or subdirectories)
+        if [ -z "$(ls -A "$target_dir" 2>/dev/null)" ]; then
+            echo "Initializing $config_name configuration directory: $target_dir"
+            if [ -d "$oob_dir" ] && [ "$(ls -A "$oob_dir" 2>/dev/null)" ]; then
+                sudo cp -r "$oob_dir"/* "$target_dir"/
+                sudo chown -R jeeves:jeeves "$target_dir"
+                echo "Copied OOB $config_name configuration files"
+            else
+                echo "Warning: OOB $config_name configuration directory $oob_dir is empty or does not exist"
+            fi
+        else
+            echo "$config_name configuration directory already contains files, skipping initialization"
+        fi
+    else
+        echo "Warning: $config_name configuration directory $target_dir does not exist"
+    fi
+}
+
+# Initialize configuration directories
+copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
+copy_oob_if_empty "/home/jeeves/.claude" "/opt/oob-config/.claude" "Claude"
+sudo chown -R jeeves:jeeves /home/jeeves
+
+# If no arguments provided, default to opencode web
+if [ $# -eq 0 ]; then
+    set -- opencode web --hostname 0.0.0.0 --port 3333
+fi
+
+# Execute the command
+exec "$@"
+EOF
+
+RUN chmod +x /usr/local/bin/entrypoint.sh
+
+# Switch back to runtime user and re-fix home permissions
+USER jeeves
+RUN sudo chown -R jeeves:jeeves /home/jeeves
+
+# Set working directory
+WORKDIR /workspace
+
+EXPOSE 3333
+# ============================================================================
+# Entry point: Not used
+# Start cmd: Initialize config directories if empty, then run the Web UI
+# ============================================================================
+ENTRYPOINT []
+CMD ["/usr/local/bin/entrypoint.sh"]
+
+# Note:  Might want to update to run the OpenCode WebUI in the background, with the ability to terminal in to use the TUI
+# opencode web --hostname 0.0.0.0 --port 3333
