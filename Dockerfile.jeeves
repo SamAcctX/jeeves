@@ -188,12 +188,16 @@ RUN if getent group ${GID}; then \
 # ============================================================================
 # Configure environment
 # ============================================================================
-ENV WORKSPACE=/workspace
+ENV WORKSPACE=/proj
 ENV HOME=/home/jeeves
 ENV PYTHONUNBUFFERED=1
 
 # Ensure venv is used for python/pip
 ENV VIRTUAL_ENV=/opt/venv
+
+# Install fetch MCP python package
+RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
+        mcp-server-fetch
 
 # ============================================================================
 # Create and stage helper scripts
@@ -252,8 +256,8 @@ EOF
 # ============================================================================
 # Setup directories with proper permissions
 # ============================================================================
-RUN mkdir -p /workspace && \
-    chown -R jeeves:jeeves /workspace && \
+RUN mkdir -p /proj && \
+    chown -R jeeves:jeeves /proj && \
     chown -R jeeves:jeeves /home/jeeves && \
     chown -R jeeves:jeeves /opt/venv
 
@@ -306,20 +310,17 @@ RUN sudo chown -R jeeves:jeeves /opt/oob-config
 # Switch to root for installation
 USER root
 
-# Create directory for PRD Creator files
-RUN mkdir -p /opt/jeeves/prd-creator
+# Create directory for jeeves supplementary tools
+RUN mkdir -p /opt/jeeves/
+
+# Copy helper scripts
+COPY jeeves/bin /usr/local/bin/
 
 # Copy PRD Creator files
-COPY jeeves/prd-creator-prompt.md /opt/jeeves/prd-creator/
-COPY jeeves/README.md /opt/jeeves/prd-creator/
-COPY jeeves/TOOLKIT-README.md /opt/jeeves/
-
-# Copy PRD Creator helper script to PATH
-COPY jeeves/prd-creator.sh /usr/local/bin/prd-creator
-COPY jeeves/prd-creator-uninstall.sh /usr/local/bin/prd-creator-uninstall
+COPY jeeves/PRD /opt/jeeves/prd-creator/
 
 # Set permissions
-RUN chmod +x /usr/local/bin/prd-creator && \
+RUN chmod +x /usr/local/bin/ && \
     chown -R jeeves:jeeves /opt/jeeves
 
 # Switch back to jeeves user
@@ -381,7 +382,7 @@ USER jeeves
 RUN sudo chown -R jeeves:jeeves /home/jeeves
 
 # Set working directory
-WORKDIR /workspace
+WORKDIR /proj
 
 EXPOSE 3333
 # ============================================================================

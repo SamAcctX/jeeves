@@ -209,7 +209,7 @@ $Script:DOCKERFILE_PATH = Join-Path $PSScriptRoot "Dockerfile.jeeves"
 $Script:BUILD_CONTEXT = $PSScriptRoot
 $Script:HOST_PORT = 3333
 $Script:CONTAINER_PORT = 3333
-$Script:WORKSPACE_MOUNT = "$(Get-Location):/workspace:rw"
+$Script:WORKSPACE_MOUNT = "$(Get-Location):/proj:rw"
 
 <#
 .SYNOPSIS
