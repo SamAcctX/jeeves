@@ -22,15 +22,18 @@ declare -A MCP_ENV_VARS=(
     ["searxng"]="SEARXNG_URL"
 )
 
+# Global variable to store SEARXNG_URL
+SEARXNG_URL=""
+
 # Default Paths
 declare -A OPENCODE_PATHS=(
     ["project"]="opencode.json"
-    ["global"]="~/.config/opencode/opencode.json"
+    ["global"]="$HOME/.config/opencode/opencode.json"
 )
 
 declare -A CLAUDE_PATHS=(
     ["project"]=".mcp.json"
-    ["global"]="~/.claude.json"
+    ["global"]="$HOME/.claude.json"
 )
 
 # ============================================================================
@@ -68,38 +71,78 @@ command_exists() {
 validate_json() {
     local json_file="$1"
     
-    if command_exists jq; then
-        if jq empty "$json_file" 2>/dev/null; then
-            return 0
-        else
-            print_error "Invalid JSON in file: $json_file"
-            return 1
-        fi
-    elif command_exists python3; then
-        if python3 -m json.tool "$json_file" >/dev/null 2>&1; then
-            return 0
-        else
-            print_error "Invalid JSON in file: $json_file"
-            return 1
-        fi
+    if jq empty "$json_file" 2>/dev/null; then
+        return 0
     else
-        print_error "Neither jq nor python3 is available for JSON validation"
+        print_error "Invalid JSON in file: $json_file"
         return 1
     fi
+}
+
+# Build MCP server entry
+build_server_config_entry() {
+    local server_name="$1"
+    local is_opencode="$2"
+    local searxng_url="$SEARXNG_URL"
+
+    if [ "$server_name" = "searxng" ]; then
+        if [ "$is_opencode" = true ]; then
+            printf '    "%s": {
+        "type": "local",
+        "command": ["npx", "-y", "%s"],
+        "environment": {
+            "SEARXNG_URL": "%s"
+        }
+    }' "$server_name" "${MCP_SERVERS[$server_name]}" "$searxng_url"
+        else
+            printf '    "%s": {
+        "command": ["npx", "-y", "%s"],
+        "env": {
+            "SEARXNG_URL": "%s"
+        }
+    }' "$server_name" "${MCP_SERVERS[$server_name]}" "$searxng_url"
+        fi
+    else
+        if [ "$is_opencode" = true ]; then
+            printf '    "%s": {
+        "type": "local",
+        "command": ["%s"]
+    }' "$server_name" "${MCP_SERVERS[$server_name]}"
+        else
+            printf '    "%s": {
+        "command": ["%s"]
+    }' "$server_name" "${MCP_SERVERS[$server_name]}"
+        fi
+    fi
+}
+
+# Combine MCP entries with proper comma separators and newlines
+join_mcp_entries() {
+    local is_opencode="$1"
+    shift
+    local server_names=($@)
+    local entries=()
+
+    for server_name in "${server_names[@]}"; do
+        entries+=( "$(build_server_config_entry "$server_name" "$is_opencode")" )
+    done
+
+    local combined=""
+    for idx in "${!entries[@]}"; do
+        if [ "$idx" -gt 0 ]; then
+            combined+=$',\n'
+        fi
+        combined+="${entries[$idx]}"
+    done
+
+    printf '%s' "$combined"
 }
 
 # Parse JSON file
 parse_json() {
     local json_file="$1"
     
-    if command_exists jq; then
-        jq '.' "$json_file"
-    elif command_exists python3; then
-        python3 -c "import json; print(json.dumps(json.load(open('$json_file'))))"
-    else
-        print_error "Neither jq nor python3 is available for JSON parsing"
-        return 1
-    fi
+    jq '.' "$json_file"
 }
 
 # Create timestamped backup
@@ -138,12 +181,7 @@ mcp_server_exists() {
     local config="$1"
     local server_name="$2"
     
-    if command_exists jq; then
-        jq -e ".mcpServers.\"$server_name\"" "$config" >/dev/null 2>&1 || jq -e ".mcp.\"$server_name\"" "$config" >/dev/null 2>&1
-    else
-        # Fallback: grep for server name
-        grep -q "\"$server_name\"" "$config"
-    fi
+    jq -e ".mcpServers.\"$server_name\"" "$config" >/dev/null 2>&1 || jq -e ".mcp.\"$server_name\"" "$config" >/dev/null 2>&1
 }
 
 # Check if a specific MCP server exists in config file
@@ -152,15 +190,10 @@ mcp_server_exists_in_config() {
     local server_name="$2"
     local is_opencode="$3"
     
-    if command_exists jq; then
-        if [ "$is_opencode" = true ]; then
-            jq -e ".mcp.\"$server_name\"" "$config_file" >/dev/null 2>&1
-        else
-            jq -e ".mcpServers.\"$server_name\"" "$config_file" >/dev/null 2>&1
-        fi
+    if [ "$is_opencode" = true ]; then
+        jq -e ".mcp.\"$server_name\"" "$config_file" >/dev/null 2>&1
     else
-        # Fallback: grep for server name
-        grep -q "\"$server_name\"" "$config_file"
+        jq -e ".mcpServers.\"$server_name\"" "$config_file" >/dev/null 2>&1
     fi
 }
 
@@ -236,52 +269,22 @@ process_opencode_config() {
     print_info "Processing OpenCode configuration (${scope} scope)..."
     
     # Build MCP configuration
+    local -a mcp_entries=()
     for server_name in "${!MCP_SERVERS[@]}"; do
-        local server_config=""
-        
-        if [ "$server_name" = "searxng" ]; then
-            # Prompt for SEARXNG_URL
-            if [ "$dry_run" = true ]; then
-                print_info "[DRY-RUN] Would prompt for SEARXNG_URL for $server_name"
-                searxng_url="https://searxng.example.com"
-            else
-                read -p "Enter SEARXNG_URL for $server_name: " searxng_url
-            fi
-            server_config=$(cat <<EOF
-    "$server_name": {
-        "type": "local",
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
-        "environment": {
-            "SEARXNG_URL": "$searxng_url"
-        }
-    }
-EOF
-)
-        else
-            server_config=$(cat <<EOF
-    "$server_name": {
-        "type": "local",
-        "command": ["${MCP_SERVERS[$server_name]}"]
-    }
-EOF
-)
+        if [ "$dry_run" = true ] && [ "$server_name" = "searxng" ]; then
+            print_info "[DRY-RUN] Using SEARXNG_URL for $server_name"
         fi
         
-        mcp_config+="$server_config"
+        mcp_entries+=("$(build_server_config_entry "$server_name" true)")
     done
     
-    # Build proper JSON object for mcp section
-    mcp_json="{"
-    local first=true
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        if [ "$first" = true ]; then
-            first=false
-        else
-            mcp_json+=","
+    mcp_config=""
+    for idx in "${!mcp_entries[@]}"; do
+        if [ "$idx" -gt 0 ]; then
+            mcp_config+=$',\n'
         fi
-        mcp_json+="$server_config"
+        mcp_config+="${mcp_entries[$idx]}"
     done
-    mcp_json+="}"
     
     # Check if config file exists
     if [ -f "$config_file" ]; then
@@ -303,13 +306,19 @@ EOF
             if ! jq -e '.mcp' "$config_file" >/dev/null 2>&1; then
                 # Add mcp section
                 if [ "$dry_run" = false ]; then
-                    # Create temporary file with mcp section
+                    # Build config using the same logic as new file creation
+                    local mcp_config_with_schema='    "$schema": "https://opencode.ai/config.json",
+    '
+                    for idx in "${!mcp_entries[@]}"; do
+                        if [ "$idx" -gt 0 ]; then
+                            mcp_config_with_schema+=$',\n'
+                        fi
+                        mcp_config_with_schema+="${mcp_entries[$idx]}"
+                    done
+                    
                     cat > "${config_file}.tmp" <<EOF
 {
-    "$schema": "https://opencode.ai/config.json",
-    "mcp": {
-$mcp_config
-    }
+    $mcp_config_with_schema
 }
 EOF
                     # Merge with existing config
@@ -330,6 +339,29 @@ EOF
                     for server_name in "${!MCP_SERVERS[@]}"; do
                         # Check if server already exists
                         if ! mcp_server_exists_in_config "$config_file" "$server_name" true; then
+                            # Build config for this server
+                            local server_config=""
+                            if [ "$server_name" = "searxng" ]; then
+                                server_config=$(cat <<EOF
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "environment": {
+            "SEARXNG_URL": "$SEARXNG_URL"
+        }
+    }
+EOF
+)
+                            else
+                                server_config=$(cat <<EOF
+    "$server_name": {
+        "type": "local",
+        "command": ["${MCP_SERVERS[$server_name]}"]
+    }
+EOF
+)
+                            fi
+                            
                             if [ "$first" = true ]; then
                                 first=false
                             else
@@ -368,24 +400,34 @@ EOF
                 }
             fi
             
-            # Check if file is writable
-            if ! is_writable "$config_file"; then
-                exit 1
-            fi
+            # Create temporary directory for file creation
+            local temp_dir=$(mktemp -d /tmp/mcp-config-XXXXXX)
             
-            # Create new config file
-            if cat > "$config_file" <<EOF
+            # Create temporary config file
+            local temp_config_file="${temp_dir}/config.json"
+            
+            if cat > "$temp_config_file" <<EOF
 {
-    "$schema": "https://opencode.ai/config.json",
+    "\$schema": "https://opencode.ai/config.json",
     "mcp": {
 $mcp_config
     }
 }
 EOF
             then
-                print_success "Created new OpenCode config file: $config_file"
+                # Move config file to target location
+                if mv "$temp_config_file" "$config_file"; then
+                    print_success "Created new OpenCode config file: $config_file"
+                    # Clean up temporary directory
+                    rm -rf "$temp_dir"
+                else
+                    print_error "Failed to move OpenCode config file to target location"
+                    rm -rf "$temp_dir"
+                    exit 1
+                fi
             else
-                print_error "Failed to create OpenCode config file: $config_file"
+                print_error "Failed to create temporary OpenCode config file"
+                rm -rf "$temp_dir"
                 exit 1
             fi
         else
@@ -406,17 +448,15 @@ process_claude_config() {
     print_info "Processing Claude Code configuration (${scope} scope)..."
     
     # Build MCP configuration
+    local -a mcp_entries=()
     for server_name in "${!MCP_SERVERS[@]}"; do
         local server_config=""
         
         if [ "$server_name" = "searxng" ]; then
-            # Prompt for SEARXNG_URL
             if [ "$dry_run" = true ]; then
-                print_info "[DRY-RUN] Would prompt for SEARXNG_URL for $server_name"
-                searxng_url="https://searxng.example.com"
-            else
-                read -p "Enter SEARXNG_URL for $server_name: " searxng_url
+                print_info "[DRY-RUN] Using SEARXNG_URL for $server_name"
             fi
+            searxng_url="$SEARXNG_URL"
             server_config=$(cat <<EOF
     "$server_name": {
         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
@@ -435,21 +475,16 @@ EOF
 )
         fi
         
-        mcp_config+="$server_config"
+        mcp_entries+=("$server_config")
     done
     
-    # Build proper JSON object for mcpServers section
-    mcp_json="{"
-    local first=true
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        if [ "$first" = true ]; then
-            first=false
-        else
-            mcp_json+=","
+    mcp_config=""
+    for idx in "${!mcp_entries[@]}"; do
+        if [ "$idx" -gt 0 ]; then
+            mcp_config+=$',\n'
         fi
-        mcp_json+="$server_config"
+        mcp_config+="${mcp_entries[$idx]}"
     done
-    mcp_json+="}"
     
     # Check if config file exists
     if [ -f "$config_file" ]; then
@@ -497,6 +532,27 @@ EOF
                     for server_name in "${!MCP_SERVERS[@]}"; do
                         # Check if server already exists
                         if ! mcp_server_exists_in_config "$config_file" "$server_name" false; then
+                            # Build config for this server
+                            local server_config=""
+                            if [ "$server_name" = "searxng" ]; then
+                                server_config=$(cat <<EOF
+    "$server_name": {
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "env": {
+            "SEARXNG_URL": "$SEARXNG_URL"
+        }
+    }
+EOF
+)
+                            else
+                                server_config=$(cat <<EOF
+    "$server_name": {
+        "command": ["${MCP_SERVERS[$server_name]}"]
+    }
+EOF
+)
+                            fi
+                            
                             if [ "$first" = true ]; then
                                 first=false
                             else
@@ -535,13 +591,13 @@ EOF
                 }
             fi
             
-            # Check if file is writable
-            if ! is_writable "$config_file"; then
-                exit 1
-            fi
+            # Create temporary directory for file creation
+            local temp_dir=$(mktemp -d /tmp/mcp-config-XXXXXX)
             
-            # Create new config file
-            if cat > "$config_file" <<EOF
+            # Create temporary config file
+            local temp_config_file="${temp_dir}/config.json"
+            
+            if cat > "$temp_config_file" <<EOF
 {
     "mcpServers": {
 $mcp_config
@@ -549,9 +605,19 @@ $mcp_config
 }
 EOF
             then
-                print_success "Created new Claude Code config file: $config_file"
+                # Move config file to target location
+                if mv "$temp_config_file" "$config_file"; then
+                    print_success "Created new Claude Code config file: $config_file"
+                    # Clean up temporary directory
+                    rm -rf "$temp_dir"
+                else
+                    print_error "Failed to move Claude Code config file to target location"
+                    rm -rf "$temp_dir"
+                    exit 1
+                fi
             else
-                print_error "Failed to create Claude Code config file: $config_file"
+                print_error "Failed to create temporary Claude Code config file"
+                rm -rf "$temp_dir"
                 exit 1
             fi
         else
@@ -580,32 +646,6 @@ display_summary() {
     if [ "$dry_run" = true ]; then
         print_warning "This was a dry-run. No changes were made to configuration files."
     fi
-}
-
-# Display dry-run preview
-display_dry_run_preview() {
-    local config_file="$1"
-    local is_opencode="$2"
-    local added_servers=0
-    local existing_servers=0
-    
-    echo ""
-    print_info "Dry-Run Preview for $config_file:"
-    echo "-----------------------------------"
-    
-    for server_name in "${!MCP_SERVERS[@]}"; do
-        if mcp_server_exists_in_config "$config_file" "$server_name" "$is_opencode"; then
-            echo "  [EXISTING] $server_name"
-            existing_servers=$((existing_servers + 1))
-        else
-            echo "  [TO ADD]   $server_name"
-            added_servers=$((added_servers + 1))
-        fi
-    done
-    
-    echo ""
-    print_info "Summary: $added_servers servers to add, $existing_servers servers already exist"
-    echo ""
 }
 
 # ============================================================================
@@ -641,6 +681,14 @@ echo ""
 
 # Check dependencies
 check_dependencies
+
+# Prompt for SEARXNG_URL once at the beginning
+if [ "$DRY_RUN" = true ]; then
+    print_info "[DRY-RUN] Using placeholder SEARXNG_URL"
+    SEARXNG_URL="https://searxng.example.com"
+elif [ -z "$SEARXNG_URL" ]; then
+    read -p "Enter SEARXNG_URL: " SEARXNG_URL
+fi
 
 # Process configurations
 process_opencode_config "$SCOPE" "$DRY_RUN"

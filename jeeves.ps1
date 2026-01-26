@@ -8,7 +8,7 @@
     with the containerized OpenCode environment.
 
     The script can be invoked from any directory as it maps the current working
-    directory (pwd) to /workspace inside the container.
+    directory (pwd) to /proj inside the container.
 
 .PARAMETER Command
     The command to execute (build, start, stop, restart, rm, shell, logs, status, clean, help)
@@ -285,13 +285,13 @@ function Get-UserMountSpec {
     if ($explicitUid -and $explicitUid -ne "1000") {
         return @{
             UserFlag = "--user `"$($ids.UID):$($ids.GID)`""
-            WorkspaceMount = "$(Get-Location):/workspace:rw"
+            WorkspaceMount = "$(Get-Location):/proj:rw"
             ConfigMounts = $configMounts
         }
     } else {
         return @{
             UserFlag = ""
-            WorkspaceMount = "$(Get-Location):/workspace:rw"
+            WorkspaceMount = "$(Get-Location):/proj:rw"
             ConfigMounts = $configMounts
         }
     }
@@ -587,7 +587,7 @@ function Ensure-ContainerRunning {
 .NOTES
     - Clean start removes any existing container and the image before rebuilding.
     - Clean start rebuilds the image without Docker cache to guarantee a fresh build.
-    - Maps current directory to /workspace in the container
+    - Maps current directory to /proj in the container
     - Exposes port 3333 for the OpenCode Web UI
     - Container runs in detached mode (-d flag)
 #>
@@ -985,7 +985,7 @@ Jeeves start - Start the Container
 
 DESCRIPTION:
     Starts the jeeves container with the current working directory mounted
-    to /workspace inside the container. This allows you to work on files
+    to /proj inside the container. This allows you to work on files
     in your current directory from within the container.
 
 USAGE:
@@ -1004,11 +1004,11 @@ EXAMPLES:
     jeeves start --clean
 
 NOTES:
-    - Port 3333 on host maps to port 3333 in container
-    - Current directory (pwd) is mounted to /workspace
-    - Container name: jeeves
-    - Web UI available at: http://localhost:3333
-    - Container runs in detached mode (background)
+- Port 3333 on host maps to port 3333 in container
+- Current directory (pwd) is mounted to /proj
+- Container name: jeeves
+- Web UI available at: http://localhost:3333
+- Container runs in detached mode (background)
 "@
         }
         "stop" {
@@ -1064,10 +1064,10 @@ EXAMPLES:
     jeeves restart
 
 NOTES:
-    - Equivalent to: jeeves stop && jeeves start
-    - Builds image if missing before starting
-    - Container data in /workspace is preserved
-    - Container name and configuration remain the same
+- Equivalent to: jeeves stop && jeeves start
+- Builds image if missing before starting
+- Container data in /proj is preserved
+- Container name and configuration remain the same
 "@
         }
         "rm" {
@@ -1108,12 +1108,13 @@ EXAMPLES:
     jeeves shell
 
 NOTES:
-    - Builds image and starts container if not running
-    - Opens an interactive bash shell
-    - Your current directory is available at /workspace
-    - OpenCode CLI is available as 'opencode'
-    - Type 'exit' to leave the shell
-    - Tmux auto-attaches for persistent sessions
+- Builds image and starts container if not running
+- Opens an interactive bash shell
+- Your current directory is available at /proj
+- OpenCode CLI is available as 'opencode'
+- Type 'exit' to leave the shell
+- Tmux auto-attaches for persistent sessions
+- Hint:  Use the Shift/Option key interact with the terminal outside of tmux, useful for copy-paste and keyboard shortcuts
 "@
         }
         "logs" {

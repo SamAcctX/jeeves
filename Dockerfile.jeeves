@@ -27,6 +27,8 @@ RUN apt-get update && \
         jq \
         sudo \
         tmux \
+        xclip \
+        xsel \
         python3 \
         python3-pip \
         python3-venv \
@@ -252,6 +254,24 @@ fi
 
 EOF
 
+# And now for tmux config settings to make it behave like a proper terminal
+# with history scrolling, copy-paste, etc.
+RUN cat << 'EOF' >> /home/jeeves/.tmux.conf
+# 1. Enable Mouse Support (enables scrolling terminal output)
+set -g mouse on
+
+# 2. Enable System Clipboard (OSC 52 support)
+set -s set-clipboard on
+
+# 3. Fix ESC Lag (lowers delay from 500ms to 10ms)
+set -sg escape-time 10
+
+# 4. Optional: Increase history for more scrollback
+set -g history-limit 50000
+
+# Fix colors
+set -g default-terminal "screen-256color"
+EOF
 
 # ============================================================================
 # Setup directories with proper permissions
@@ -317,10 +337,12 @@ RUN mkdir -p /opt/jeeves/
 COPY jeeves/bin /usr/local/bin/
 
 # Copy PRD Creator files
-COPY jeeves/PRD /opt/jeeves/prd-creator/
+COPY jeeves/PRD /opt/jeeves/PRD/
+# Copy Deepest Thinking files
+COPY jeeves/Deepest-Thinking /opt/jeeves/Deepest-Thinking/
 
 # Set permissions
-RUN chmod +x /usr/local/bin/ && \
+RUN chmod -R +x /usr/local/bin/ && \
     chown -R jeeves:jeeves /opt/jeeves
 
 # Switch back to jeeves user
@@ -365,6 +387,14 @@ copy_oob_if_empty() {
 copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
 copy_oob_if_empty "/home/jeeves/.claude" "/opt/oob-config/.claude" "Claude"
 sudo chown -R jeeves:jeeves /home/jeeves
+
+# Auto-install some skills at the user level that should be useful
+# See: https://github.com/kamalnrf/claude-plugins
+#      https://www.reddit.com/r/opencodeCLI/comments/1pzni8k/45000_public_claude_skills_are_now/
+
+echo "Installing skills-discovery for opencode and claude code..."
+npx skills-installer install @Kamalnrf/claude-plugins/skills-discovery --client opencode
+npx skills-installer install @Kamalnrf/claude-plugins/skills-discovery --client claude-code
 
 # If no arguments provided, default to opencode web
 if [ $# -eq 0 ]; then
