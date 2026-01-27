@@ -299,6 +299,130 @@ function Get-UserMountSpec {
 
 <#
 .SYNOPSIS
+    Initializes the temporary directory for Docker Compose files
+
+.DESCRIPTION
+    Creates the .tmp directory if it doesn't exist and ensures .gitignore
+    and .dockerignore files contain the .tmp/ entry to prevent temporary
+    files from being committed or included in builds.
+
+.NOTES
+    This function is called before generating docker-compose.yml files
+    to ensure proper temporary file management.
+#>
+function Initialize-TemporaryDirectory {
+    $tmpPath = Join-Path $PSScriptRoot ".tmp"
+    
+    if (-not (Test-Path $tmpPath)) {
+        New-Item -ItemType Directory -Path $tmpPath -Force | Out-Null
+        Write-Log "Created .tmp directory for compose files" -trace
+    }
+    
+    # Ensure .gitignore exists and contains .tmp
+    $gitignorePath = Join-Path $PSScriptRoot ".gitignore"
+    if (Test-Path $gitignorePath) {
+        $gitignoreContent = Get-Content $gitignorePath
+        if ($gitignoreContent -notcontains ".tmp/") {
+            Add-Content -Path $gitignorePath -Value "`n.tmp/" -Encoding UTF8
+            Write-Log "Added .tmp/ to .gitignore" -trace
+        }
+    }
+    
+    # Ensure .dockerignore exists and contains .tmp
+    $dockerignorePath = Join-Path $PSScriptRoot ".dockerignore"
+    if (Test-Path $dockerignorePath) {
+        $dockerignoreContent = Get-Content $dockerignorePath
+        if ($dockerignoreContent -notcontains ".tmp/") {
+            Add-Content -Path $dockerignorePath -Value "`n.tmp/" -Encoding UTF8
+            Write-Log "Added .tmp/ to .dockerignore" -trace
+        }
+    }
+}
+
+<#
+.SYNOPSIS
+    Generates Docker Compose configuration file
+
+.DESCRIPTION
+    Creates a docker-compose.yml file in the .tmp directory with resolved paths,
+    proper service dependencies, and Browserless integration. Preserves all existing
+    dynamic path resolution logic from Get-UserMountSpec().
+
+.NOTES
+    Generated file includes jeeves and browserless services with proper networking,
+    health checks, and resource limits as specified in the PRD.
+#>
+function New-DockerComposeFile {
+    $mountSpec = Get-UserMountSpec
+    $tmpPath = Join-Path $PSScriptRoot ".tmp"
+    
+    $composeContent = @"
+services:
+  jeeves:
+    build:
+      context: ..
+      dockerfile: Dockerfile.jeeves
+    environment:
+      - BROWSERLESS_URL=http://browserless:3000
+    depends_on:
+      browserless:
+        condition: service_healthy
+    volumes:
+      - $($mountSpec.WorkspaceMount)`n
+"@
+    
+    foreach ($configMount in $mountSpec.ConfigMounts) {
+        $composeContent += "      - $configMount`n"
+    }
+    
+    if ($mountSpec.UserFlag) {
+        $userSpec = $mountSpec.UserFlag -replace '--user ', ''
+        $composeContent += "    user: $userSpec`n"
+    }
+    
+    $composeContent += @"
+    ports:
+      - "3333:3333"
+    networks:
+      - jeeves-network
+
+  browserless:
+    image: ghcr.io/browserless/chromium:latest
+    environment:
+      - MAX_CONCURRENT_SESSIONS=10
+      - DEFAULT_BLOCK_ADS=true
+      - FUNCTION_ENABLED=true
+      - TOKEN=1234
+    ports:
+      - "3334:3000"
+    networks:
+      - jeeves-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/docs"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '1.0'
+
+networks:
+  jeeves-network:
+    driver: bridge
+"@
+    
+    # Write to .tmp directory
+    $composeFile = Join-Path $tmpPath "docker-compose.yml"
+    $composeContent | Out-File -FilePath $composeFile -Encoding UTF8
+    Write-Log "Generated docker-compose.yml: $composeFile" -trace
+    
+    return $composeFile
+}
+
+<#
+.SYNOPSIS
     Validates that the Dockerfile exists
 
 .DESCRIPTION
@@ -416,11 +540,23 @@ function Build-Image {
     String containing the container ID, or $null if not running
 #>
 function Get-ContainerId {
-    $containerId = docker ps -q -f "name=${Script:CONTAINER_NAME}"
-    if (-not $containerId) {
+    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if (Test-Path $composeFile) {
+        # Use docker compose to find jeeves container
+        $composePs = & docker compose -f $composeFile ps -q jeeves 2>$null
+        if ($composePs) {
+            return $composePs.Trim()
+        }
         return $null
+    } else {
+        # Legacy single container method
+        $containerId = docker ps -q -f "name=${Script:CONTAINER_NAME}"
+        if (-not $containerId) {
+            return $null
+        }
+        return $containerId
     }
-    return $containerId
 }
 
 <#
@@ -505,39 +641,52 @@ function Ensure-ContainerNotPresent {
         [switch]$SkipStop
     )
 
-    if (-not $SkipStop) {
-        Ensure-ContainerStopped -Force:$Force
+    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if (Test-Path $composeFile) {
+        if (-not $SkipStop) {
+            Write-Log "Removing services using Docker Compose..." -debug
+            & docker compose -f $composeFile down -v --remove-orphans
+            if ($LASTEXITCODE -eq 0) {
+                Write-Log "Services removed" -success
+            }
+        }
     } else {
-        $runningContainer = Get-ContainerId
-        if ($runningContainer) {
-            Write-Log "Container '${Script:CONTAINER_NAME}' is running; cannot remove it while active" -error
+        # Legacy single container method
+        if (-not $SkipStop) {
+            Ensure-ContainerStopped -Force:$Force
+        } else {
+            $runningContainer = Get-ContainerId
+            if ($runningContainer) {
+                Write-Log "Container '${Script:CONTAINER_NAME}' is running; cannot remove it while active" -error
+                return
+            }
+        }
+
+        $allContainers = docker ps -a -q -f "name=${Script:CONTAINER_NAME}"
+        if (-not $allContainers) {
+            Write-Log "No container instances found for '${Script:CONTAINER_NAME}'" -trace
             return
         }
-    }
 
-    $allContainers = docker ps -a -q -f "name=${Script:CONTAINER_NAME}"
-    if (-not $allContainers) {
-        Write-Log "No container instances found for '${Script:CONTAINER_NAME}'" -trace
-        return
-    }
+        Write-Log "Removing container: ${Script:CONTAINER_NAME}" -debug
 
-    Write-Log "Removing container: ${Script:CONTAINER_NAME}" -debug
-    
-    # Initialize rmArgs array with base command and mandatory flags
-    $rmArgs = @(
-        "rm"
-    )
-    
-    # Add all containers to remove
-    if ($allContainers) {
-        $rmArgs += $allContainers
-    }
-    
-    # Execute the command using splatting operator
-    docker @rmArgs
+        # Initialize rmArgs array with base command and mandatory flags
+        $rmArgs = @(
+            "rm"
+        )
 
-    if ($LASTEXITCODE -eq 0) {
-        Write-Log "Container removed" -success
+        # Add all containers to remove
+        if ($allContainers) {
+            $rmArgs += $allContainers
+        }
+
+        # Execute the command using splatting operator
+        docker @rmArgs
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Container removed" -success
+        }
     }
 }
 
@@ -556,7 +705,7 @@ function Ensure-ContainerRunning {
     }
 
     if (-not $AutoStart) {
-        Write-Log "Container '${Script:CONTAINER_NAME}' is not running. Start it with: jeeves start" -error
+        Write-Log "Services are not running. Start them with: jeeves start" -error
         return $null
     }
 
@@ -564,7 +713,7 @@ function Ensure-ContainerRunning {
 
     $containerId = Get-ContainerId
     if (-not $containerId) {
-        Write-Log "Failed to start container '${Script:CONTAINER_NAME}'" -error
+        Write-Log "Failed to start services" -error
         exit 1
     }
 
@@ -611,39 +760,26 @@ function Start-Container {
 
     Ensure-ContainerNotPresent -SkipStop
 
-    Write-Log "Starting container: ${Script:CONTAINER_NAME}" -debug
+    Write-Log "Starting container services..." -debug
 
-    $mountSpec = Get-UserMountSpec
-    
-    # Initialize runArgs array with base command and mandatory flags
-    $runArgs = @(
-        "run"
-        "-d"
-        "--name", $Script:CONTAINER_NAME
-        "-p", "${Script:HOST_PORT}:${Script:CONTAINER_PORT}"
-        "-v", $mountSpec.WorkspaceMount
-    )
+    # 1. Ensure .tmp directory exists and is properly ignored
+    Initialize-TemporaryDirectory
 
-    # Add configuration directory mounts
-    foreach ($configMount in $mountSpec.ConfigMounts) {
-        $runArgs += "-v", $configMount
+    # 2. Generate docker-compose.yml with resolved paths
+    $composeFile = New-DockerComposeFile
+
+    # 3. Run docker compose instead of docker run
+    & docker compose -f $composeFile up -d
+
+    # 4. Handle errors and cleanup if needed
+    if ($LASTEXITCODE -ne 0) {
+        Write-Log "Failed to start services" -error
+        exit 1
     }
 
-    # Add optional flags only when they contain data
-    if ($mountSpec.UserFlag) {
-        $runArgs += $mountSpec.UserFlag
-    }
-
-    # Add the image name as the last argument
-    $runArgs += "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
-
-    # Execute the command using splatting operator
-    docker @runArgs
-
-    if ($LASTEXITCODE -eq 0) {
-        Write-Log "Container started successfully" -success
-        Write-Log "Access the web UI at: http://localhost:${Script:HOST_PORT}" -info
-    }
+    Write-Log "Services started successfully" -success
+    Write-Log "Access the web UI at: http://localhost:${Script:HOST_PORT}" -info
+    Write-Log "Browserless available at: http://localhost:3334?TOKEN=1234" -info
 }
 
 <#
@@ -679,7 +815,21 @@ function Stop-Container {
         return
     }
 
-    Ensure-ContainerStopped -Force:$Force
+    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if (Test-Path $composeFile) {
+        Write-Log "Stopping services using Docker Compose..." -debug
+        & docker compose -f $composeFile down
+
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Services stopped" -success
+        } else {
+            Write-Log "Failed to stop services using Docker Compose, falling back to Docker" -warning
+            Ensure-ContainerStopped -Force:$Force
+        }
+    } else {
+        Ensure-ContainerStopped -Force:$Force
+    }
 
     if ($Remove) {
         Ensure-ContainerNotPresent -SkipStop -Force:$Force
@@ -763,21 +913,28 @@ function Enter-Shell {
     Press Ctrl+C to exit log viewing
 #>
 function Show-Logs {
-    $containerId = Get-ContainerId
-    if (-not $containerId) {
-        Write-Log "Container '${Script:CONTAINER_NAME}' is not running. Start it with: jeeves start" -error
-        exit 1
-    }
+    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if (Test-Path $composeFile) {
+        Write-Log "Showing logs for all services..." -debug
+        & docker compose -f $composeFile logs -f
+    } else {
+        $containerId = Get-ContainerId
+        if (-not $containerId) {
+            Write-Log "Container '${Script:CONTAINER_NAME}' is not running. Start it with: jeeves start" -error
+            exit 1
+        }
 
-    # Initialize logsArgs array with base command and mandatory flags
-    $logsArgs = @(
-        "logs"
-        "-f"
-        $containerId
-    )
-    
-    # Execute the command using splatting operator
-    docker @logsArgs
+        # Initialize logsArgs array with base command and mandatory flags
+        $logsArgs = @(
+            "logs"
+            "-f"
+            $containerId
+        )
+
+        # Execute the command using splatting operator
+        docker @logsArgs
+    }
 }
 
 <#
@@ -792,38 +949,50 @@ function Show-Logs {
     Formatted status information to the console
 #>
 function Show-Status {
-    Write-Log "=== Jeeves Container Status ===" -debug
+    Write-Log "=== Jeeves Service Status ===" -debug
 
-    $containerId = Get-ContainerId
-    if ($containerId) {
-        Write-Log "Status: Running" -success
-        Write-Log "Container ID: $containerId" -trace
+    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if (Test-Path $composeFile) {
+        Write-Log "Using Docker Compose services:" -info
+        & docker compose -f $composeFile ps
+
+        # Additional status information
+        Write-Log "" -info
         Write-Log "Web UI: http://localhost:${Script:HOST_PORT}" -trace
+        Write-Log "Browserless: http://localhost:3000" -trace
     } else {
-        # Initialize psArgs array with base command and mandatory flags
-        $psArgs = @(
-            "ps"
-            "-a"
-            "-q"
-            "-f", "name=${Script:CONTAINER_NAME}"
-        )
-        
-        # Execute the command using splatting operator
-        $stoppedContainer = docker @psArgs
-        if ($stoppedContainer) {
-            Write-Log "Status: Stopped" -info
+        # Legacy single container status
+        $containerId = Get-ContainerId
+        if ($containerId) {
+            Write-Log "Status: Running" -success
+            Write-Log "Container ID: $containerId" -trace
+            Write-Log "Web UI: http://localhost:${Script:HOST_PORT}" -trace
         } else {
-            Write-Log "Status: Not created" -info
+            # Initialize psArgs array with base command and mandatory flags
+            $psArgs = @(
+                "ps"
+                "-a"
+                "-q"
+                "-f", "name=${Script:CONTAINER_NAME}"
+            )
+
+            # Execute the command using splatting operator
+            $stoppedContainer = docker @psArgs
+            if ($stoppedContainer) {
+                Write-Log "Status: Stopped" -info
+            } else {
+                Write-Log "Status: Not created" -info
+            }
         }
     }
 
-    # Initialize imagesArgs array with base command and mandatory flags
+    # Check image status
     $imagesArgs = @(
         "images"
         "-q", "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
     )
-    
-    # Execute the command using splatting operator
+
     $imageExists = docker @imagesArgs
     if ($imageExists) {
         Write-Log "Image: ${Script:IMAGE_NAME}:${Script:IMAGE_TAG} (exists)" -trace
