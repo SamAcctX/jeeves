@@ -126,28 +126,6 @@ build_server_config_entry() {
         }
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         fi
-    elif [ "$server_name" = "sequentialthinking" ]; then
-        if [ "$is_opencode" = true ]; then
-            printf '    "%s": {
-        "type": "local",
-        "command": ["npx", "-y", "%s"]
-    }' "$server_name" "${MCP_SERVERS[$server_name]}"
-        else
-            printf '    "%s": {
-        "command": ["npx", "-y", "%s"]
-    }' "$server_name" "${MCP_SERVERS[$server_name]}"
-        fi
-    elif [ "$server_name" = "fetch" ]; then
-        if [ "$is_opencode" = true ]; then
-            printf '    "%s": {
-        "type": "local",
-        "command": ["python", "-m", "mcp_server_fetch"]
-    }' "$server_name"
-        else
-            printf '    "%s": {
-        "command": ["python", "-m", "mcp_server_fetch"]
-    }' "$server_name"
-        fi
     else
         if [ "$is_opencode" = true ]; then
             if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
@@ -263,9 +241,9 @@ merge_mcp_config() {
     local is_opencode="$3"
     
     if [ "$is_opencode" = true ]; then
-        # Merge into mcp object, creating it if it doesn't exist
+        # Merge into mcp object
         if command_exists jq; then
-            jq --argjson mcp "$mcp_config" 'if .mcp then .mcp += $mcp else . + {"mcp": $mcp} end' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+            jq --argjson mcp "$mcp_config" '.mcp += $mcp' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
         else
             print_error "jq is required for OpenCode config merging"
             return 1
@@ -273,7 +251,7 @@ merge_mcp_config() {
     else
         # Merge into mcpServers object
         if command_exists jq; then
-            jq --argjson mcp "$mcp_config" 'if .mcpServers then .mcpServers += $mcp else . + {"mcpServers": $mcp} end' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
+            jq --argjson mcp "$mcp_config" '.mcpServers += $mcp' "$config_file" > "${config_file}.tmp" && mv "${config_file}.tmp" "$config_file"
         else
             print_error "jq is required for Claude Code config merging"
             return 1
@@ -404,60 +382,44 @@ EOF
                             local server_config=""
                             if [ "$server_name" = "searxng" ]; then
                                 server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
-         "environment": {
-             "SEARXNG_URL": "$SEARXNG_URL"
-         }
-     }
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
+        "environment": {
+            "SEARXNG_URL": "$SEARXNG_URL"
+        }
+    }
 EOF
 )
                             elif [ "$server_name" = "playwright" ]; then
                                 server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
-         "environment": {
-             "PLAYWRIGHT_MCP_HEADLESS": "true",
-             "PLAYWRIGHT_MCP_BROWSER": "chromium",
-             "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-             "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
-         }
-     }
-EOF
-)
-                            elif [ "$server_name" = "sequentialthinking" ]; then
-                                server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
-     }
-EOF
-)
-                            elif [ "$server_name" = "fetch" ]; then
-                                server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["python", "-m", "mcp_server_fetch"]
-     }
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
+        "environment": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+        }
+    }
 EOF
 )
                             else
-                                if [[ "${MCP_SERVERS[$server_name]}" == python* ]]; then
+                                if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
                                     server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["python", "-m", "mcp_server_fetch"]
-     }
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"]
+    }
 EOF
 )
                                 else
                                     server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
-     }
+    "$server_name": {
+        "type": "local",
+        "command": ["${MCP_SERVERS[$server_name]}"]
+    }
 EOF
 )
                                 fi
@@ -483,7 +445,6 @@ EOF
                     fi
                 else
                     print_info "[DRY-RUN] Would merge MCP configurations into OpenCode config"
-                    display_dry_run_preview "$config_file" true
                 fi
             fi
         else
@@ -661,7 +622,7 @@ EOF
                             if [ "$server_name" = "searxng" ]; then
                                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "env": {
             "SEARXNG_URL": "$SEARXNG_URL"
         }
@@ -671,7 +632,7 @@ EOF
                             elif [ "$server_name" = "playwright" ]; then
 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
             "PLAYWRIGHT_MCP_BROWSER": "chromium",
@@ -681,36 +642,13 @@ server_config=$(cat <<EOF
     }
 EOF
 )
-                            elif [ "$server_name" = "sequentialthinking" ]; then
-                                server_config=$(cat <<EOF
-    "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
-    }
-EOF
-)
-                            elif [ "$server_name" = "fetch" ]; then
-                                server_config=$(cat <<EOF
-    "$server_name": {
-        "command": ["python", "-m", "mcp_server_fetch"]
-    }
-EOF
-)
                             else
-                                if [[ "${MCP_SERVERS[$server_name]}" == python* ]]; then
-                                    server_config=$(cat <<EOF
+                                server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["python", "-m", "mcp_server_fetch"]
+        "command": ["${MCP_SERVERS[$server_name]}"]
     }
 EOF
 )
-                                else
-                                    server_config=$(cat <<EOF
-    "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
-    }
-EOF
-)
-                                fi
                             fi
                             
                             if [ "$first" = true ]; then
