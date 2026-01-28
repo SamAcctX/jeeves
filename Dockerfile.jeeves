@@ -211,11 +211,16 @@ RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
         mcp-server-fetch
     
 # Install Playwright browser and dependencies
-RUN npm install -g @playwright/test
-RUN npx playwright-core install-deps chromium firefox webkit
-RUN npx playwright-core install --no-shell chromium firefox webkit
-ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+USER jeeves
+
 ENV PLAYWRIGHT_MCP_NO_SANDBOX=1
+ENV PLAYWRIGHT_SKIP_BROWSER_CLEANUP=1
+
+RUN sudo npm install -g @playwright/test && \
+    npx playwright-core install-deps chromium firefox webkit && \
+    npx playwright-core install --no-shell chromium firefox webkit
+
+USER root
 
 
 # ============================================================================
