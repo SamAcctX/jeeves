@@ -107,22 +107,18 @@ build_server_config_entry() {
         if [ "$is_opencode" = true ]; then
             printf '    "%s": {
         "type": "local",
-        "command": ["npx", "-y", "%s"],
+        "command": ["npx", "-y", "%s", "--isolated", "--no-sandbox"],
         "environment": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
-            "PLAYWRIGHT_MCP_BROWSER": "chromium",
-            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+            "PLAYWRIGHT_MCP_BROWSER": "chromium"
         }
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         else
             printf '    "%s": {
-        "command": ["npx", "-y", "%s"],
+        "command": ["npx", "-y", "%s", "--isolated", "--no-sandbox"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
-            "PLAYWRIGHT_MCP_BROWSER": "chromium",
-            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+            "PLAYWRIGHT_MCP_BROWSER": "chromium"
         }
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         fi
@@ -415,16 +411,14 @@ EOF
 )
                             elif [ "$server_name" = "playwright" ]; then
                                 server_config=$(cat <<EOF
-     "$server_name": {
-         "type": "local",
-         "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
-         "environment": {
-             "PLAYWRIGHT_MCP_HEADLESS": "true",
-             "PLAYWRIGHT_MCP_BROWSER": "chromium",
-             "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-             "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
-         }
-     }
+      "$server_name": {
+          "type": "local",
+          "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}", "--isolated", "--no-sandbox"],
+          "environment": {
+              "PLAYWRIGHT_MCP_HEADLESS": "true",
+              "PLAYWRIGHT_MCP_BROWSER": "chromium"
+          }
+      }
 EOF
 )
                             elif [ "$server_name" = "sequentialthinking" ]; then
@@ -571,12 +565,10 @@ EOF
         elif [ "$server_name" = "playwright" ]; then
             server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}", "--isolated", "--no-sandbox"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
-            "PLAYWRIGHT_MCP_BROWSER": "chromium",
-            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+            "PLAYWRIGHT_MCP_BROWSER": "chromium"
         }
     }
 EOF
