@@ -345,11 +345,11 @@ function Initialize-TemporaryDirectory {
 
 .DESCRIPTION
     Creates a docker-compose.yml file in the .tmp directory with resolved paths,
-    proper service dependencies, and Browserless integration. Preserves all existing
+    proper service dependencies. Preserves all existing
     dynamic path resolution logic from Get-UserMountSpec().
 
 .NOTES
-    Generated file includes jeeves and browserless services with proper networking,
+    Generated file includes jeeves services with proper networking,
     health checks, and resource limits as specified in the PRD.
 #>
 function New-DockerComposeFile {
@@ -363,10 +363,10 @@ services:
       context: ..
       dockerfile: Dockerfile.jeeves
     environment:
-      - BROWSERLESS_URL=http://browserless:3000
-    depends_on:
-      browserless:
-        condition: service_healthy
+      - PLAYWRIGHT_MCP_HEADLESS=1
+      - PLAYWRIGHT_MCP_BROWSER=chromium
+      - PLAYWRIGHT_MCP_NO_SANDBOX=1
+      - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
     volumes:
       - $($mountSpec.WorkspaceMount)`n
 "@
@@ -386,27 +386,27 @@ services:
     networks:
       - jeeves-network
 
-  browserless:
-    image: ghcr.io/browserless/chromium:latest
-    environment:
-      - MAX_CONCURRENT_SESSIONS=10
-      - DEFAULT_BLOCK_ADS=true
-      - FUNCTION_ENABLED=true
-      - TOKEN=1234
-    ports:
-      - "3334:3000"
-    networks:
-      - jeeves-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/docs"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-          cpus: '1.0'
+#  browserless:
+#    image: ghcr.io/browserless/chromium:latest
+#    environment:
+#      - MAX_CONCURRENT_SESSIONS=10
+#      - DEFAULT_BLOCK_ADS=1
+#      - FUNCTION_ENABLED=1
+#      - TOKEN=1234
+#    ports:
+#      - "3334:3000"
+#    networks:
+#      - jeeves-network
+#    healthcheck:
+#      test: ["CMD", "curl", "-f", "http://localhost:3000/docs"]
+#      interval: 30s
+#      timeout: 10s
+#      retries: 3
+#    deploy:
+#      resources:
+#        limits:
+#          memory: 512M
+#          cpus: '1.0'
 
 networks:
   jeeves-network:
@@ -779,7 +779,6 @@ function Start-Container {
 
     Write-Log "Services started successfully" -success
     Write-Log "Access the web UI at: http://localhost:${Script:HOST_PORT}" -info
-    Write-Log "Browserless available at: http://localhost:3334?TOKEN=1234" -info
 }
 
 <#
@@ -960,7 +959,6 @@ function Show-Status {
         # Additional status information
         Write-Log "" -info
         Write-Log "Web UI: http://localhost:${Script:HOST_PORT}" -trace
-        Write-Log "Browserless: http://localhost:3000" -trace
     } else {
         # Legacy single container status
         $containerId = Get-ContainerId

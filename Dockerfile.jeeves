@@ -33,7 +33,17 @@ RUN apt-get update && \
         python3-pip \
         python3-venv \
         python3-dev \
-        openssl && \
+        openssl \
+        libnss3 \
+        libatk-bridge2.0-0 \
+        libdrm2 \
+        libxkbcommon0 \
+        libxcomposite1 \
+        libxdamage1 \
+        libxrandr2 \
+        libgbm1 \
+        libxss1 \
+        libasound2t64 && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -63,7 +73,6 @@ RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - && \
     npm cache clear --force && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
-
 
 FROM base AS opencode-builder
 # Manual versioning since we're building from source...
@@ -200,6 +209,14 @@ ENV VIRTUAL_ENV=/opt/venv
 # Install fetch MCP python package
 RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
         mcp-server-fetch
+    
+# Install Playwright browser and dependencies
+RUN npm install -g @playwright/test
+RUN npx playwright-core install-deps chromium firefox webkit
+RUN npx playwright-core install --no-shell chromium firefox webkit
+ENV PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
+ENV PLAYWRIGHT_MCP_NO_SANDBOX=1
+
 
 # ============================================================================
 # Create and stage helper scripts
@@ -393,8 +410,14 @@ sudo chown -R jeeves:jeeves /home/jeeves
 #      https://www.reddit.com/r/opencodeCLI/comments/1pzni8k/45000_public_claude_skills_are_now/
 
 echo "Installing skills-discovery for opencode and claude code..."
+# https://claude-plugins.dev/skills/@Kamalnrf/claude-plugins/skills-discovery
 npx skills-installer install @Kamalnrf/claude-plugins/skills-discovery --client opencode
 npx skills-installer install @Kamalnrf/claude-plugins/skills-discovery --client claude-code
+
+echo "Installing using-superpowers for opencode and claude code..."
+# https://claude-plugins.dev/skills/@obra/superpowers/using-superpowers
+npx skills-installer install @obra/superpowers/using-superpowers --client opencode
+npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
 
 # If no arguments provided, default to opencode web
 if [ $# -eq 0 ]; then

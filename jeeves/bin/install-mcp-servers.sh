@@ -12,9 +12,10 @@ set -e
 
 # MCP Server Configurations
 declare -A MCP_SERVERS=(
-    ["sequentialthinking"]="@modelcontextprotocol/server-sequential-thinking"
-    ["fetch"]="python -m mcp_server_fetch"
+    ["sequentialthinking"]="npx -y @modelcontextprotocol/server-sequential-thinking"
+    ["fetch"]="npx -y mcp-server-fetch"
     ["searxng"]="mcp-searxng"
+    ["playwright"]="@playwright/mcp@latest"
 )
 
 # Environment Variables for MCP Servers
@@ -22,7 +23,7 @@ declare -A MCP_ENV_VARS=(
     ["searxng"]="SEARXNG_URL"
 )
 
-# Global variable to store SEARXNG_URL
+# Global variables to store environment values
 SEARXNG_URL=""
 
 # Default Paths
@@ -102,16 +103,52 @@ build_server_config_entry() {
         }
     }' "$server_name" "${MCP_SERVERS[$server_name]}" "$searxng_url"
         fi
-    else
+    elif [ "$server_name" = "playwright" ]; then
         if [ "$is_opencode" = true ]; then
             printf '    "%s": {
         "type": "local",
-        "command": ["%s"]
+        "command": ["npx", "-y", "%s"],
+        "environment": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+        }
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         else
             printf '    "%s": {
+        "command": ["npx", "-y", "%s"],
+        "env": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+        }
+    }' "$server_name" "${MCP_SERVERS[$server_name]}"
+        fi
+    else
+        if [ "$is_opencode" = true ]; then
+            if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
+                printf '    "%s": {
+        "type": "local",
+        "command": ["npx", "-y", "%s"]
+    }' "$server_name" "${MCP_SERVERS[$server_name]#npx -y }"
+            else
+                printf '    "%s": {
+        "type": "local",
         "command": ["%s"]
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
+            fi
+        else
+            if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
+                printf '    "%s": {
+        "command": ["npx", "-y", "%s"]
+    }' "$server_name" "${MCP_SERVERS[$server_name]#npx -y }"
+            else
+                printf '    "%s": {
+        "command": ["%s"]
+    }' "$server_name" "${MCP_SERVERS[$server_name]}"
+            fi
         fi
     fi
 }
@@ -306,27 +343,29 @@ process_opencode_config() {
             if ! jq -e '.mcp' "$config_file" >/dev/null 2>&1; then
                 # Add mcp section
                 if [ "$dry_run" = false ]; then
-                    # Build config using the same logic as new file creation
-                    local mcp_config_with_schema='    "$schema": "https://opencode.ai/config.json",
-    '
+                    # Build mcp section content
+                    local mcp_section_content=""
                     for idx in "${!mcp_entries[@]}"; do
                         if [ "$idx" -gt 0 ]; then
-                            mcp_config_with_schema+=$',\n'
+                            mcp_section_content+=$',\n'
                         fi
-                        mcp_config_with_schema+="${mcp_entries[$idx]}"
+                        mcp_section_content+="${mcp_entries[$idx]}"
                     done
                     
+                    # Create temporary file with mcp section
                     cat > "${config_file}.tmp" <<EOF
 {
-    $mcp_config_with_schema
+    "mcp": {
+$mcp_section_content
+    }
 }
 EOF
                     # Merge with existing config
                     jq -s '.[0] * .[1]' "$config_file" "${config_file}.tmp" > "${config_file}.new" && mv "${config_file}.new" "$config_file"
                     rm -f "${config_file}.tmp"
-                    print_success "Added mcp section to OpenCode config"
+                    print_success "Created mcp section in OpenCode config"
                 else
-                    print_info "[DRY-RUN] Would add mcp section to OpenCode config"
+                    print_info "[DRY-RUN] Would create mcp section in OpenCode config"
                     display_dry_run_preview "$config_file" true
                 fi
             else
@@ -345,21 +384,45 @@ EOF
                                 server_config=$(cat <<EOF
     "$server_name": {
         "type": "local",
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "environment": {
             "SEARXNG_URL": "$SEARXNG_URL"
         }
     }
 EOF
 )
-                            else
+                            elif [ "$server_name" = "playwright" ]; then
                                 server_config=$(cat <<EOF
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
+        "environment": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+        }
+    }
+EOF
+)
+                            else
+                                if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
+                                    server_config=$(cat <<EOF
+    "$server_name": {
+        "type": "local",
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"]
+    }
+EOF
+)
+                                else
+                                    server_config=$(cat <<EOF
     "$server_name": {
         "type": "local",
         "command": ["${MCP_SERVERS[$server_name]}"]
     }
 EOF
 )
+                                fi
                             fi
                             
                             if [ "$first" = true ]; then
@@ -459,20 +522,42 @@ process_claude_config() {
             searxng_url="$SEARXNG_URL"
             server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "env": {
             "SEARXNG_URL": "$searxng_url"
         }
     }
 EOF
 )
-        else
+        elif [ "$server_name" = "playwright" ]; then
             server_config=$(cat <<EOF
+    "$server_name": {
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "env": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+        }
+    }
+EOF
+)
+        else
+            if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
+                server_config=$(cat <<EOF
+    "$server_name": {
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"]
+    }
+EOF
+)
+            else
+                server_config=$(cat <<EOF
     "$server_name": {
         "command": ["${MCP_SERVERS[$server_name]}"]
     }
 EOF
 )
+            fi
         fi
         
         mcp_entries+=("$server_config")
@@ -517,9 +602,9 @@ EOF
                     # Merge with existing config
                     jq -s '.[0] * .[1]' "$config_file" "${config_file}.tmp" > "${config_file}.new" && mv "${config_file}.new" "$config_file"
                     rm -f "${config_file}.tmp"
-                    print_success "Added mcpServers section to Claude Code config"
+                    print_success "Created mcpServers section in Claude Code config"
                 else
-                    print_info "[DRY-RUN] Would add mcpServers section to Claude Code config"
+                    print_info "[DRY-RUN] Would create mcpServers section in Claude Code config"
                     display_dry_run_preview "$config_file" false
                 fi
             else
@@ -537,9 +622,22 @@ EOF
                             if [ "$server_name" = "searxng" ]; then
                                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "env": {
             "SEARXNG_URL": "$SEARXNG_URL"
+        }
+    }
+EOF
+)
+                            elif [ "$server_name" = "playwright" ]; then
+server_config=$(cat <<EOF
+    "$server_name": {
+        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
+        "env": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium",
+            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
         }
     }
 EOF
@@ -626,6 +724,42 @@ EOF
     fi
 }
 
+# Display dry run preview
+display_dry_run_preview() {
+    local config_file="$1"
+    local is_opencode="$2"
+    
+    echo ""
+    print_info "Dry-run preview for $config_file:"
+    echo "---------------------------------------"
+    
+    # Show what the MCP section would look like
+    local -a mcp_entries=()
+    for server_name in "${!MCP_SERVERS[@]}"; do
+        if [ "$is_opencode" = true ]; then
+            mcp_entries+=("$(build_server_config_entry "$server_name" true)")
+        else
+            mcp_entries+=("$(build_server_config_entry "$server_name" false)")
+        fi
+    done
+    
+    local mcp_config=""
+    for idx in "${!mcp_entries[@]}"; do
+        if [ "$idx" -gt 0 ]; then
+            mcp_config+=$',\n'
+        fi
+        mcp_config+="${mcp_entries[$idx]}"
+    done
+    
+    if [ "$is_opencode" = true ]; then
+        echo "Would add/merge into mcp section:"
+    else
+        echo "Would add/merge into mcpServers section:"
+    fi
+    
+    echo -e "$mcp_config"
+}
+
 # Display summary
 display_summary() {
     local scope="$1"
@@ -689,6 +823,7 @@ if [ "$DRY_RUN" = true ]; then
 elif [ -z "$SEARXNG_URL" ]; then
     read -p "Enter SEARXNG_URL: " SEARXNG_URL
 fi
+
 
 # Process configurations
 process_opencode_config "$SCOPE" "$DRY_RUN"
