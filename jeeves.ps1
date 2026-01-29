@@ -279,7 +279,8 @@ function Get-UserMountSpec {
     # Create config mount specifications
     $configMounts = @(
         "$($userHome)/.claude:/home/jeeves/.claude:rw",
-        "$($userHome)/.config/opencode:/home/jeeves/.config/opencode:rw"
+        "$($userHome)/.config/opencode:/home/jeeves/.config/opencode:rw",
+        "$($userHome)/.opencode:/home/jeeves/.opencode:rw"
     )
 
     if ($explicitUid -and $explicitUid -ne "1000") {
