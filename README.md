@@ -73,65 +73,52 @@ Jeeves is a comprehensive development environment that combines the power of AI 
 
 ```mermaid
 graph TB
-    %% Jeeves System Architecture
-    subgraph "🐳 Container Layer (Docker)"
-        A[🐧 Ubuntu Base System<br/>Ubuntu latest] --> B[🐍 Python/Node.js Toolchain<br/>Python 3.x + Node.js LTS]
-        B --> C[🛠️ Development Tools<br/>Git, vim, tmux, jq]
-        C --> D[🤖 OpenCode Installation<br/>CLI + TUI + Web UI]
-        C --> E[🧠 Claude Code CLI<br/>AI Assistant]
-        D --> F[⚡ Runtime Environment<br/>Non-root user + Volume mounts]
+    %% Jeeves Architecture
+    subgraph Container["Container Layer"]
+        A[Ubuntu Base] --> B[Python/Node.js]
+        B --> C[OpenCode + Claude Code]
+        C --> D[Runtime Environment]
     end
 
-    subgraph "🤖 AI Agents Layer"
-        G[📋 PRD Creator<br/>Product Requirements Docs<br/>Structured questioning]
-        H[🔬 Deepest-Thinking<br/>Research Agent<br/>Academic-style analysis]
-        I[📝 Platform-specific Templates<br/>OpenCode + Claude Code]
-        G --> I
-        H --> I
+    subgraph Agents["AI Agents"]
+        E[PRD Creator] --> F[Deepest-Thinking]
     end
 
-    subgraph "🔌 MCP Servers Layer"
-        J[🧠 Sequential Thinking<br/>Structured Analysis<br/>Multi-step reasoning]
-        K[🌐 Fetch Server<br/>Web Content Retrieval<br/>Markdown conversion]
-        L[🔍 SearxNG<br/>Privacy Search<br/>Search engine integration]
-        M[🎭 Playwright<br/>Browser Automation<br/>Web interaction]
+    subgraph MCP["MCP Servers"]
+        G[Sequential Thinking]
+        H[Fetch Server]
+        I[SearxNG]
+        J[Playwright]
     end
 
-    %% Connection Relationships
-    F -.->|Provides unified environment for| G
-    F -.->|Provides unified environment for| H
-    F -.->|Enables enhanced capabilities via| J
-    F -.->|Enables enhanced capabilities via| K
-    F -.->|Enables enhanced capabilities via| L
-    F -.->|Enables enhanced capabilities via| M
-    
-    %% User Interface
-    subgraph "👤 Access Methods"
-        N[🌐 Web UI<br/>localhost:3333<br/>Browser-based development]
-        O[💻 CLI/TUI Interface<br/>Command-line tools]
-        P[🖥️ Shell Access<br/>tmux Sessions<br/>Persistent terminal]
+    subgraph Access["User Access"]
+        K[Web UI<br/>localhost:3333]
+        L[CLI/TUI]
+        M[Shell Access]
     end
-    
-    F --> N
-    F --> O
-    F --> P
+
+    %% Main connections
+    D --> E
+    D --> F
+    D --> G
+    D --> H
+    D --> I
+    D --> J
+
+    C --> K
+    C --> L
+    C --> M
 
     %% Styling
-    classDef containerLayer fill:#e1f5fe,stroke:#0c4a6e,color:#ffffff,stroke-width:3px
-    classDef agentsLayer fill:#f3e5f5,stroke:#6366f1,color:#ffffff,stroke-width:3px
-    classDef mcpLayer fill:#e8f5e8,stroke:#d63384,color:#ffffff,stroke-width:3px
-    classDef accessLayer fill:#fef3c7,stroke:#f59e0b,color:#000000,stroke-width:3px
-    classDef baseStyle stroke:#1f2937,stroke-width:2px,color:#1f2937,font-family:monospace
+    classDef container fill:#e3f2fd,stroke:#2c3e50,color:#fff
+    classDef agents fill:#f0f9ff,stroke:#0969da,color:#fff  
+    classDef mcp fill:#ffe4e6,stroke:#d63384,color:#fff
+    classDef access fill:#e8f4fd,stroke:#1a73e8,color:#fff
 
-    class A,B,C,D,E,F containerLayer
-    class G,H,I agentsLayer
-    class J,K,L,M mcpLayer
-    class N,O,P accessLayer
-    
-    %% Title styling
-    linkStyle 0,1,2,3,4,5 stroke:#1f2937,stroke-width:2px
-    linkStyle 6,7,8 stroke:#1f2937,stroke-width:2px,color:#666
-    linkStyle 9,10,11,12,13,14 stroke:#666,stroke-width:2px,stroke-dasharray: 5 5
+    class A,B,C,D container
+    class E,F agents
+    class G,H,I,J mcp
+    class K,L,M access
 ```
 
 ## 🎯 Features Deep Dive
