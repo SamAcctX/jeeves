@@ -368,6 +368,8 @@ services:
       - PLAYWRIGHT_MCP_BROWSER=chromium
       - PLAYWRIGHT_MCP_NO_SANDBOX=1
       - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
+      # Disable Exa web search to ensure SearXNG is used instead
+      - OPENCODE_ENABLE_EXA=false
     volumes:
       - $($mountSpec.WorkspaceMount)`n
 "@
