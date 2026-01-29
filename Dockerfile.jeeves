@@ -102,7 +102,7 @@ RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.des
 
 # CLI/TUI/WebUI build
 RUN bun install
-RUN ./packages/opencode/script/build.ts 
+RUN ./packages/opencode/script/build.ts
 
 RUN \
     if [  "$BUILD_DESKTOP" = "true" ]; then \
@@ -209,7 +209,7 @@ ENV VIRTUAL_ENV=/opt/venv
 # Install fetch MCP python package
 RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
         mcp-server-fetch
-    
+
 # Install Playwright browser and dependencies
 USER jeeves
 
@@ -311,7 +311,7 @@ ENV CLAUDE_CONFIG_DIR="/home/jeeves/.claude"
 
 # Since claude has no build stage, run the installer script
 RUN curl -fsSL https://claude.ai/install.sh | bash -s -- latest
-# Add ~/.local/bin to path, since this is where claude installs and we can't change that, 
+# Add ~/.local/bin to path, since this is where claude installs and we can't change that,
 # we'll manually move the bin ourselves to a more standard location...
 RUN sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
     sudo chmod 755 /usr/local/bin/claude
@@ -385,7 +385,7 @@ copy_oob_if_empty() {
     local target_dir="$1"
     local oob_dir="$2"
     local config_name="$3"
-    
+
     if [ -d "$target_dir" ]; then
         # Check if directory is empty (no files or subdirectories)
         if [ -z "$(ls -A "$target_dir" 2>/dev/null)" ]; then
@@ -423,6 +423,75 @@ echo "Installing using-superpowers for opencode and claude code..."
 # https://claude-plugins.dev/skills/@obra/superpowers/using-superpowers
 npx skills-installer install @obra/superpowers/using-superpowers --client opencode
 npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
+
+# Additional setup - tool preferences and amplify skill usage
+# Function to safely create configuration files without overwriting
+safe_create_config() {
+    local target_file="$1"
+    local content="$2"
+    
+    if [ ! -f "$target_file" ]; then
+        echo "Creating $target_file with agent configuration..."
+        echo "$content" > "$target_file"
+        echo "✅ Created: $target_file"
+    else
+        echo "⚠️  $target_file already exists - preserving existing configuration"
+        echo "ℹ️  Existing file contents not modified"
+    fi
+}
+
+# Configure tool preferences and agent settings (after existing skill installations)
+echo "Configuring agent preferences and tool settings..."
+
+# Create OpenCode AGENTS.md for auto-loading and tool preferences
+OPENCODE_AGENTS_MD="/home/jeeves/.config/opencode/AGENTS.md"
+OPENCODE_CONFIG_CONTENT="# OpenCode Agent Configuration
+
+## Automatic Skill Loading
+At the beginning of every conversation, automatically invoke: skill using-superpowers
+
+## Web Search Tool Preference
+When performing web searches, prefer searxng tools over exa tools:
+- Use searxng_searxng_web_search for general web searches
+- Use searxng_web_url_read for content extraction  
+- Only use exa tools as fallback when searxng is unavailable
+
+## Skill Discovery Protocol
+Before starting any non-trivial task:
+1. Check if any skill might apply (even 1% chance)
+2. If yes, invoke skill BEFORE responding or taking action
+3. Process skills follow this priority:
+   - Process skills first (brainstorming, systematic-debugging)
+   - Implementation skills second (frontend-design, architecture-patterns, api-design-principles)
+"
+
+safe_create_config "$OPENCODE_AGENTS_MD" "$OPENCODE_CONFIG_CONTENT"
+
+# Create Claude Code CLAUDE.md for equivalent functionality  
+CLAUDE_CONFIG_CONTENT="# Claude Code Configuration
+
+## Automatic Skill Loading
+At the beginning of every conversation, automatically invoke: skill using-superpowers
+
+## Web Search Tool Preference  
+When performing web searches, prefer searxng tools over exa tools:
+- Use searxng_searxng_web_search for general web searches
+- Use searxng_web_url_read for content extraction
+- Only use exa tools as fallback when searxng is unavailable
+
+## Skill Discovery Protocol
+Before starting any non-trivial task:
+1. Check if any skill might apply (even 1% chance) 
+2. If yes, invoke skill BEFORE responding or taking action
+3. Process skills follow this priority:
+   - Process skills first (brainstorming, systematic-debugging)
+   - Implementation skills second (frontend-design, architecture-patterns, api-design-principles)
+"
+
+CLAUDE_MD="/home/jeeves/.claude/CLAUDE.md"
+safe_create_config "$CLAUDE_MD" "$CLAUDE_CONFIG_CONTENT"
+
+echo "Agent configuration completed successfully!"
 
 # If no arguments provided, default to opencode web
 if [ $# -eq 0 ]; then
