@@ -72,53 +72,22 @@ Jeeves is a comprehensive development environment that combines the power of AI 
 ## 🏗️ Architecture Overview
 
 ```mermaid
-graph TB
-    %% Jeeves Architecture
-    subgraph Container["Container Layer"]
-        A[Ubuntu Base] --> B[Python/Node.js]
-        B --> C[OpenCode + Claude Code]
-        C --> D[Runtime Environment]
-    end
-
-    subgraph Agents["AI Agents"]
-        E[PRD Creator] --> F[Deepest-Thinking]
-    end
-
-    subgraph MCP["MCP Servers"]
-        G[Sequential Thinking]
-        H[Fetch Server]
-        I[SearxNG]
-        J[Playwright]
-    end
-
-    subgraph Access["User Access"]
-        K[Web UI<br/>localhost:3333]
-        L[CLI/TUI]
-        M[Shell Access]
-    end
-
-    %% Main connections
-    D --> E
-    D --> F
-    D --> G
-    D --> H
-    D --> I
-    D --> J
-
-    C --> K
-    C --> L
-    C --> M
-
-    %% Styling
-    classDef container fill:#e3f2fd,stroke:#2c3e50,color:#fff
-    classDef agents fill:#f0f9ff,stroke:#0969da,color:#fff  
-    classDef mcp fill:#ffe4e6,stroke:#d63384,color:#fff
-    classDef access fill:#e8f4fd,stroke:#1a73e8,color:#fff
-
-    class A,B,C,D container
-    class E,F agents
-    class G,H,I,J mcp
-    class K,L,M access
+graph LR
+    A[🐳 Container] --> B[🤖 AI Tools]
+    A --> C[🔌 MCP Servers]
+    A --> D[👤 User Access]
+    
+    B --> B1[📋 PRD Creator]
+    B --> B2[🔬 Deepest Thinking]
+    
+    C --> C1[🧠 Sequential Thinking]
+    C --> C2[🌐 Fetch]
+    C --> C3[🔍 SearxNG]
+    C --> C4[🎭 Playwright]
+    
+    D --> D1[🌐 Web UI:3333]
+    D --> D2[💻 CLI/TUI]
+    D --> D3[🖥️ Shell]
 ```
 
 ## 🎯 Features Deep Dive
