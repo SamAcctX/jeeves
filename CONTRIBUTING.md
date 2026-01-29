@@ -330,28 +330,28 @@ Brief description of changes
 
 ```
 jeeves/
-├── README.md                 # Main documentation
-├── CONTRIBUTING.md            # Contribution guidelines
-├── LICENSE                   # AGPLv3 license
-├── jeeves.ps1               # Main management script
-├── Dockerfile.jeeves          # Container build file
-├── .gitignore               # Git ignore rules
-├── .tmp/                    # Generated configs (git ignored)
-├── jeeves/                  # Package directory
-│   ├── bin/                # Installation scripts
+├── README.md                    # Main documentation
+├── CONTRIBUTING.md              # Contribution guidelines
+├── LICENSE                      # AGPLv3 license
+├── jeeves.ps1                   # Main management script
+├── Dockerfile.jeeves            # Container build file
+├── .gitignore                   # Git ignore rules
+├── .tmp/                        # Generated configs (git ignored)
+├── jeeves/                      # Package directory
+│   ├── bin/                     # Installation scripts
 │   │   ├── install-mcp-servers.sh
 │   │   └── install-agents.sh
-│   ├── PRD/                # PRD Creator agent
+│   ├── PRD/                     # PRD Creator agent
 │   │   ├── README-PRD.md
 │   │   ├── prd-creator-prompt.md
 │   │   ├── prd-creator-opencode-template.md
 │   │   └── prd-creator-claude-template.md
-│   └── Deepest-Thinking/    # Research agent
+│   └── Deepest-Thinking/        # Research agent
 │       ├── README-Deepest-Thinking.md
 │       ├── deepest-thinking-prompt.md
 │       ├── deepest-thinking-opencode-template.md
 │       └── deepest-thinking-claude-template.md
-└── docs/                      # Reference documentation
+└── docs/                        # Reference documentation
     ├── commands.md
     ├── configuration.md
     └── troubleshooting.md
