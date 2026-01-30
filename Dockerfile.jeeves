@@ -462,7 +462,10 @@ Before starting any non-trivial task:
 3. Process skills follow this priority:
    - Process skills first (brainstorming, systematic-debugging)
    - Implementation skills second (frontend-design, architecture-patterns, api-design-principles)
+
+Since skills are only loaded at startup, if a new skill is installed, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option).
 "
+
 
 safe_create_config "$OPENCODE_AGENTS_MD" "$OPENCODE_CONFIG_CONTENT"
 
@@ -485,6 +488,8 @@ Before starting any non-trivial task:
 3. Process skills follow this priority:
    - Process skills first (brainstorming, systematic-debugging)
    - Implementation skills second (frontend-design, architecture-patterns, api-design-principles)
+
+   Since skills are only loaded at startup, if a new skill is installed, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option).
 "
 
 CLAUDE_MD="/home/jeeves/.claude/CLAUDE.md"
