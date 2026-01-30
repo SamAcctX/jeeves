@@ -309,12 +309,21 @@ USER jeeves
 # env to hopefully push the `~/.claude.json` into the `~/.claude` folder for easier volume mapping
 ENV CLAUDE_CONFIG_DIR="/home/jeeves/.claude"
 
-# Since claude has no build stage, run the installer script
-RUN curl -fsSL https://claude.ai/install.sh | bash -s -- latest
-# Add ~/.local/bin to path, since this is where claude installs and we can't change that,
-# we'll manually move the bin ourselves to a more standard location...
-RUN sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
-    sudo chmod 755 /usr/local/bin/claude
+# Build argument to control Claude Code installation
+ARG INSTALL_CLAUDE_CODE
+ENV INSTALL_CLAUDE_CODE=${INSTALL_CLAUDE_CODE:-false}
+
+# Since claude has no build stage, run the installer script (conditional)
+RUN if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then \
+        echo "Installing Claude Code..."; \
+        curl -fsSL https://claude.ai/install.sh | bash -s -- latest; \
+        # Add ~/.local/bin to path, since this is where claude installs and we can't change that, \
+        # we'll manually move the bin ourselves to a more standard location... \
+        sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
+        sudo chmod 755 /usr/local/bin/claude; \
+    else \
+        echo "Claude Code installation skipped (INSTALL_CLAUDE_CODE is not 'true')"; \
+    fi
 
 #Linux CLI Binary, copied to path location as well since we will use it interactively
 COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/usr/local/bin/opencode"]
@@ -448,13 +457,18 @@ OPENCODE_CONFIG_CONTENT="# OpenCode Agent Configuration
 
 ## Automatic Skill Loading
 At the beginning of every conversation, automatically invoke: skill using-superpowers
-Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option)
+Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually '/exit' will close the application, and the user can resume the session via the --continue CLI option)
 
 ## Web Search Tool Preference
 When performing web searches, prefer searxng tools over exa tools:
 - Use searxng_searxng_web_search for general web searches
 - Use searxng_web_url_read for content extraction  
 - Only use exa tools as fallback when searxng is unavailable
+
+## Containerized Limitations
+You are running in a Docker container.  While you have full access to the /proj directory, you will have limited access to any other folder
+You may ask the user to install additional Ubuntu packages if needed, but you cannot do so yourself
+You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
 "
 
 
@@ -465,13 +479,18 @@ CLAUDE_CONFIG_CONTENT="# Claude Code Configuration
 
 ## Automatic Skill Loading
 At the beginning of every conversation, automatically invoke: skill using-superpowers
-Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option)
+Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually '/exit' will close the application, and the user can resume the session via the --continue CLI option)
 
 ## Web Search Tool Preference  
 When performing web searches, prefer searxng tools over exa tools:
 - Use searxng_searxng_web_search for general web searches
 - Use searxng_web_url_read for content extraction
 - Only use exa tools as fallback when searxng is unavailable
+
+## Containerized Limitations
+You are running in a Docker container.  While you have full access to the /proj directory, you will have limited access to any other folder
+You may ask the user to install additional Ubuntu packages if needed, but you cannot do so yourself
+You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
 "
 
 CLAUDE_MD="/home/jeeves/.claude/CLAUDE.md"

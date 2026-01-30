@@ -19,6 +19,9 @@
 .PARAMETER Desktop
     Build desktop binaries (valid for 'build' command)
 
+.PARAMETER InstallClaudeCode
+    Install Claude Code in the container (valid for 'build' command)
+
 .PARAMETER Clean
     Perform a clean start: stops, removes container/image, rebuilds from scratch, then starts (valid for 'start' command)
 
@@ -455,10 +458,13 @@ function Test-Dockerfile {
 .PARAMETER NoCache
     If specified, builds without using Docker's layer cache
 
-.PARAMETER Desktop
+    .PARAMETER Desktop
     If specified, sets BUILD_DESKTOP=true to include desktop binary builds
 
-.PARAMETER Clean
+    .PARAMETER InstallClaudeCode
+    If specified, sets INSTALL_CLAUDE_CODE=true to install Claude Code in the container
+
+    .PARAMETER Clean
     If specified, performs a clean build by removing existing containers and images first
 
 .EXAMPLE
@@ -477,6 +483,7 @@ function Build-Image {
     param(
         [switch]$NoCache,
         [switch]$Desktop,
+        [switch]$InstallClaudeCode,
         [switch]$Clean
     )
 
@@ -502,14 +509,14 @@ function Build-Image {
         }
     }
 
-    # Add build arguments - these shouldn't be needed anymore at build-time
-    #$userIds = Get-UserIds
-    #$buildArgs += "--build-arg", "UID=$($userIds.UID)"
-    #$buildArgs += "--build-arg", "GID=$($userIds.GID)"
-
     if ($Desktop) {
         Write-Log "Building with desktop support..." -warning
         $buildArgs += "--build-arg", "BUILD_DESKTOP=true"
+    }
+
+    if ($InstallClaudeCode) {
+        Write-Log "Installing Claude Code in container..." -warning
+        $buildArgs += "--build-arg", "INSTALL_CLAUDE_CODE=true"
     }
 
     # Add remaining mandatory flags
@@ -582,7 +589,8 @@ function Ensure-ImageExists {
     param(
         [switch]$ForceRebuild,
         [switch]$NoCache,
-        [switch]$Desktop
+        [switch]$Desktop,
+        [switch]$InstallClaudeCode
     )
 
     if ($ForceRebuild) {
@@ -597,7 +605,7 @@ function Ensure-ImageExists {
     }
 
     Write-Log "Image ${Script:IMAGE_NAME}:${Script:IMAGE_TAG} not found; building now..." -debug
-    Build-Image -NoCache:$NoCache -Desktop:$Desktop
+    Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
 
     return Get-ImageId
 }
@@ -698,10 +706,11 @@ function Ensure-ContainerRunning {
     param(
         [switch]$AutoStart = $true,
         [switch]$ForceRebuild,
-        [switch]$NoCache
+        [switch]$NoCache,
+        [switch]$InstallClaudeCode
     )
 
-    Ensure-ImageExists -ForceRebuild:$ForceRebuild -NoCache:$NoCache
+    Ensure-ImageExists -ForceRebuild:$ForceRebuild -NoCache:$NoCache -InstallClaudeCode:$InstallClaudeCode
 
     $containerId = Get-ContainerId
     if ($containerId) {
@@ -868,6 +877,13 @@ function Remove-Container {
     Uses `docker exec -it` for an interactive TTY session
 #>
 function Enter-Shell {
+    param([switch]$New)
+
+    if ($New) {
+        Write-Log "--new flag set: stopping and removing existing container..." -warning
+        Ensure-ContainerNotPresent -Force
+    }
+
     $rawContainerOutput = @(Ensure-ContainerRunning)
     $containerId = $rawContainerOutput |
         ForEach-Object { $_.ToString().Trim() } |
@@ -1064,12 +1080,14 @@ Commands:
   clean     Remove container and image
 
 Options:
-  --help       Show detailed help for a command
-  --no-cache   Build without using cache (build command)
-  --desktop    Build desktop binaries (build command)
-  --clean      Clean start: rebuild everything (start command)
-  --remove     Also remove container (stop command)
-  --force      Force stop container (stop command)
+  --help                Show detailed help for a command
+  --no-cache            Build without using cache (build command)
+  --desktop             Build desktop binaries (build command)
+  --install-claude-code Install Claude Code in container (build command)
+  --clean               Clean start: rebuild everything (start command)
+  --remove              Also remove container (stop command)
+  --force               Force stop container (stop command)
+  --new                 Stop and remove container before shell (shell command)
 
 Aliases:
   b -> build
@@ -1079,17 +1097,19 @@ Aliases:
   st, ps -> status
 
 Examples:
-  jeeves build              # Build the image
-  jeeves build --no-cache   # Clean build without cache
-  jeeves build --desktop    # Build with desktop support
-  jeeves start              # Start the container
-  jeeves start --clean      # Clean rebuild and start
-  jeeves shell              # Enter the container
-  jeeves logs               # View logs
-  jeeves stop               # Stop the container
-  jeeves stop --remove      # Stop and remove container
-  jeeves stop --force       # Force stop
-  jeeves clean              # Remove everything
+  jeeves build                    # Build the image
+  jeeves build --no-cache         # Clean build without cache
+  jeeves build --desktop          # Build with desktop support
+  jeeves build --install-claude-code  # Build with Claude Code installed
+  jeeves start                    # Start the container
+  jeeves start --clean            # Clean rebuild and start
+  jeeves shell                    # Enter the container
+  jeeves shell --new              # Stop, remove, and enter fresh container
+  jeeves logs                     # View logs
+  jeeves stop                     # Stop the container
+  jeeves stop --remove            # Stop and remove container
+  jeeves stop --force             # Force stop
+  jeeves clean                    # Remove everything
 
 For detailed help on a specific command, use: jeeves <command> --help
 "@ -ForegroundColor Cyan
@@ -1130,17 +1150,23 @@ OPTIONS:
                  This forces a complete rebuild of all layers, useful for
                  ensuring a clean build or troubleshooting build issues.
 
-    --desktop    Build desktop binaries (Linux, Windows)
-                 Includes the OpenCode desktop application (Tauri-based)
-                 in the image. This significantly increases build time.
+    --desktop             Build desktop binaries (Linux, Windows)
+                          Includes the OpenCode desktop application (Tauri-based)
+                          in the image. This significantly increases build time.
 
-    --help       Show this help message
+    --install-claude-code Install Claude Code in the container
+                          Downloads and installs Claude Code from the official
+                          installer. Disabled by default.
+
+    --help                Show this help message
 
 EXAMPLES:
     jeeves build
     jeeves build --no-cache
     jeeves build --desktop
     jeeves build --no-cache --desktop
+    jeeves build --install-claude-code
+    jeeves build --no-cache --desktop --install-claude-code
 
 NOTES:
     - The build uses UID/GID arguments for proper file permissions
@@ -1226,13 +1252,28 @@ Jeeves restart - Restart the Container
 DESCRIPTION:
     Stops and immediately starts the container. Useful for applying changes
     that don't require a full rebuild, such as environment variable changes
-    or when troubleshooting.
+    or when troubleshooting. Can also rebuild the image with specific options.
 
 USAGE:
-    jeeves restart
+    jeeves restart [options]
+
+OPTIONS:
+    --no-cache            Build without using Docker's layer cache
+                          Forces a complete rebuild of all layers.
+
+    --desktop             Build desktop binaries (Linux, Windows)
+                          Includes the OpenCode desktop application.
+
+    --install-claude-code Install Claude Code in the container
+                          Downloads and installs Claude Code.
+
+    --help                Show this help message
 
 EXAMPLES:
     jeeves restart
+    jeeves restart --no-cache
+    jeeves restart --desktop
+    jeeves restart --no-cache --desktop --install-claude-code
 
 NOTES:
 - Equivalent to: jeeves stop && jeeves start
@@ -1273,10 +1314,17 @@ DESCRIPTION:
     you to execute commands directly within the container environment.
 
 USAGE:
-    jeeves shell
+    jeeves shell [options]
+
+OPTIONS:
+    --new        Stop and remove the current container before entering
+                 This ensures a fresh container instance is created.
+
+    --help       Show this help message
 
 EXAMPLES:
     jeeves shell
+    jeeves shell --new
 
 NOTES:
 - Builds image and starts container if not running
@@ -1455,13 +1503,19 @@ function Main {
         [switch]$Desktop,
 
         [Parameter(Mandatory = $false)]
+        [switch]$InstallClaudeCode,
+
+        [Parameter(Mandatory = $false)]
         [switch]$Clean,
 
         [Parameter(Mandatory = $false)]
         [switch]$Remove,
 
         [Parameter(Mandatory = $false)]
-        [switch]$Force
+        [switch]$Force,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$New
     )
 
     # Validate Docker is available
@@ -1479,12 +1533,12 @@ function Main {
 
         # Map menu selection back to command
         switch -Regex ($selectedCommand) {
-            "^(build)$" { Build-Image -NoCache:$NoCache -Desktop:$Desktop }
+            "^(build)$" { Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode }
             "^(start)$" { Start-Container -Clean:$Clean }
             "^(stop)$" { Stop-Container -Force:$Force -Remove:$Remove }
-            "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop; Start-Container }
+            "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container }
             "^(rm)$" { Remove-Container }
-            "^(shell)$" { Enter-Shell }
+            "^(shell)$" { Enter-Shell -New:$New }
             "^(logs)$" { Show-Logs }
             "^(status)$" { Show-Status }
             "^(clean)$" { Remove-Container; Remove-Image }
@@ -1496,7 +1550,7 @@ function Main {
     switch -Regex ($Command) {
         "^(build|b)$" {
             if ($Help) { Show-CommandHelp "build"; exit 0 }
-            Build-Image -NoCache:$NoCache -Desktop:$Desktop
+            Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
         }
         "^(start|up)$" {
             if ($Help) { Show-CommandHelp "start"; exit 0 }
@@ -1508,7 +1562,7 @@ function Main {
         }
         "^(restart)$" {
             if ($Help) { Show-CommandHelp "restart"; exit 0 }
-            Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop; Start-Container
+            Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container
         }
         "^(rm|remove)$" {
             if ($Help) { Show-CommandHelp "rm"; exit 0 }
@@ -1516,7 +1570,7 @@ function Main {
         }
         "^(shell|attach|sh)$" {
             if ($Help) { Show-CommandHelp "shell"; exit 0 }
-            Enter-Shell
+            Enter-Shell -New:$New
         }
         "^(logs|log)$" {
             if ($Help) { Show-CommandHelp "logs"; exit 0 }

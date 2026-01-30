@@ -9,7 +9,7 @@
 ## ✨ Key Features
 
 - 🐳 **Containerized Environment** - Consistent, portable development setup with Ubuntu base
-- 🤖 **Dual AI Platforms** - OpenCode and Claude Code with unified configuration
+- 🤖 **AI Platforms** - OpenCode with optional Claude Code support
 - 🛠️ **Pre-configured MCP Servers** - Sequential Thinking, Fetch, SearxNG, Playwright
 - 🎯 **Specialized AI Agents** - PRD Creator and Deepest-Thinking research agent
 - 🌐 **Web UI Access** - Browser-based development at http://localhost:3333
@@ -50,6 +50,8 @@ cd jeeves
 
 # Inside the container, verify installations
 opencode --version
+
+# If you built with --install-claude-code flag:
 claude --version
 ```
 
@@ -145,11 +147,11 @@ The `jeeves.ps1` script provides comprehensive container management:
 
 | Command | Alias | Description | Example |
 |---------|-------|-------------|---------|
-| `build` | `b` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop` |
+| `build` | `b` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop --install-claude-code` |
 | `start` | `up` | Launch container | `./jeeves.ps1 start --clean` |
 | `stop` | `down` | Stop container | `./jeeves.ps1 stop --remove` |
-| `restart` | - | Restart container | `./jeeves.ps1 restart` |
-| `shell` | `attach`, `sh` | Terminal access | `./jeeves.ps1 shell` |
+| `restart` | - | Restart container | `./jeeves.ps1 restart --no-cache --desktop` |
+| `shell` | `attach`, `sh` | Terminal access | `./jeeves.ps1 shell --new` |
 | `logs` | - | View logs | `./jeeves.ps1 logs` |
 | `status` | `st`, `ps` | Check status | `./jeeves.ps1 status` |
 | `clean` | - | Cleanup | `./jeeves.ps1 clean` |
@@ -186,6 +188,15 @@ The `jeeves.ps1` script provides comprehensive container management:
 3. Use OpenCode CLI/TUI commands
 4. Access tmux sessions for persistent work
 5. Utilize pre-installed development tools
+
+**Shell Options:**
+```bash
+# Enter existing container (default)
+./jeeves.ps1 shell
+
+# Stop/remove current container and enter fresh instance
+./jeeves.ps1 shell --new
+```
 
 #### Agent-Assisted Development
 1. **PRD Creation**: Use `@prd-creator` for project planning
@@ -280,7 +291,23 @@ Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 
 # Build with desktop applications
 ./jeeves.ps1 build --desktop
+
+# Build with Claude Code installed (disabled by default)
+./jeeves.ps1 build --install-claude-code
+
+# Full build with all options
+./jeeves.ps1 build --no-cache --desktop --install-claude-code
 ```
+
+#### Build Options
+
+| Flag | Description |
+|------|-------------|
+| `--no-cache` | Build without Docker layer cache (clean build) |
+| `--desktop` | Include desktop binaries (Linux/Windows apps) |
+| `--install-claude-code` | Install Claude Code in the container |
+
+**Note:** Claude Code installation is disabled by default. Use `--install-claude-code` to include it.
 
 #### Performance Optimization
 - **Docker Memory**: Allocate 4GB+ in Docker Desktop settings
