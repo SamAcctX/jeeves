@@ -76,8 +76,9 @@ git checkout -b feature/your-feature-name
 # Inside the container, verify tools work
 opencode --version
 claude --version
-@prd-creator --help
-@deepest-thinking --help
+
+# Note: Agents (@prd-creator, @deepest-thinking) are markdown templates
+# They become available as subagents after installation
 ```
 
 ## 📋 Contribution Types
@@ -141,14 +142,11 @@ We welcome the following types of contributions:
 ./jeeves.ps1 build --no-cache
 ./jeeves.ps1 start
 
-# Test inside the container
-./jeeves.ps1 shell -c "
-# Test your changes here
-opencode --agent your-new-agent
-claude --help
-./install-mcp-servers.sh --dry-run
-./install-agents.sh --global
-"
+# Test inside the container using docker exec
+docker exec jeeves opencode --version
+docker exec jeeves claude --version
+docker exec jeeves bash -c "cd /usr/local/bin && install-mcp-servers.sh --dry-run"
+docker exec jeeves bash -c "cd /usr/local/bin && install-agents.sh --global"
 
 # Test different platforms if possible
 ```
@@ -179,7 +177,7 @@ git push origin feature/your-feature-name
 - Use cmdlet-style verb-noun naming
 - Include comment-based help for functions
 - Add proper error handling with try/catch
-- Use Write-Output/Write-Error/Write-Warning for output
+- Use `Write-Log` with switches (`-info`, `-error`, `-warning`, `-success`, `-trace`, `-debug`) for output
 
 #### Example Function Style:
 ```powershell
@@ -270,18 +268,14 @@ show_help() {
 ### Automated Testing
 ```bash
 # Run basic functionality tests
-./jeeves.ps1 shell -c "
-opencode --version
-claude --version
-cd /usr/local/bin && ./install-mcp-servers.sh --dry-run
-./install-agents.sh --global
-"
+docker exec jeeves opencode --version
+docker exec jeeves claude --version
+docker exec jeeves bash -c "cd /usr/local/bin && install-mcp-servers.sh --dry-run"
+docker exec jeeves bash -c "cd /usr/local/bin && install-agents.sh --global"
 
-# Test agent functionality
-./jeeves.ps1 shell -c "
-@prd-creator --help
-@deepest-thinking --help
-"
+# Verify agent templates are installed
+docker exec jeeves ls -la /opt/jeeves/PRD/
+docker exec jeeves ls -la /opt/jeeves/Deepest-Thinking/
 ```
 
 ### Cross-Platform Testing
@@ -291,11 +285,81 @@ cd /usr/local/bin && ./install-mcp-servers.sh --dry-run
 
 ## 🔄 Pull Request Process
 
+### Commit Message Convention
+
+All commit messages and PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This is enforced by automated CI checks.
+
+**Format:**
+```
+<type>[optional scope]: <description>
+```
+
+**Types:**
+- **feat**: A new feature
+- **fix**: A bug fix
+- **docs**: Documentation only changes
+- **style**: Code style changes (formatting, semicolons, etc.)
+- **refactor**: Code refactoring
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **chore**: Build process or auxiliary tool changes
+- **sec**: Security-related changes
+- **revert**: Reverting a previous commit
+
+**Scopes (optional):**
+- **ps1**: PowerShell scripts
+- **docker**: Docker-related changes
+- **docs**: Documentation
+- **ci**: CI/CD configuration
+- **deps**: Dependencies
+- **core**: Core functionality
+- **bin**: Binary/installation scripts
+
+**Examples:**
+```
+feat(ps1): add container restart command
+fix(docker): resolve path escaping issue
+docs: update installation instructions
+sec: fix privilege escalation vulnerability
+chore(deps): update Docker base image to Ubuntu 24.04
+```
+
+**Important Notes:**
+- PR titles are automatically validated by GitHub Actions
+- The subject line must not start with an uppercase letter
+- No period at the end of the subject line
+- Breaking changes should include `!` before the colon (e.g., `feat!: breaking change`)
+
 ### Before Submitting
 1. **Test thoroughly** - Ensure your changes work as expected
 2. **Update documentation** - Document new features and changes
 3. **Check for existing issues** - Avoid duplicate work
 4. **Keep changes focused** - One feature or fix per PR if possible
+5. **Follow conventional commits** - PR title must follow the format above
+
+### Important: No Direct Commits to Main
+
+The `main` branch is protected - **direct pushes are blocked**. All changes must go through pull requests:
+
+```bash
+# Create a feature branch
+git checkout -b feature/your-feature-name
+
+# Make your changes and commit
+git add .
+git commit -m "feat: your conventional commit message"
+
+# Push the branch
+git push origin feature/your-feature-name
+
+# Open a PR via GitHub UI or: gh pr create
+```
+
+PRs require:
+- At least 1 approval (if configured)
+- All status checks passing (including PR title linting)
+- No merge conflicts
+- All conversations resolved
 
 ### PR Template
 ```markdown
@@ -426,7 +490,7 @@ jeeves/
 - Provide context and error messages when seeking help
 
 ### Reporting Issues
-- Use the issue template found in `.github/ISSUE_TEMPLATE/` directory
+- Open a new issue with detailed information
 - Include system information and reproduction steps
 - Provide logs and screenshots when applicable
 

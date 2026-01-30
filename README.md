@@ -73,12 +73,16 @@ Jeeves is a comprehensive development environment that combines the power of AI 
 
 ```mermaid
 graph LR
-    A[🐳 Container] --> B[🤖 AI Tools]
+    A[🐳 Container] --> B[🤖 AI Platforms]
     A --> C[🔌 MCP Servers]
     A --> D[👤 User Access]
+    A --> E[🎯 AI Agents]
     
-    B --> B1[📋 PRD Creator]
-    B --> B2[🔬 Deepest Thinking]
+    B --> B1[OpenCode]
+    B --> B2[Claude Code]
+    
+    E --> E1[📋 PRD Creator]
+    E --> E2[🔬 Deepest Thinking]
     
     C --> C1[🧠 Sequential Thinking]
     C --> C2[🌐 Fetch]
@@ -139,16 +143,16 @@ Browser automation and web interaction for testing and scraping.
 
 The `jeeves.ps1` script provides comprehensive container management:
 
-| Command | Description | Example |
-|---------|-------------|---------|
-| `build` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop` |
-| `start` | Launch container | `./jeeves.ps1 start --clean` |
-| `stop` | Stop container | `./jeeves.ps1 stop --remove` |
-| `restart` | Restart container | `./jeeves.ps1 restart` |
-| `shell` | Terminal access | `./jeeves.ps1 shell` |
-| `logs` | View logs | `./jeeves.ps1 logs` |
-| `status` | Check status | `./jeeves.ps1 status` |
-| `clean` | Cleanup | `./jeeves.ps1 clean` |
+| Command | Alias | Description | Example |
+|---------|-------|-------------|---------|
+| `build` | `b` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop` |
+| `start` | `up` | Launch container | `./jeeves.ps1 start --clean` |
+| `stop` | `down` | Stop container | `./jeeves.ps1 stop --remove` |
+| `restart` | - | Restart container | `./jeeves.ps1 restart` |
+| `shell` | `attach`, `sh` | Terminal access | `./jeeves.ps1 shell` |
+| `logs` | - | View logs | `./jeeves.ps1 logs` |
+| `status` | `st`, `ps` | Check status | `./jeeves.ps1 status` |
+| `clean` | - | Cleanup | `./jeeves.ps1 clean` |
 
 #### Interactive Mode
 ```powershell
@@ -209,9 +213,11 @@ Key environment variables in docker-compose:
 ```yaml
 environment:
   - PLAYWRIGHT_MCP_HEADLESS=1
+  - PLAYWRIGHT_MCP_BROWSER=chromium
+  - PLAYWRIGHT_MCP_NO_SANDBOX=1
+  - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
+  - OPENCODE_ENABLE_EXA=false
   - SEARXNG_URL=${SEARXNG_URL:-}
-  - PUID=${PUID:-1000}
-  - PGID=${PGID:-1000}
 ```
 
 ### Agent Configuration
@@ -219,8 +225,7 @@ environment:
 #### Installing Custom Agents
 ```bash
 # Inside the container
-cd /usr/local/bin
-./install-agents.sh --global
+install-agents.sh --global
 ```
 
 #### Agent Templates
@@ -244,8 +249,7 @@ tools: [read, write, grep, glob, bash, webfetch, question]
 #### Adding New MCP Servers
 ```bash
 # Inside the container
-cd /usr/local/bin
-./install-mcp-servers.sh --global --dry-run
+install-mcp-servers.sh --global --dry-run
 ```
 
 #### Manual Configuration
@@ -255,11 +259,9 @@ Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 {
   "mcp": {
     "servers": {
-      "sequential-thinking": {
+      "sequentialthinking": {
         "type": "local",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
-        "environment": {}
+        "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
       }
     }
   }
@@ -299,7 +301,7 @@ Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 - name: Test with Jeeves
   run: |
     ./jeeves.ps1 start
-    ./jeeves.ps1 shell -c "opencode run 'run tests'"
+    docker exec jeeves bash -c "opencode run 'run tests'"
     ./jeeves.ps1 stop
 ```
 
@@ -307,7 +309,7 @@ Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 ```powershell
 # Automated development workflow
 ./jeeves.ps1 start
-./jeeves.ps1 shell -c "cd /proj && npm install && npm test"
+docker exec jeeves bash -c "cd /proj && npm install && npm test"
 ./jeeves.ps1 stop
 ```
 

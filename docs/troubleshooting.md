@@ -57,7 +57,9 @@ Container starts but exits immediately without staying running.
 
 **1. Check Container Logs**
 ```bash
-./jeeves.ps1 logs --tail 50
+./jeeves.ps1 logs
+# Or view last 50 lines with docker
+docker logs --tail 50 jeeves
 ```
 
 **2. Inspect Container**
@@ -95,8 +97,8 @@ id -g
 docker exec jeeves id
 
 # Fix mapping
-export PUID=$(id -u)
-export PGID=$(id -g)
+export UID=$(id -u)
+export GID=$(id -g)
 ./jeeves.ps1 stop
 ./jeeves.ps1 start
 ```
@@ -111,7 +113,7 @@ sudo chown -R $USER:$USER ~/.opencode ~/.claude
 
 # Fix permissions
 chmod 755 ~/.opencode ~/.claude
-chmod 600 ~/.opencode/opencode.json ~/.claude/.claude.json
+chmod 600 ~/.config/opencode/opencode.json ~/.claude.json
 ```
 
 **3. Windows-Specific Issues**
@@ -143,8 +145,10 @@ docker exec jeeves which opencode
 # Check installation directory
 docker exec jeeves ls -la /usr/local/bin/ | grep opencode
 
-# Reinstall OpenCode
-docker exec jeeves npm install -g @opencode-ai/opencode
+# Reinstall OpenCode (requires container rebuild)
+./jeeves.ps1 clean
+./jeeves.ps1 build --no-cache
+./jeeves.ps1 start
 ```
 
 **2. Check PATH**
@@ -260,11 +264,8 @@ docker exec jeeves curl -fsSL https://claude.ai/install.sh | bash
 
 **2. Alternative Installation Methods**
 ```bash
-# Using npm
-docker exec jeeves npm install -g @anthropic-ai/claude-code
-
-# Using pip
-docker exec jeeves pip install claude-code
+# Note: Claude Code is installed via the official install script during container build
+# For host installation, see: https://claude.ai/install
 ```
 
 ### Authentication Issues
@@ -285,7 +286,7 @@ claude config set anthropic.api_key your-api-key-here
 **2. Check Configuration**
 ```bash
 claude config show
-cat ~/.claude/.claude.json
+cat ~/.claude.json
 ```
 
 ## MCP Server Issues
@@ -306,18 +307,17 @@ opencode agent list
 docker exec jeeves npx -y @modelcontextprotocol/server-sequential-thinking --help
 
 # Check installation script
-cd /usr/local/bin
-./install-mcp-servers.sh --dry-run
-./install-mcp-servers.sh --global
+install-mcp-servers.sh --dry-run
+install-mcp-servers.sh --global
 ```
 
 **2. Verify Configuration**
 ```bash
 # OpenCode configuration
-cat ~/.opencode/opencode.json | jq .mcp
+cat ~/.config/opencode/opencode.json | jq .mcp
 
 # Claude configuration
-cat ~/.claude/.claude.json | jq .mcpServers
+cat ~/.claude.json | jq .mcpServers
 ```
 
 **3. Test Individual Servers**
@@ -347,8 +347,9 @@ opencode config set mcp.servers.searxng.environment.SEARXNG_URL https://search.e
 
 **2. Use Public Instance**
 ```bash
-# Set to public SearxNG instance
-export SEARXNG_URL=https://search.brave.com
+# Set to a public SearxNG instance
+# Find public instances at: https://searx.space/
+export SEARXNG_URL=https://search.example.com
 ```
 
 **3. Test Connection**
@@ -376,10 +377,10 @@ PLAYWRIGHT_MCP_HEADLESS=1 npx playwright install
 **2. Check Browser Path**
 ```bash
 # Verify browser installation
-docker exec jeeves ls -la $PLAYWRIGHT_MCP_HEADLESS
+docker exec jeeves ls -la ~/ms-playwright/
 
-# Test manually
-docker exec jeeves $PLAYWRIGHT_MCP_HEADLESS/ms-playwright --version
+# Check Playwright version
+docker exec jeeves npx playwright --version
 ```
 
 **3. Display Issues**
@@ -648,12 +649,11 @@ brew install powershell
 Enable verbose logging for troubleshooting:
 
 ```bash
-# Enable debug logging
-export DEBUG=1
-export JEEVES_DEBUG=1
+# Build with verbose output and save to log
+./jeeves.ps1 build --no-cache 2>&1 | tee build.log
 
-# Build with debug output
-./jeeves.ps1 build --debug 2>&1 | tee build.log
+# Or capture all output from any command
+./jeeves.ps1 start 2>&1 | tee start.log
 ```
 
 ### Log Collection
@@ -669,8 +669,8 @@ docker info > docker-info.log
 docker version > docker-version.log
 
 # Configuration files
-cat ~/.opencode/opencode.json > opencode-config.log
-cat ~/.claude/.claude.json > claude-config.log
+cat ~/.config/opencode/opencode.json > opencode-config.log 2>/dev/null || echo "OpenCode config not found"
+cat ~/.claude.json > claude-config.log 2>/dev/null || echo "Claude config not found"
 ```
 
 ### Report Issues

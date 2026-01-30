@@ -15,7 +15,11 @@ The main Docker build file defines the Jeeves container environment.
 FROM ubuntu:latest AS base
 # System packages and Python/Node.js setup
 
-# Stage 2: Runtime
+# Stage 2: Builder
+FROM base AS opencode-builder
+# Builds OpenCode from source with optional desktop binaries
+
+# Stage 3: Runtime
 FROM base AS runtime
 # Final container setup with user and tools
 ```
@@ -24,9 +28,13 @@ FROM base AS runtime
 
 **Adding System Packages:**
 ```dockerfile
-RUN apt-get update && apt-get install -y \
-    your-custom-package \
-    && rm -rf /var/lib/apt/lists/*
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        your-custom-package \
+        && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
 ```
 
 **Setting Environment Variables:**
@@ -40,55 +48,58 @@ ENV PATH="/usr/local/bin:${PATH}"
 Generated dynamically in `.tmp/docker-compose.yml`:
 
 ```yaml
-version: '3.8'
-
 services:
   jeeves:
     build:
-      context: .
+      context: ..
       dockerfile: Dockerfile.jeeves
-      target: runtime
-    image: jeeves:latest
-    container_name: jeeves
-    ports:
-      - "3333:3333"
-    volumes:
-      - ./:/proj
-      - /home/jeeves/.opencode:/root/.opencode
-      - /home/jeeves/.claude:/root/.claude
     environment:
       - PLAYWRIGHT_MCP_HEADLESS=1
-      - SEARXNG_URL=${SEARXNG_URL:-}
-      - PUID=${PUID:-1000}
-      - PGID=${PGID:-1000}
+      - PLAYWRIGHT_MCP_BROWSER=chromium
+      - PLAYWRIGHT_MCP_NO_SANDBOX=1
+      - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
+      - OPENCODE_ENABLE_EXA=false
+    volumes:
+      - $(pwd):/proj:rw
+      - ~/.claude:/home/jeeves/.claude:rw
+      - ~/.config/opencode:/home/jeeves/.config/opencode:rw
+      - ~/.opencode:/home/jeeves/.opencode:rw
+    ports:
+      - "3333:3333"
     networks:
       - jeeves-network
-    user: "${PUID}:${PGID}"
+
+networks:
+  jeeves-network:
+    driver: bridge
 ```
 
 #### Volume Mounts
 
 | Host Path | Container Path | Purpose |
 |-----------|----------------|---------|
-| `./` | `/proj` | Project workspace |
-| `/home/jeeves/.opencode` | `/root/.opencode` | OpenCode configuration |
-| `/home/jeeves/.claude` | `/root/.claude` | Claude Code configuration |
+| `$(pwd)` | `/proj` | Project workspace |
+| `~/.claude` | `/home/jeeves/.claude` | Claude Code configuration |
+| `~/.config/opencode` | `/home/jeeves/.config/opencode` | OpenCode configuration |
+| `~/.opencode` | `/home/jeeves/.opencode` | OpenCode agent directory |
 
 #### Environment Variables
 
 | Variable | Default | Description |
 |----------|---------|---------|
-| `PLAYWRIGHT_MCP_HEADLESS` | `1` | Playwright browser installation |
+| `PLAYWRIGHT_MCP_HEADLESS` | `1` | Playwright headless mode |
+| `PLAYWRIGHT_MCP_BROWSER` | `chromium` | Default Playwright browser |
+| `PLAYWRIGHT_MCP_NO_SANDBOX` | `1` | Disable browser sandbox |
+| `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS` | `1` | Allow file access |
+| `OPENCODE_ENABLE_EXA` | `false` | Disable Exa web search |
 | `SEARXNG_URL` | (empty) | SearxNG search service URL |
-| `PUID` | `1000` | User ID for file permissions |
-| `PGID` | `1000` | Group ID for file permissions |
 
 ## OpenCode Configuration
 
 ### Configuration File Location
 
-- **File**: `~/.opencode/opencode.json`
-- **Container Path**: `/root/.opencode/opencode.json`
+- **File**: `~/.config/opencode/opencode.json`
+- **Container Path**: `/home/jeeves/.config/opencode/opencode.json`
 
 ### Basic Configuration Structure
 
@@ -102,17 +113,10 @@ services:
     }
   },
   "mcp": {
-    "servers": {
-      "sequential-thinking": {
-        "type": "local",
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
-        "environment": {}
-      }
+    "sequentialthinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
     }
-  },
-  "agents": {
-    "directory": "/root/.opencode/agents"
   }
 }
 ```
@@ -121,8 +125,9 @@ services:
 
 ### Configuration File Location
 
-- **Primary**: `~/.claude/.claude.json`
-- **Alternative**: `~/.claude/mcp.json`
+- **Global**: `~/.claude.json`
+- **Project**: `.mcp.json`
+- **Container Path**: `/home/jeeves/.claude/.claude.json`
 
 ### Basic Configuration Structure
 
@@ -131,15 +136,11 @@ services:
   "api_key": "sk-ant-api-key-here",
   "model": "claude-3-5-sonnet",
   "mcpServers": {
-    "sequential-thinking": {
-      "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-sequential-thinking"],
-      "env": {}
+    "sequentialthinking": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
     },
     "fetch": {
-      "command": "mcp-server-fetch",
-      "args": [],
-      "env": {}
+      "command": ["python", "-m", "mcp_server_fetch"]
     }
   }
 }
@@ -153,13 +154,21 @@ services:
 ---
 description: "Brief description of agent capabilities"
 mode: subagent
-temperature: 0.7
+temperature: 0.3
 permission:
-  write: ask      # ask | allow | deny
-  bash: ask       # ask | allow | deny
-  webfetch: allow # ask | allow | deny
-  edit: deny       # ask | allow | deny
-tools: [read, write, grep, glob, bash, webfetch, question]
+  write: ask
+  bash: ask
+  webfetch: allow
+  edit: deny
+tools:
+  read: true
+  write: true
+  grep: true
+  glob: true
+  bash: true
+  webfetch: true
+  question: true
+  sequentialthinking: true
 ---
 ```
 
@@ -179,6 +188,8 @@ tools: [read, write, grep, glob, bash, webfetch, question]
 | `glob` | Find files by pattern | allow (safe) |
 | `bash` | Execute shell commands | ask (security risk) |
 | `webfetch` | Retrieve web content | allow (external data) |
+| `websearch` | Search the web | ask (rate limits) |
+| `codesearch` | Search code repositories | allow (computation) |
 | `question` | Ask user questions | allow (interactive) |
 | `edit` | Edit file contents | ask (destructive) |
 | `sequentialthinking` | Structured analysis | allow (computation) |

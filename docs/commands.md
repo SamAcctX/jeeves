@@ -54,11 +54,12 @@ Launch the Jeeves container with volume mounting and networking.
 Stop the running Jeeves container.
 
 ```powershell
-./jeeves.ps1 stop [--remove]
+./jeeves.ps1 stop [--remove] [--force]
 ```
 
 **Options:**
 - `--remove`: Remove container after stopping
+- `--force`: Force stop using SIGKILL instead of graceful SIGTERM
 
 **Examples:**
 ```powershell
@@ -67,6 +68,9 @@ Stop the running Jeeves container.
 
 # Stop and remove
 ./jeeves.ps1 stop --remove
+
+# Force stop
+./jeeves.ps1 stop --force
 ```
 
 #### `restart`
@@ -207,7 +211,7 @@ claude show-context
 ```
 
 **Supported Servers:**
-- `sequential-thinking`: Structured analysis and reasoning
+- `sequentialthinking`: Structured analysis and reasoning
 - `fetch`: Web content retrieval
 - `searxng`: Privacy-focused search
 - `playwright`: Browser automation
@@ -216,7 +220,13 @@ claude show-context
 
 ```bash
 # Install all agents globally
-./install-agents.sh --global
+install-agents.sh --global
+
+# Install only Deepest-Thinking agent
+install-agents.sh --deepest
+
+# Show usage information
+install-agents.sh --help
 ```
 
 **Available Agents:**
@@ -235,8 +245,8 @@ docker build -f Dockerfile.jeeves -t jeeves:latest
 docker run -it --name jeeves \
   -p 3333:3333 \
   -v $(pwd):/proj \
-  -v /home/jeeves/.opencode:/root/.opencode \
-  -v /home/jeeves/.claude:/root/.claude \
+  -v ~/.config/opencode:/home/jeeves/.config/opencode \
+  -v ~/.claude:/home/jeeves/.claude \
   jeeves:latest
 
 # View logs
@@ -302,15 +312,15 @@ claude config set anthropic.api_key your-key-here
 
 ```bash
 # Set user ID for file permissions
-export PUID=$(id -u)
-export PGID=$(id -g)
+export UID=$(id -u)
+export GID=$(id -g)
 ```
 
 ### OpenCode Environment
 
 ```bash
 # Configuration directory
-export OPENCODE_CONFIG_DIR=/root/.opencode
+export OPENCODE_CONFIG_DIR=/home/jeeves/.config/opencode
 
 # Web UI port
 export OPENCODE_WEB_PORT=3333
@@ -372,12 +382,10 @@ sudo chown -R $USER:$USER /proj
 
 | Code | Meaning | Action |
 |-------|---------|--------|
-| 0 | Success | Operation completed |
-| 1 | General Error | Check error message |
-| 2 | Invalid Arguments | Check command syntax |
-| 3 | Docker Not Available | Install/start Docker |
-| 4 | Container Not Found | Build/start container |
-| 5 | Permission Denied | Check Docker permissions |
+| 0 | Success | Operation completed successfully |
+| 1 | Error | Operation failed - check error message for details |
+
+**Note:** The script currently uses simplified exit codes (0 for success, 1 for any error). Check the error message output for specific failure details.
 
 ## Help and Support
 
