@@ -405,6 +405,21 @@ copy_oob_if_empty() {
     fi
 }
 
+# Function to safely create configuration files without overwriting
+safe_create_config() {
+    local target_file="$1"
+    local content="$2"
+    
+    if [ ! -f "$target_file" ]; then
+        echo "Creating $target_file with agent configuration..."
+        echo "$content" > "$target_file"
+        echo "✅ Created: $target_file"
+    else
+        echo "⚠️  $target_file already exists - preserving existing configuration"
+        echo "ℹ️  Existing file contents not modified"
+    fi
+}
+
 # Initialize configuration directories
 copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
 copy_oob_if_empty "/home/jeeves/.claude" "/opt/oob-config/.claude" "Claude"
@@ -425,22 +440,6 @@ npx skills-installer install @obra/superpowers/using-superpowers --client openco
 npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
 
 # Additional setup - tool preferences and amplify skill usage
-# Function to safely create configuration files without overwriting
-safe_create_config() {
-    local target_file="$1"
-    local content="$2"
-    
-    if [ ! -f "$target_file" ]; then
-        echo "Creating $target_file with agent configuration..."
-        echo "$content" > "$target_file"
-        echo "✅ Created: $target_file"
-    else
-        echo "⚠️  $target_file already exists - preserving existing configuration"
-        echo "ℹ️  Existing file contents not modified"
-    fi
-}
-
-# Configure tool preferences and agent settings (after existing skill installations)
 echo "Configuring agent preferences and tool settings..."
 
 # Create OpenCode AGENTS.md for auto-loading and tool preferences
