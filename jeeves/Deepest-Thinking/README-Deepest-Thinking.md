@@ -83,10 +83,10 @@ cp /path/to/proj/Deepest-Thinking/deepest-thinking-claude-template.md ~/.claude/
 ### OpenCode Agent Configuration
 
 The OpenCode template includes:
-- **Description**: Methodical research assistant for deep investigation
+- **Description**: Methodical research assistant who conducts exhaustive investigations through required research cycles
 - **Mode**: `subagent` (specialized task)
 - **Temperature**: `0.3` (focused, analytical responses)
-- **Tools**: Read, write, search, and analysis tools
+- **Tools**: Read, write, search, and analysis tools including SearxNG Web Search and Sequential Thinking
 - **Permissions**: Safe defaults with approval for sensitive operations
 
 ```yaml
@@ -135,10 +135,13 @@ model: inherit
 #### 1. Start a Conversation
 Begin by describing your research topic or question.
 
-#### 2. Initial Engagement
+#### 2. Initial Engagement [STOP POINT ONE]
 The agent will ask 2-3 clarifying questions to understand your research needs.
+- Agent asks questions
+- You provide clarifications
+- Agent confirms understanding
 
-#### 3. Research Planning
+#### 3. Research Planning [STOP POINT TWO]
 The agent will present a research plan with:
 - 3-5 major themes to investigate
 - Key questions for each theme
@@ -147,13 +150,13 @@ The agent will present a research plan with:
 
 **You must approve the research plan before proceeding.**
 
-#### 4. Research Execution
-The agent will conduct mandatory research cycles:
+#### 4. Research Execution (No Stops)
+The agent will conduct mandatory research cycles (minimum two full cycles per theme):
 - **Initial Landscape Analysis**: SearxNG Web Search + Sequential Thinking
 - **Deep Investigation**: SearxNG Web Search + Sequential Thinking
 - **Knowledge Integration**: Synthesize findings across themes
 
-#### 5. Final Report
+#### 5. Final Report [STOP POINT THREE]
 The agent will produce a comprehensive academic-style report including:
 - Knowledge Development (evolution of understanding)
 - Comprehensive Analysis (synthesis of evidence)
@@ -193,26 +196,20 @@ Uses inherited permissions from the main conversation. The subagent has access t
 - SequentialThinking (structured analysis)
 - Question (interactive dialogue)
 
-## MCP Integration Requirements
+## Tool Integration
 
-The Deepest-Thinking agent uses native SearxNG Web Search tool instead of requiring MCP servers. This provides:
-- **SearxNG Web Search** - Comprehensive search capabilities
-- **Sequential Thinking** - Structured thinking process
-- Essential for all analysis phases
-- Configuration: Minimum 5 thoughts per analysis
+The Deepest-Thinking agent uses native OpenCode/Claude Code tools:
 
-### Installation Instructions
+### Required Native Tools
+- **SearxNG Web Search** (`searxng_searxng_web_search`) - Comprehensive search capabilities
+- **Sequential Thinking** (`sequentialthinking`) - Structured thinking process
+- **Read/Write** - File operations for saving reports
+- **Bash** - Terminal commands when needed
 
-#### Install MCP Servers
-```bash
-# Run the MCP installation script
-./jeeves/bin/install-mcp-servers.sh
-```
-
-#### Verify Installation
-1. Check that MCP servers are running
-2. Verify tool availability in your platform
-3. Test with a simple research query
+### Tool Configuration
+- SearxNG Web Search: Use `max_results=20` for comprehensive coverage
+- Sequential Thinking: Maintain minimum 5 thoughts per analysis
+- Web Search: Preferred over Exa tools as configured in AGENTS.md
 
 ## Directory Structure
 
