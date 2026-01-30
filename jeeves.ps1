@@ -363,6 +363,7 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile.jeeves
+    image: jeeves:latest
     environment:
       - PLAYWRIGHT_MCP_HEADLESS=1
       - PLAYWRIGHT_MCP_BROWSER=chromium
