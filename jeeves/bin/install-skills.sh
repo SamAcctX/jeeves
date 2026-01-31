@@ -191,7 +191,7 @@ install_doc_npm_deps() {
 
 # Function to install document creation skills
 install_doc_skills() {
-    local scope_flag=""
+    local scope_flag="--project"
     if [ "$GLOBAL_SCOPE" = true ]; then
         scope_flag="--global"
     fi
@@ -226,7 +226,7 @@ install_doc_skills() {
 
 # Function to install n8n skills
 install_n8n_skills() {
-    local scope_flag=""
+    local scope_flag="--project"
     if [ "$GLOBAL_SCOPE" = true ]; then
         scope_flag="--global"
     fi
