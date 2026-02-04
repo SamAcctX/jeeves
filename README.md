@@ -12,6 +12,7 @@
 - 🤖 **AI Platforms** - OpenCode with optional Claude Code support
 - 🛠️ **Pre-configured MCP Servers** - Sequential Thinking, Fetch, SearxNG, Playwright
 - 🎯 **Specialized AI Agents** - PRD Creator and Deepest-Thinking research agent
+- 📦 **Automatic Dependency Resolution** - Skills' pip/npm/apt dependencies installed automatically
 - 🌐 **Web UI Access** - Browser-based development at http://localhost:3333
 - ⚡ **Cross-platform Support** - Windows, Linux, and macOS with proper file permissions
 
@@ -68,6 +69,7 @@ Jeeves is a comprehensive development environment that combines the power of AI 
 
 - 🔄 **Consistency**: Same environment across all machines
 - 🚀 **Productivity**: Pre-configured tools and agents ready to use
+- 📦 **Zero-Config Dependencies**: Skill dependencies installed automatically
 - 🔒 **Privacy**: Local container with optional cloud AI services
 - 🎯 **Focus**: Spend time coding, not configuring
 
@@ -79,6 +81,7 @@ graph LR
     A --> C[🔌 MCP Servers]
     A --> D[👤 User Access]
     A --> E[🎯 AI Agents]
+    A --> F[📦 Dependency Resolver]
     
     B --> B1[OpenCode]
     B --> B2[Claude Code]
@@ -94,6 +97,9 @@ graph LR
     D --> D1[🌐 Web UI:3333]
     D --> D2[💻 CLI/TUI]
     D --> D3[🖥️ Shell]
+    
+    F --> F1[Auto-install skill deps]
+    F --> F2[pip/npm/apt support]
 ```
 
 ## 🎯 Features Deep Dive
@@ -254,6 +260,71 @@ permission:
 tools: [read, write, grep, glob, bash, webfetch, question]
 ---
 ```
+
+### Skill Dependency Resolver
+
+Jeeves automatically installs dependencies required by AI skills (pip packages, npm modules, and apt packages).
+
+#### How It Works
+When the container starts, the `install-skill-deps.sh` script automatically:
+1. Discovers all installed skills (global and project-local)
+2. Parses each skill's `SKILL.md` for dependency declarations
+3. Categorizes packages by manager (apt, pip, npm)
+4. Deduplicates packages across all skills
+5. Installs everything with appropriate privileges
+
+#### Supported Dependency Patterns
+Skills can declare dependencies in three ways:
+
+**Pattern 1: Dependencies Section**
+```markdown
+## Dependencies
+
+- **pandoc**: `sudo apt-get install pandoc` (for text extraction)
+- **docx**: `npm install -g docx` (for creating documents)
+- **defusedxml**: `pip install defusedxml` (for XML parsing)
+```
+
+**Pattern 2: Installation Section**
+```markdown
+### Installation
+
+```bash
+pip install 'markitdown[all]'
+```
+```
+
+**Pattern 3: Inline Comments**
+```markdown
+Requires: pip install pytesseract pdf2image
+```
+
+#### Manual Usage
+```bash
+# Install all skill dependencies (runs automatically on startup)
+./install-skill-deps.sh
+
+# Preview what would be installed without installing
+./install-skill-deps.sh --dry-run
+
+# Verbose output with detailed logging
+./install-skill-deps.sh --verbose
+
+# Parse a specific skill file to JSON
+python3 /proj/jeeves/bin/parse_skill_deps.py --skill-path /path/to/SKILL.md
+```
+
+#### Package Managers
+- **APT**: System packages installed with `sudo` (pandoc, libreoffice, tesseract)
+- **PIP**: Python packages installed without sudo (defusedxml, markitdown[pptx])
+- **NPM**: Node packages installed globally with `sudo` (docx, pptxgenjs, playwright)
+
+#### Docker Safety
+The script is designed for container startup:
+- Always exits with code 0 (never blocks container start)
+- Continues on individual package failures
+- Reports all failures at the end for troubleshooting
+- Safe to run multiple times (idempotent)
 
 ### MCP Server Configuration
 
