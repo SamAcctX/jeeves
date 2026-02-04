@@ -5,6 +5,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
 # Install system dependencies and Python
 RUN apt-get update && \
@@ -206,9 +207,10 @@ ENV PYTHONUNBUFFERED=1
 # Ensure venv is used for python/pip
 ENV VIRTUAL_ENV=/opt/venv
 
-# Install fetch MCP python package
+# Install python packages
 RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
-        mcp-server-fetch
+        mcp-server-fetch \
+        pyyaml
 
 # Install Playwright browser and dependencies
 USER jeeves
@@ -497,6 +499,14 @@ CLAUDE_MD="/home/jeeves/.claude/CLAUDE.md"
 safe_create_config "$CLAUDE_MD" "$CLAUDE_CONFIG_CONTENT"
 
 echo "Agent configuration completed successfully!"
+
+echo "Attempting to resolve dependencies required be installed skills..."
+echo "Any resolved dependencies will attempt to be installed automatically."
+if [ -x /usr/local/bin/install-skill-deps.sh ]; then                                                                                                                                                            
+     /usr/local/bin/install-skill-deps.sh --verbose                                                                                                                                                              
+fi
+echo "Dependency resolution and install complete."
+echo "Note: This process works by attempting to parse out deps from skill MD files.  Since this isn't required or standardized, detection and/or installation may silently fail, requiring manual installation."
 
 # If no arguments provided, default to opencode web
 if [ $# -eq 0 ]; then
