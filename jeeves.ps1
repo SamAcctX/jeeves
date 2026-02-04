@@ -367,7 +367,13 @@ services:
       context: ..
       dockerfile: Dockerfile.jeeves
     image: jeeves:latest
+    runtime: nvidia
+    privileged: true
+    shm_size: "2gb"
+    gpus: all
     environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - CUDA_VISIBLE_DEVICES=all
       - PLAYWRIGHT_MCP_HEADLESS=1
       - PLAYWRIGHT_MCP_BROWSER=chromium
       - PLAYWRIGHT_MCP_NO_SANDBOX=1

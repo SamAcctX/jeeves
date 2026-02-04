@@ -1,4 +1,4 @@
-FROM ubuntu:latest AS base
+FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 AS base
 
 # Set environment variables
 ENV DEBIAN_FRONTEND=noninteractive
@@ -6,19 +6,44 @@ ENV LANG=C.UTF-8
 ENV LC_ALL=C.UTF-8
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+# Vars for CUDA
+ENV CUDA_HOME=/usr/local/cuda
+ENV PATH=${CUDA_HOME}/bin:${PATH}
+ENV LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/usr/local/nvidia/lib:/usr/local/nvidia/lib64:/usr/lib/x86_64-linux-gnu
 
 # Install system dependencies and Python
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
-        software-properties-common && \
+        software-properties-common \
+        ca-certificates \
+        curl \
+        gnupg \
+        gnupg2 \
+        lsb-release \
+        wget && \
+    # Add Docker’s official GPG key + apt repo
+    install -m 0755 -d /etc/apt/keyrings && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc && \
+    chmod a+r /etc/apt/keyrings/docker.asc && \
+    . /etc/os-release && \
+    printf '%s\n' \
+        "Types: deb" \
+        "URIs: https://download.docker.com/linux/ubuntu" \
+        "Suites: ${UBUNTU_CODENAME:-$VERSION_CODENAME}" \
+        "Components: stable" \
+        "Signed-By: /etc/apt/keyrings/docker.asc" \
+        > /etc/apt/sources.list.d/docker.sources && \
+    # Add Nvidia key + repo
+    apt-key del 7fa2af80 && \
+    sed -i '/developer\.download\.nvidia\.com\/compute\/cuda\/repos/d' /etc/apt/sources.list.d/* && \
+    sed -i '/developer\.download\.nvidia\.com\/compute\/machine-learning\/repos/d' /etc/apt/sources.list.d/* && \
+    wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
+    dpkg -i cuda-keyring_1.1-1_all.deb && \
     add-apt-repository ppa:deadsnakes/ppa && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
-        ca-certificates \
-        wget \
-        curl \
         git \
         bash \
         vim \
@@ -44,7 +69,19 @@ RUN apt-get update && \
         libxrandr2 \
         libgbm1 \
         libxss1 \
-        libasound2t64 && \
+        libasound2t64 \
+        # Docker
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin \
+        # replace docker overlyfs for the in-container docker runtime to work
+        fuse-overlayfs \
+        # Nvidia container toolkit 
+        nvidia-container-toolkit && \
+    # Configure container runtime
+    nvidia-ctk runtime configure --runtime=docker && \
     apt-get autoremove -y && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
@@ -389,7 +426,61 @@ USER root
 
 RUN sudo cat << 'EOF' > /usr/local/bin/entrypoint.sh
 #!/bin/bash
-set -e
+set -euo pipefail
+
+# Function to start docker engine and wait until it's fully running
+start_docker_engine() {
+  # If it's already up, don't start a second daemon
+  if docker info >/dev/null 2>&1; then
+    return 0
+  fi
+
+  echo "Starting Docker Engine (dockerd)..."
+
+  # Clean up any stale pid/socket (common after unclean shutdown)
+  sudo find /run /var/run -iname 'docker*.pid' -delete || true
+
+  sudo mkdir -p /var/lib/docker /var/run /var/log /etc/docker
+
+  # Custom daemon.json to use the nvidia runtime and fuse-overlayfs storage driver
+  echo '{"storage-driver":"fuse-overlayfs","runtimes":{"nvidia":{"path":"nvidia-container-runtime","runtimeArgs":[]}}}' | sudo tee /etc/docker/daemon.json > /dev/null
+
+  # Start dockerd in the background (unix socket only)
+  # --group jeeves makes /var/run/docker.sock accessible to the jeeves user
+  sudo sh -c "dockerd \
+    --host=unix:///var/run/docker.sock \
+    --data-root=/var/lib/docker \
+    --group=jeeves \
+    ${DOCKERD_ARGS:-} \
+    >/var/log/dockerd.log 2>&1" &
+
+  DOCKERD_PID=$!
+
+  # Permissions reset
+  sudo chmod -R 755 /var/lib/docker /var/log/
+
+  # Wait until the daemon is responsive
+  echo "Waiting for dockerd to be ready..."
+  for i in $(seq 1 60); do
+    if docker info >/dev/null 2>&1; then
+      echo "dockerd is up."
+      return 0
+    fi
+    sleep 1
+  done
+
+  echo "ERROR: dockerd did not become ready in time." >&2
+  sudo tail -n 200 /var/log/dockerd.log >&2 || true
+  exit 1
+}
+
+# Function do to a clean docker shutdown on container halt signal
+cleanup() {
+  if [ -n "${DOCKERD_PID:-}" ] && sudo kill -0 "${DOCKERD_PID}" 2>/dev/null; then
+    echo "Stopping dockerd..."
+    sudo kill "${DOCKERD_PID}" || true
+  fi
+}
 
 # Function to copy OOB config if directory is empty
 copy_oob_if_empty() {
@@ -430,6 +521,12 @@ safe_create_config() {
         echo "ℹ️  Existing file contents not modified"
     fi
 }
+
+# Docker cleanup trap
+trap cleanup EXIT
+
+# Start Docker first
+start_docker_engine
 
 # Initialize configuration directories
 copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
@@ -529,10 +626,8 @@ WORKDIR /proj
 EXPOSE 3333
 # ============================================================================
 # Entry point: Not used
-# Start cmd: Initialize config directories if empty, then run the Web UI
+# Start cmd: Initialize config directories if empty, 
+#            then start docker and run the Web UI
 # ============================================================================
 ENTRYPOINT []
 CMD ["/usr/local/bin/entrypoint.sh"]
-
-# Note:  Might want to update to run the OpenCode WebUI in the background, with the ability to terminal in to use the TUI
-# opencode web --hostname 0.0.0.0 --port 3333
