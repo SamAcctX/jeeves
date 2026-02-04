@@ -310,6 +310,116 @@ deduplicate_npm_packages() {
 }
 
 # ============================================================================
+# APT PACKAGE TRANSFORMATION
+# ============================================================================
+
+# Special cases array (associative array in bash)
+declare -A SPECIAL_CASES=(
+    ["poppler"]="libpoppler-dev"
+    ["curl"]="libcurl4-dev"
+    ["openssl"]="libssl-dev"
+    ["zlib"]="zlib1g-dev"
+    ["readline"]="libreadline-dev"
+    ["sqlite"]="libsqlite3-dev"
+    ["png"]="libpng-dev"
+    ["jpeg"]="libjpeg-dev"
+    ["tiff"]="libtiff-dev"
+    ["xml2"]="libxml2-dev"
+    ["xslt"]="libxslt1-dev"
+)
+
+# Alternative suffixes array
+declare -a ALT_SUFFIXES=("-utils" "-tools" "-bin" "-common")
+
+# Transformation success tracking (key: original name, value: installed variation)
+declare -A TRANSFORMATION_SUCCESS
+
+generate_transformations() {
+    local package_name="$1"
+    local candidates=()
+
+    # Check for special case
+    if [[ -n "${SPECIAL_CASES[$package_name]}" ]]; then
+        echo "${SPECIAL_CASES[$package_name]}"
+        return 0
+    fi
+
+    # Original name
+    candidates+=("$package_name")
+
+    # -dev suffix
+    candidates+=("${package_name}-dev")
+
+    # lib prefix
+    candidates+=("lib${package_name}")
+
+    # lib + -dev
+    candidates+=("lib${package_name}-dev")
+
+    # python3- prefix
+    candidates+=("python3-${package_name}")
+
+    # Alternative suffixes
+    for suffix in "${ALT_SUFFIXES[@]}"; do
+        candidates+=("${package_name}${suffix}")
+    done
+
+    # lib + alternative suffixes
+    for suffix in "${ALT_SUFFIXES[@]}"; do
+        candidates+=("lib${package_name}${suffix}")
+    done
+
+    # Output unique candidates
+    printf "%s\n" "${candidates[@]}"
+}
+
+is_package_installed() {
+    local package_name="$1"
+    dpkg-query -W -f='${Status}' "$package_name" 2>/dev/null | grep -q "install ok installed"
+}
+
+try_install_with_transformations() {
+    local original_name="$1"
+    local error_output=""
+
+    # Generate transformation candidates
+    mapfile -t candidates < <(generate_transformations "$original_name")
+
+    # Try each candidate
+    for candidate in "${candidates[@]}"; do
+        # Skip if already installed
+        if is_package_installed "$candidate"; then
+            log_success "Already installed: $candidate (from $original_name)"
+            ((INSTALLED_APT++))
+            TRANSFORMATION_SUCCESS["$original_name"]="$candidate"
+            return 0
+        fi
+
+        log_verbose "Trying: $candidate (from $original_name)"
+        error_output=$(sudo apt-get install -y --no-install-recommends "$candidate" 2>&1)
+        local exit_code=$?
+
+        if [ $exit_code -eq 0 ]; then
+            log_success "Installed: $candidate (from $original_name)"
+            ((INSTALLED_APT++))
+            TRANSFORMATION_SUCCESS["$original_name"]="$candidate"
+            return 0
+        fi
+    done
+
+    # All variations failed
+    log_error "Failed to install: $original_name (tried ${#candidates[@]} variations)"
+    FAILED_APT+=("$original_name")
+
+    # Extract error from last attempt
+    local error_msg
+    error_msg=$(echo "$error_output" | grep -E "(E:|Package|Unable|Could not|Not found|error:)" | tail -1 | sed 's/^E: //' | sed 's/^[[:space:]]*//' | cut -c1-100)
+    [ -z "$error_msg" ] && error_msg="Installation failed (tried ${#candidates[@]} variations)"
+    FAILED_APT_MSGS+=("$error_msg")
+    return 1
+}
+
+# ============================================================================
 # PACKAGE INSTALLATION
 # ============================================================================
 
@@ -347,28 +457,16 @@ install_apt_packages() {
         log_verbose "No APT packages to install"
         return 0
     fi
+
     log_info "Installing APT packages..."
     log_verbose "Running apt-get update..."
     sudo apt-get update >/dev/null 2>&1 || log_warning "apt-get update failed, continuing anyway..."
-    
+
     for pkg in "${UNIQUE_APT[@]}"; do
-        log_verbose "Installing APT package: $pkg"
-        local error_output
-        error_output=$(sudo apt-get install -y --no-install-recommends "$pkg" 2>&1)
-        local exit_code=$?
-        if [ $exit_code -eq 0 ]; then
-            log_success "Installed: $pkg"
-            ((INSTALLED_APT++))
-        else
-            log_error "Failed to install: $pkg"
-            FAILED_APT+=("$pkg")
-            # Extract meaningful error message
-            local error_msg
-            error_msg=$(echo "$error_output" | grep -E "(E:|Package|Unable|Could not|Not found|error:)" | tail -1 | sed 's/^E: //' | sed 's/^[[:space:]]*//' | cut -c1-100)
-            [ -z "$error_msg" ] && error_msg="Installation failed"
-            FAILED_APT_MSGS+=("$error_msg")
-        fi
+        log_verbose "Processing: $pkg"
+        try_install_with_transformations "$pkg"
     done
+
     return 0
 }
 

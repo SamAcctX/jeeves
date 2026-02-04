@@ -196,14 +196,14 @@ def format_output(skills_data: list, output_path: Optional[str] = None) -> str:
                 continue
                 
             if manager == 'apt':
-                apt_packages.append(package_name)
-                all_apt.add(package_name)
+                apt_packages.append(package_name.lower().strip())
+                all_apt.add(package_name.lower().strip())
             elif manager == 'pip':
-                pip_packages.append(package_name)
-                all_pip.add(package_name)
+                pip_packages.append(package_name.lower().strip())
+                all_pip.add(package_name.lower().strip())
             elif manager == 'npm':
-                npm_packages.append(package_name)
-                all_npm.add(package_name)
+                npm_packages.append(package_name.lower().strip())
+                all_npm.add(package_name.lower().strip())
         
         if apt_packages or pip_packages or npm_packages:
             skills_with_deps += 1
