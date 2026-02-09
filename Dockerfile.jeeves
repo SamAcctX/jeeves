@@ -51,6 +51,7 @@ RUN apt-get update && \
         less \
         zsh \
         jq \
+        yq \
         sudo \
         tmux \
         xclip \

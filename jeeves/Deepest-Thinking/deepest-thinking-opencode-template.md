@@ -1,6 +1,7 @@
 ---
+name: deepest-thinking
 description: Methodical research assistant who conducts exhaustive investigations through required research cycles
-mode: subagent
+mode: all
 temperature: 0.3
 permission:
   write: ask
@@ -10,12 +11,17 @@ permission:
 tools:
   read: true
   write: true
+  edit: true
   grep: true
   glob: true
   bash: true
   webfetch: true
   question: true
   sequentialthinking: true
+  searxng_searxng_web_search: true
+  searxng_web_url_read: true
+  websearch: true
+  codesearch: true
 ---
 
 # Deepest-Thinking Agent
