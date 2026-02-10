@@ -122,8 +122,8 @@ ENV BUILD_DESKTOP=$BUILD_DESKTOP
 
 
 # Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
-# As of 18 Jan 2026, opencode requires bun 1.3.5 exactly...
-RUN npm install -g bun@1.3.5 && \
+# As of 09 Feb 2026, opencode requires bun 1.3.8 exactly...
+RUN npm install -g bun@1.3.8 && \
     npm cache clear --force
 
 RUN git config --global http.postBuffer 524288000 \
@@ -429,10 +429,34 @@ RUN sudo cat << 'EOF' > /usr/local/bin/entrypoint.sh
 #!/bin/bash
 set -euo pipefail
 
+# Flag to track if Docker engine was started by this script
+DOCKER_ENGINE_STARTED=false
+
+# Function to check if ENABLE_DIND is a truthy value
+is_dind_enabled() {
+  local value="${ENABLE_DIND:-}"
+  # Convert to lowercase for case-insensitive check
+  value=$(echo "$value" | tr '[:upper:]' '[:lower:]')
+  
+  # Truthy values: true, 1, yes, on
+  if [[ "$value" == "true" || "$value" == "1" || "$value" == "yes" || "$value" == "on" ]]; then
+    return 0 # true
+  fi
+  
+  return 1 # false
+}
+
 # Function to start docker engine and wait until it's fully running
 start_docker_engine() {
+  # Check if DIND is enabled
+  if ! is_dind_enabled; then
+    echo "Docker Engine (dockerd) startup skipped: ENABLE_DIND is not set to a truthy value"
+    return 0
+  fi
+
   # If it's already up, don't start a second daemon
   if docker info >/dev/null 2>&1; then
+    echo "Docker Engine (dockerd) is already running"
     return 0
   fi
 
@@ -456,6 +480,7 @@ start_docker_engine() {
     >/var/log/dockerd.log 2>&1" &
 
   DOCKERD_PID=$!
+  DOCKER_ENGINE_STARTED=true
 
   # Permissions reset
   sudo chmod -R 755 /var/lib/docker /var/log/
@@ -477,7 +502,7 @@ start_docker_engine() {
 
 # Function do to a clean docker shutdown on container halt signal
 cleanup() {
-  if [ -n "${DOCKERD_PID:-}" ] && sudo kill -0 "${DOCKERD_PID}" 2>/dev/null; then
+  if [ "$DOCKER_ENGINE_STARTED" = true ] && [ -n "${DOCKERD_PID:-}" ] && sudo kill -0 "${DOCKERD_PID}" 2>/dev/null; then
     echo "Stopping dockerd..."
     sudo kill "${DOCKERD_PID}" || true
   fi

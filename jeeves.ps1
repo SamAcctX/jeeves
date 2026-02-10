@@ -31,6 +31,9 @@
 .PARAMETER Force
     Force stop the container using SIGKILL instead of SIGTERM (valid for 'stop' command)
 
+.PARAMETER Dind
+    Enable Docker-in-Docker (DinD) support: runs container in privileged mode with Docker socket access (valid for 'start', 'restart' commands)
+
 .EXAMPLE
     .\jeeves.ps1 build
     Build the Docker image using cache
@@ -357,6 +360,8 @@ function Initialize-TemporaryDirectory {
     health checks, and resource limits as specified in the PRD.
 #>
 function New-DockerComposeFile {
+    param([switch]$Dind)
+    
     $mountSpec = Get-UserMountSpec
     $tmpPath = Join-Path $PSScriptRoot ".tmp"
     
@@ -368,7 +373,6 @@ services:
       dockerfile: Dockerfile.jeeves
     image: jeeves:latest
     runtime: nvidia
-    privileged: true
     shm_size: "2gb"
     gpus: all
     environment:
@@ -380,6 +384,13 @@ services:
       - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
       # Disable Exa web search to ensure SearXNG is used instead
       - OPENCODE_ENABLE_EXA=false
+"@
+
+    if ($Dind) {
+        $composeContent += "      - ENABLE_DIND=true`n"
+    }
+    
+    $composeContent += @"
     volumes:
       - $($mountSpec.WorkspaceMount)`n
 "@
@@ -391,6 +402,10 @@ services:
     if ($mountSpec.UserFlag) {
         $userSpec = $mountSpec.UserFlag -replace '--user ', ''
         $composeContent += "    user: $userSpec`n"
+    }
+    
+    if ($Dind) {
+        $composeContent += "    privileged: true`n"
     }
     
     $composeContent += @"
@@ -760,7 +775,10 @@ function Ensure-ContainerRunning {
     - Container runs in detached mode (-d flag)
 #>
 function Start-Container {
-    param([switch]$Clean)
+    param(
+        [switch]$Clean,
+        [switch]$Dind
+    )
 
     if ($Clean) {
         Write-Log "Clean start requested..." -warning
@@ -785,7 +803,7 @@ function Start-Container {
     Initialize-TemporaryDirectory
 
     # 2. Generate docker-compose.yml with resolved paths
-    $composeFile = New-DockerComposeFile
+    $composeFile = New-DockerComposeFile -Dind:$Dind
 
     # 3. Run docker compose instead of docker run
     & docker compose -f $composeFile up -d
@@ -883,7 +901,7 @@ function Remove-Container {
     Uses `docker exec -it` for an interactive TTY session
 #>
 function Enter-Shell {
-    param([switch]$New)
+    param([switch]$New, [switch]$Raw)
 
     if ($New) {
         Write-Log "--new flag set: stopping and removing existing container..." -warning
@@ -914,9 +932,15 @@ function Enter-Shell {
     $execArgs = @(
         "exec"
         "-it"
-        $containerId
-        "/bin/bash"
     )
+    
+    if ($Raw) {
+        $execArgs += "-e"
+        $execArgs += "DISABLE_TMUX=1"
+    }
+    
+    $execArgs += $containerId
+    $execArgs += "/bin/bash"
     
     # Execute the command using splatting operator
     & docker @execArgs
@@ -1094,6 +1118,7 @@ Options:
   --remove              Also remove container (stop command)
   --force               Force stop container (stop command)
   --new                 Stop and remove container before shell (shell command)
+  --dind                Enable Docker-in-Docker (DinD) support (start command)
 
 Aliases:
   b -> build
@@ -1199,6 +1224,11 @@ OPTIONS:
                  Stops the container if running, removes the container,
                  removes the image, rebuilds from scratch (--no-cache),
                  and then starts the container.
+
+    --dind       Enable Docker-in-Docker (DinD) support
+                 Runs the container in privileged mode and enables Docker
+                 socket access inside the container, allowing Docker commands
+                 to be run from within the container.
 
     --help       Show this help message
 
@@ -1442,12 +1472,12 @@ Select an option:
 "@
 
     $menuOptions = @(
-        @{ Key = "1"; Label = "Build image"; Action = "build" }
-        @{ Key = "2"; Label = "Start container"; Action = "start" }
-        @{ Key = "3"; Label = "Stop container"; Action = "stop" }
+        @{ Key = "1"; Label = "Build image (with options)"; Action = "build-menu" }
+        @{ Key = "2"; Label = "Start container (with options)"; Action = "start-menu" }
+        @{ Key = "3"; Label = "Stop container (with options)"; Action = "stop-menu" }
         @{ Key = "4"; Label = "Restart container"; Action = "restart" }
         @{ Key = "5"; Label = "Remove container"; Action = "rm" }
-        @{ Key = "6"; Label = "Attach to shell"; Action = "shell" }
+        @{ Key = "6"; Label = "Attach to shell (with options)"; Action = "shell-menu" }
         @{ Key = "7"; Label = "View logs"; Action = "logs" }
         @{ Key = "8"; Label = "Show status"; Action = "status" }
         @{ Key = "9"; Label = "Clean (remove all)"; Action = "clean" }
@@ -1476,6 +1506,14 @@ Select an option:
             Show-Help
             Read-Host "`nPress Enter to continue"
             Show-Menu
+        } elseif ($matchedOption.Action -eq "build-menu") {
+            Show-BuildMenu
+        } elseif ($matchedOption.Action -eq "start-menu") {
+            Show-StartMenu
+        } elseif ($matchedOption.Action -eq "stop-menu") {
+            Show-StopMenu
+        } elseif ($matchedOption.Action -eq "shell-menu") {
+            Show-ShellMenu
         } else {
             return $matchedOption.Action
         }
@@ -1483,6 +1521,204 @@ Select an option:
         Write-Host "Invalid selection. Please try again." -ForegroundColor Red
         Start-Sleep -Seconds 1
         Show-Menu
+    }
+}
+
+function Show-BuildMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║                Jeeves - Build Image Options                   ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select build options:
+"@
+
+    $buildOptions = @(
+        @{ Key = "1"; Label = "Default build"; Action = "build" }
+        @{ Key = "2"; Label = "Build without cache"; Action = "build-nocache" }
+        @{ Key = "3"; Label = "Build with desktop support"; Action = "build-desktop" }
+        @{ Key = "4"; Label = "Build with Claude Code"; Action = "build-claude" }
+        @{ Key = "5"; Label = "Build without cache + desktop"; Action = "build-nocache-desktop" }
+        @{ Key = "6"; Label = "Build without cache + Claude Code"; Action = "build-nocache-claude" }
+        @{ Key = "7"; Label = "Build with desktop + Claude Code"; Action = "build-desktop-claude" }
+        @{ Key = "8"; Label = "Build without cache + desktop + Claude Code"; Action = "build-all" }
+        @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
+        @{ Key = "0"; Label = "Exit"; Action = "exit" }
+    )
+
+    foreach ($option in $buildOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $buildOptions | Where-Object {
+        $_.Key -eq $selection -or
+        $_.Action -eq $selection.ToLower()
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Action -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Action -eq "back") {
+            Show-Menu
+        } else {
+            return $matchedOption.Action
+        }
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Show-BuildMenu
+    }
+}
+
+function Show-StartMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║                Jeeves - Start Container Options               ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select start options:
+"@
+
+    $startOptions = @(
+        @{ Key = "1"; Label = "Start without DinD"; Action = "start" }
+        @{ Key = "2"; Label = "Start with DinD"; Action = "start-dind" }
+        @{ Key = "3"; Label = "Clean start (rebuild & start) without DinD"; Action = "start-clean" }
+        @{ Key = "4"; Label = "Clean start (rebuild & start) with DinD"; Action = "start-clean-dind" }
+        @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
+        @{ Key = "0"; Label = "Exit"; Action = "exit" }
+    )
+
+    foreach ($option in $startOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $startOptions | Where-Object {
+        $_.Key -eq $selection -or
+        $_.Action -eq $selection.ToLower()
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Action -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Action -eq "back") {
+            Show-Menu
+        } else {
+            return $matchedOption.Action
+        }
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Show-StartMenu
+    }
+}
+
+function Show-StopMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║                Jeeves - Stop Container Options                ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select stop options:
+"@
+
+    $stopOptions = @(
+        @{ Key = "1"; Label = "Graceful stop"; Action = "stop" }
+        @{ Key = "2"; Label = "Stop and remove container"; Action = "stop-remove" }
+        @{ Key = "3"; Label = "Force stop"; Action = "stop-force" }
+        @{ Key = "4"; Label = "Force stop and remove"; Action = "stop-force-remove" }
+        @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
+        @{ Key = "0"; Label = "Exit"; Action = "exit" }
+    )
+
+    foreach ($option in $stopOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $stopOptions | Where-Object {
+        $_.Key -eq $selection -or
+        $_.Action -eq $selection.ToLower()
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Action -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Action -eq "back") {
+            Show-Menu
+        } else {
+            return $matchedOption.Action
+        }
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Show-StopMenu
+    }
+}
+
+function Show-ShellMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║                Jeeves - Shell Options                          ║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select shell options:
+"@
+
+    $shellOptions = @(
+        @{ Key = "1"; Label = "Attach to shell (without DinD)"; Action = "shell" }
+        @{ Key = "2"; Label = "Attach to shell with DinD"; Action = "shell-dind" }
+        @{ Key = "3"; Label = "Attach to new shell (without DinD)"; Action = "shell-new" }
+        @{ Key = "4"; Label = "Attach to new shell with DinD"; Action = "shell-new-dind" }
+        @{ Key = "5"; Label = "Attach to raw shell (without tmux)"; Action = "shell-raw" }
+        @{ Key = "6"; Label = "Attach to raw shell with DinD"; Action = "shell-raw-dind" }
+        @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
+        @{ Key = "0"; Label = "Exit"; Action = "exit" }
+    )
+
+    foreach ($option in $shellOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $shellOptions | Where-Object {
+        $_.Key -eq $selection -or
+        $_.Action -eq $selection.ToLower()
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Action -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Action -eq "back") {
+            Show-Menu
+        } else {
+            return $matchedOption.Action
+        }
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Show-ShellMenu
     }
 }
 
@@ -1521,7 +1757,10 @@ function Main {
         [switch]$Force,
 
         [Parameter(Mandatory = $false)]
-        [switch]$New
+        [switch]$New,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Dind
     )
 
     # Validate Docker is available
@@ -1539,12 +1778,81 @@ function Main {
 
         # Map menu selection back to command
         switch -Regex ($selectedCommand) {
-            "^(build)$" { Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode }
-            "^(start)$" { Start-Container -Clean:$Clean }
-            "^(stop)$" { Stop-Container -Force:$Force -Remove:$Remove }
-            "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container }
+            # Build options
+            "^(build)$" { Build-Image -NoCache:$false -Desktop:$false -InstallClaudeCode:$false }
+            "^(build-nocache)$" { Build-Image -NoCache:$true -Desktop:$false -InstallClaudeCode:$false }
+            "^(build-desktop)$" { Build-Image -NoCache:$false -Desktop:$true -InstallClaudeCode:$false }
+            "^(build-claude)$" { Build-Image -NoCache:$false -Desktop:$false -InstallClaudeCode:$true }
+            "^(build-nocache-desktop)$" { Build-Image -NoCache:$true -Desktop:$true -InstallClaudeCode:$false }
+            "^(build-nocache-claude)$" { Build-Image -NoCache:$true -Desktop:$false -InstallClaudeCode:$true }
+            "^(build-desktop-claude)$" { Build-Image -NoCache:$false -Desktop:$true -InstallClaudeCode:$true }
+            "^(build-all)$" { Build-Image -NoCache:$true -Desktop:$true -InstallClaudeCode:$true }
+            
+            # Start options
+            "^(start)$" { Start-Container -Clean:$false -Dind:$false }
+            "^(start-dind)$" { Start-Container -Clean:$false -Dind:$true }
+            "^(start-clean)$" { Start-Container -Clean:$true -Dind:$false }
+            "^(start-clean-dind)$" { Start-Container -Clean:$true -Dind:$true }
+            
+            # Stop options
+            "^(stop)$" { Stop-Container -Force:$false -Remove:$false }
+            "^(stop-remove)$" { Stop-Container -Force:$false -Remove:$true }
+            "^(stop-force)$" { Stop-Container -Force:$true -Remove:$false }
+            "^(stop-force-remove)$" { Stop-Container -Force:$true -Remove:$true }
+            
+            # Restart and other commands
+            "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container -Dind:$Dind }
             "^(rm)$" { Remove-Container }
-            "^(shell)$" { Enter-Shell -New:$New }
+            
+            # Shell options
+            "^(shell)$" { Enter-Shell -New:$false -Raw:$false }
+            "^(shell-dind)$" { 
+                # For shell with DinD, we need to ensure container is running with DinD
+                $containerId = Get-ContainerId
+                if (-not $containerId) {
+                    Start-Container -Dind:$true
+                    $containerId = Get-ContainerId
+                }
+                # Check if container is running with DinD by checking compose file
+                $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+                if (Test-Path $composeFile) {
+                    $composeContent = Get-Content $composeFile -Raw
+                    if (-not $composeContent.Contains("ENABLE_DIND=true")) {
+                        Write-Log "Container is not running with DinD. Restarting with DinD..." -warning
+                        Stop-Container
+                        Start-Container -Dind:$true
+                    }
+                }
+                Enter-Shell -New:$false -Raw:$false
+            }
+            "^(shell-new)$" { Enter-Shell -New:$true -Raw:$false }
+            "^(shell-new-dind)$" { 
+                # For new shell with DinD, ensure we start fresh with DinD
+                Start-Container -Dind:$true -Clean:$true
+                Enter-Shell -New:$true -Raw:$false
+            }
+            "^(shell-raw)$" { Enter-Shell -New:$false -Raw:$true }
+            "^(shell-raw-dind)$" { 
+                # For raw shell with DinD, ensure container is running with DinD
+                $containerId = Get-ContainerId
+                if (-not $containerId) {
+                    Start-Container -Dind:$true
+                    $containerId = Get-ContainerId
+                }
+                # Check if container is running with DinD by checking compose file
+                $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+                if (Test-Path $composeFile) {
+                    $composeContent = Get-Content $composeFile -Raw
+                    if (-not $composeContent.Contains("ENABLE_DIND=true")) {
+                        Write-Log "Container is not running with DinD. Restarting with DinD..." -warning
+                        Stop-Container
+                        Start-Container -Dind:$true
+                    }
+                }
+                Enter-Shell -New:$false -Raw:$true
+            }
+            
+            # Logs and status
             "^(logs)$" { Show-Logs }
             "^(status)$" { Show-Status }
             "^(clean)$" { Remove-Container; Remove-Image }
@@ -1560,7 +1868,7 @@ function Main {
         }
         "^(start|up)$" {
             if ($Help) { Show-CommandHelp "start"; exit 0 }
-            Start-Container -Clean:$Clean
+            Start-Container -Clean:$Clean -Dind:$Dind
         }
         "^(stop|down)$" {
             if ($Help) { Show-CommandHelp "stop"; exit 0 }
@@ -1568,7 +1876,7 @@ function Main {
         }
         "^(restart)$" {
             if ($Help) { Show-CommandHelp "restart"; exit 0 }
-            Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container
+            Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container -Dind:$Dind
         }
         "^(rm|remove)$" {
             if ($Help) { Show-CommandHelp "rm"; exit 0 }
