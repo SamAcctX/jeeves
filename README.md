@@ -8,7 +8,7 @@
 
 ## ✨ Key Features
 
-- 🐳 **Containerized Environment** - Consistent, portable development setup with Ubuntu base
+- 🐳 **Containerized Environment** - Consistent, portable development setup with NVIDIA CUDA base image
 - 🤖 **AI Platforms** - OpenCode with optional Claude Code support
 - 🛠️ **Pre-configured MCP Servers** - Sequential Thinking, Fetch, SearxNG, Playwright
 - 🎯 **Specialized AI Agents** - PRD Creator and Deepest-Thinking research agent
@@ -140,7 +140,7 @@ Browser automation and web interaction for testing and scraping.
 
 ### Development Environment
 
-- **Container Features**: Ubuntu base with modern Python/Node.js toolchain
+- **Container Features**: NVIDIA CUDA base (Ubuntu 24.04) with modern Python/Node.js toolchain
 - **OpenCode Integration**: CLI, TUI, and Web UI interfaces
 - **Claude Code Support**: Dual platform capabilities with shared configuration
 - **File Management**: Volume mounts for workspace and configuration persistence
@@ -155,10 +155,11 @@ The `jeeves.ps1` script provides comprehensive container management:
 |---------|-------|-------------|---------|
 | `build` | `b` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop --install-claude-code` |
 | `start` | `up` | Launch container | `./jeeves.ps1 start --clean` |
-| `stop` | `down` | Stop container | `./jeeves.ps1 stop --remove` |
-| `restart` | - | Restart container | `./jeeves.ps1 restart --no-cache --desktop` |
+| `stop` | `down` | Stop container | `./jeeves.ps1 stop --remove --force` |
+| `restart` | - | Restart container | `./jeeves.ps1 restart --no-cache --desktop --install-claude-code` |
 | `shell` | `attach`, `sh` | Terminal access | `./jeeves.ps1 shell --new` |
-| `logs` | - | View logs | `./jeeves.ps1 logs` |
+| `rm` | `remove` | Remove container | `./jeeves.ps1 rm` |
+| `logs` | `log` | View logs | `./jeeves.ps1 logs` |
 | `status` | `st`, `ps` | Check status | `./jeeves.ps1 status` |
 | `clean` | - | Cleanup | `./jeeves.ps1 clean` |
 
@@ -204,6 +205,9 @@ The `jeeves.ps1` script provides comprehensive container management:
 ./jeeves.ps1 shell --new
 ```
 
+**Environment Variables:**
+- `DISABLE_TMUX=1` - Disable automatic tmux attachment when entering shell
+
 #### Agent-Assisted Development
 1. **PRD Creation**: Use `@prd-creator` for project planning
 2. **Research Tasks**: Use `@deepest-thinking` for comprehensive investigation
@@ -225,17 +229,23 @@ RUN apt-get update && apt-get install -y \
 ```
 
 #### Environment Variables
-Key environment variables in docker-compose:
+These environment variables are automatically configured by `jeeves.ps1` when starting the container:
 
-```yaml
-environment:
-  - PLAYWRIGHT_MCP_HEADLESS=1
-  - PLAYWRIGHT_MCP_BROWSER=chromium
-  - PLAYWRIGHT_MCP_NO_SANDBOX=1
-  - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
-  - OPENCODE_ENABLE_EXA=false
-  - SEARXNG_URL=${SEARXNG_URL:-}
-```
+**Playwright MCP:**
+- `PLAYWRIGHT_MCP_HEADLESS=1` - Run browser in headless mode
+- `PLAYWRIGHT_MCP_BROWSER=chromium` - Default browser
+- `PLAYWRIGHT_MCP_NO_SANDBOX=1` - Disable browser sandbox
+- `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1` - Allow file system access
+
+**OpenCode:**
+- `OPENCODE_ENABLE_EXA=false` - Disable Exa web search (uses SearXNG instead)
+
+**GPU Support:**
+- `NVIDIA_DRIVER_CAPABILITIES=all` - Enable all NVIDIA GPU capabilities
+- `CUDA_VISIBLE_DEVICES=all` - Make all GPUs visible to container
+
+**SearXNG:**
+- `SEARXNG_URL` - Set this when running `install-mcp-servers.sh` to configure your SearxNG instance URL
 
 ### Agent Configuration
 
@@ -248,16 +258,43 @@ install-agents.sh --global
 #### Agent Templates
 Create custom agents in `.opencode/agents/` or `.claude/agents/`:
 
+**OpenCode Format:**
 ```yaml
 ---
 description: "Your custom agent"
 mode: subagent
 temperature: 0.7
 permission:
-  write: ask      # ask | allow | deny
-  bash: ask       # ask | allow | deny
-  webfetch: allow # ask | allow | deny
-tools: [read, write, grep, glob, bash, webfetch, question]
+  write: ask
+  bash: ask
+  webfetch: allow
+  edit: deny
+tools:
+  read: true
+  write: true
+  grep: true
+  glob: true
+  bash: true
+  webfetch: true
+  question: true
+  sequentialthinking: true
+---
+```
+
+**Claude Code Format:**
+```yaml
+---
+name: your-agent-name
+description: "Your custom agent"
+mode: subagent
+temperature: 0.7
+permission:
+  write: ask
+  bash: ask
+  webfetch: allow
+  edit: deny
+tools: Read, Write, Grep, Glob, Bash, Web, SequentialThinking, Question
+model: inherit
 ---
 ```
 
@@ -335,16 +372,25 @@ install-mcp-servers.sh --global --dry-run
 ```
 
 #### Manual Configuration
-Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 
+**OpenCode** - Edit `opencode.json`:
 ```json
 {
   "mcp": {
-    "servers": {
-      "sequentialthinking": {
-        "type": "local",
-        "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
-      }
+    "sequentialthinking": {
+      "type": "local",
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequentialthinking"]
+    }
+  }
+}
+```
+
+**Claude Code** - Edit `.mcp.json` (project) or `~/.claude.json` (global):
+```json
+{
+  "mcpServers": {
+    "sequentialthinking": {
+      "command": ["npx", "-y", "@modelcontextprotocol/server-sequentialthinking"]
     }
   }
 }
@@ -375,6 +421,7 @@ Edit `opencode.json` (OpenCode) or `.claude.json` (Claude Code):
 | Flag | Description |
 |------|-------------|
 | `--no-cache` | Build without Docker layer cache (clean build) |
+| `--clean` | Stop and remove existing container before building |
 | `--desktop` | Include desktop binaries (Linux/Windows apps) |
 | `--install-claude-code` | Install Claude Code in the container |
 

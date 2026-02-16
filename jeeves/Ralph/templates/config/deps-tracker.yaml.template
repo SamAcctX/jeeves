@@ -1,0 +1,46 @@
+# Dependency Tracker
+# Tracks task dependencies for the Ralph Loop
+# Manager uses this to determine which tasks are unblocked and ready for work
+#
+# Format:
+#   tasks:
+#     XXXX:
+#       depends_on: []  # List of task IDs this task depends on
+#       blocks: []      # List of task IDs blocked by this task
+#
+# Rules:
+# - A task is "unblocked" when all tasks in its depends_on list are complete
+# - The "blocks" field is the inverse of depends_on (for visualization/debugging)
+# - Tasks with empty depends_on: [] can start immediately
+# - Circular dependencies are detected and reported as TASK_BLOCKED
+
+tasks:
+  # Example 1: Independent task (no dependencies)
+  0001:
+    depends_on: []
+    blocks: [0003]
+
+  # Example 2: Another independent task
+  0002:
+    depends_on: []
+    blocks: [0003]
+
+  # Example 3: Dependent task (requires 0001 and 0002)
+  0003:
+    depends_on: [0001, 0002]
+    blocks: [0004]
+
+  # Example 4: Single dependency
+  0004:
+    depends_on: [0003]
+    blocks: []
+
+  # Example 5: Another independent task
+  0005:
+    depends_on: []
+    blocks: []
+
+  # Add new tasks following this pattern:
+  # XXXX:
+  #   depends_on: [YYYY, ZZZZ]  # Tasks that must complete first
+  #   blocks: [AAAA, BBBB]      # Tasks waiting on this one

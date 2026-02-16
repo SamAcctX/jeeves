@@ -1,0 +1,50 @@
+# Ralph Loop TODO
+
+# Phase 1: Foundation
+- [ ] 0001: Task description here
+- [ ] 0002: Another task description
+- [ ] 0003: Third task in phase 1
+
+# Phase 2: Core Implementation
+- [ ] 0004: Fourth task
+- [ ] 0005: Fifth task
+- [ ] 0006: Sixth task
+
+# Phase 3: Integration
+- [ ] 0007: Seventh task
+- [ ] 0008: Eighth task
+
+# Phase 4: Finalization
+- [ ] 0009: Ninth task
+- [ ] 0010: Tenth task
+
+# STRICT GRAMMAR REFERENCE (DO NOT MODIFY THESE EXAMPLES):
+#
+# 1. Task Lines (only these formats are allowed):
+#    - [ ] 0001: Task title here     (incomplete task)
+#    - [x] 0001: Task title here     (complete task)
+#
+# 2. Abort Lines (emitted by Manager when TASK_BLOCKED):
+#    ABORT: HELP NEEDED FOR TASK 0001: Brief explanation of the blockage
+#
+# 3. Completion Sentinel (emitted when all tasks complete):
+#    ALL TASKS COMPLETE, EXIT LOOP
+#
+# 4. Group Headers (informational only, no functionality):
+#    # Phase 1: Foundation
+#    # Category Name
+#
+# RULES:
+# - Task IDs MUST be 4-digit zero-padded (0001-9999)
+# - The order of tasks is INFORMATIONAL only
+# - The grouping (phases/categories) is INFORMATIONAL only
+# - Manager selects tasks dynamically based on deps-tracker.yaml
+# - Do not add commentary lines (except group headers)
+# - Do not modify the abort/completion formats
+#
+# MANAGER PARSING:
+# The Manager agent uses grep patterns to read this file:
+#   - Incomplete: grep "^- \[ \]" TODO.md
+#   - Complete:   grep "^- \[x\]" TODO.md
+#   - Aborted:    grep "^ABORT:" TODO.md
+#   - All Done:   grep "^ALL TASKS COMPLETE" TODO.md

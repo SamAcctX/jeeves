@@ -1,0 +1,21 @@
+# Ralph Loop .gitignore Template
+# Copy this file to your project root as .gitignore
+# Customize according to your project needs
+
+# Ralph active task data (ephemeral, should not be tracked)
+.ralph/tasks/
+.ralph/tasks/*/activity.md
+.ralph/tasks/*/attempts.md
+
+# Optional: Track completed tasks for project history
+# Uncomment the following line if you want to track completed tasks
+# !.ralph/tasks/done/
+
+# Ralph temporary files and logs
+.ralph/logs/
+.ralph/tmp/
+.ralph/cache/
+
+# Agent session files (temporary)
+.ralph/sessions/
+.ralph/state/

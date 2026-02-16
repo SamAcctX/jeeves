@@ -1,0 +1,180 @@
+## TDD Phase Tracking
+
+**Current Phase**: [TEST_CREATION|AWAITING_DEV|IMPLEMENTATION|AWAITING_TEST|VALIDATION|AWAITING_REFACTOR|REFACTOR|AWAITING_TEST_REFACTOR|FINAL_VALIDATION|DONE]
+**Active Role**: [Tester|Developer|None]
+**Last Handoff**: [timestamp] - [READY_FOR_DEV|READY_FOR_TEST|READY_FOR_TEST_REFACTOR|DONE]
+**Handoff Scope**: [tests-only|prod-only|refactor-validation|complete]
+**Resumable State**: [What to resume when session restarts]
+
+---
+
+## Handoff History
+
+| Timestamp | From | To | State | Scope | Summary |
+|-----------|------|-----|-------|-------|---------|
+| [auto-populated on each handoff] |
+
+---
+
+## Defect Reports
+
+[Defect reports will be added here when tests reveal bugs]
+
+---
+
+## Context Resumption
+
+**Last Context Checkpoint**: [timestamp]
+**Work Completed**: [summary]
+**Work Remaining**: [brief summary]
+**Files In Progress**: [list of partially modified files]
+**Next Steps**: [ordered list of remaining actions]
+**Critical Context**: [any important context needed for resumption]
+
+---
+
+# Task XXXX Activity Log
+
+**Task:** [Task Title]
+**Started:** [YYYY-MM-DD HH:MM]
+**Last Updated:** [YYYY-MM-DD HH:MM]
+**Status:** [IN_PROGRESS/COMPLETE/BLOCKED]
+**Total Iterations:** N
+
+---
+
+## Progress Log
+
+### [2026-01-15 14:30] - Iteration 1
+
+Started work on task. Initial assessment:
+- [What was discovered]
+- [Initial approach planned]
+
+Actions taken:
+- [Action 1 with result]
+- [Action 2 with result]
+- [Action 3 with result]
+
+Progress made:
+- [X% complete]
+- [What was accomplished]
+
+---
+
+### [2026-01-15 15:45] - Iteration 2
+
+Continued implementation. Revised approach based on previous findings:
+- [What changed in strategy]
+
+Completed:
+- [Completed item 1]
+- [Completed item 2]
+
+Still needed:
+- [Remaining work]
+
+---
+
+### [2026-01-15 16:30] - Iteration 3
+
+[Continue pattern for each iteration...]
+
+---
+
+## Errors & Issues
+
+### [2026-01-15 14:45] Connection Timeout
+**Severity:** High/Medium/Low
+**Status:** [RESOLVED/ONGOING]
+
+**Description:**
+[What went wrong]
+
+**Error Message:**
+```
+[Full error output]
+```
+
+**Resolution:**
+[How it was fixed, or current status]
+
+**Prevention:**
+[How to avoid this in future]
+
+---
+
+### [2026-01-15 15:30] Dependency Not Found
+**Severity:** Medium
+**Status:** RESOLVED
+
+**Description:**
+[Issue description]
+
+**Resolution:**
+[How resolved]
+
+---
+
+## Decisions Made
+
+### [2026-01-15 14:35] Chose X over Y
+**Context:** [Why the decision was needed]
+**Options Considered:**
+- Option A: [Pros/Cons]
+- Option B: [Pros/Cons]
+
+**Decision:** [What was chosen]
+**Rationale:** [Why this choice]
+**Reversibility:** [Can this be changed later?]
+
+---
+
+## Lessons Learned
+
+### Technical Lessons
+1. [Technical insight 1]
+2. [Technical insight 2]
+
+### Process Lessons
+1. [Process improvement 1]
+2. [Process improvement 2]
+
+### Patterns Discovered
+- [Pattern 1 with context]
+- [Pattern 2 with context]
+
+---
+
+## Resources & References
+
+### Files Modified
+- `/path/to/file1` - [What was changed]
+- `/path/to/file2` - [What was changed]
+
+### Commands Used
+```bash
+[Useful commands discovered during work]
+```
+
+### Documentation Referenced
+- [Link or reference 1]
+- [Link or reference 2]
+
+---
+
+## Completion Summary
+
+**Completed:** [YYYY-MM-DD HH:MM]
+**Final Status:** [COMPLETE/INCOMPLETE/BLOCKED]
+**Signal Sent:** [TASK_COMPLETE_XXXX/etc.]
+
+**What Was Accomplished:**
+- [Summary of deliverables]
+- [Key achievements]
+
+**Outstanding Issues:**
+- [Any known issues or tech debt]
+
+**Recommendations:**
+- [Suggestions for future related work]

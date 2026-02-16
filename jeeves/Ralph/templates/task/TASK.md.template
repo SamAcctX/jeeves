@@ -1,0 +1,48 @@
+# Task XXXX: [Title]
+
+## Description
+[Detailed description of what needs to be implemented. Be specific about:
+- What functionality or feature is required
+- Why it's needed (business/technical context)
+- Any specific constraints or requirements]
+
+## Acceptance Criteria
+- [ ] Criterion 1: Specific, testable requirement
+- [ ] Criterion 2: Another specific requirement
+- [ ] All tests pass (defined per task type)
+- [ ] No scope creep (only what was requested)
+
+## Implementation Notes
+[Specific technical details, patterns to follow, files to modify, etc.]
+
+### Files to Create/Modify
+- `/path/to/file1` - Purpose
+- `/path/to/file2` - Purpose
+
+### Technical Details
+[Any specific algorithms, data structures, APIs, or patterns to use]
+
+### Validation Steps
+```bash
+# Commands to verify implementation
+command1
+command2
+```
+
+## Dependencies
+[Technical dependencies only - packages, libraries, external resources]
+- Package/Library: [Purpose - worker should self-resolve]
+- External API: [Purpose]
+
+Note: Task dependencies are tracked in deps-tracker.yaml, not here.
+
+## Metadata
+- **Estimated Complexity**: [XS/S/M/L]
+  - XS: 0-15 min (trivial fixes, copy operations)
+  - S: 15-30 min (simple scripts, straightforward impl)
+  - M: 30-60 min (multi-function, moderate complexity)
+  - L: 1-2 hours (complex integrations)
+- **Max Attempts**: [default: 10, override if needed]
+
+## Notes
+[Additional context, edge cases, or special considerations]

@@ -1,0 +1,94 @@
+# Task XXXX Attempt Log
+
+Task: [Task Title]
+Created: [YYYY-MM-DD HH:MM]
+Max Attempts: 10
+
+---
+
+## Attempt 1 [2026-01-15 14:30]
+
+**Iteration:** 1
+
+**Approach:**
+[Description of what was tried in this attempt]
+
+**Actions Taken:**
+1. [Step 1]
+2. [Step 2]
+3. [Step 3]
+
+**Result:**
+- [INCOMPLETE/COMPLETE/FAILED/BLOCKED]
+- [Brief summary of outcome]
+
+**Errors Encountered:**
+```
+[Any error messages or stack traces]
+```
+
+**Lessons Learned:**
+- [What worked]
+- [What didn't work]
+- [What to try next]
+
+---
+
+## Attempt 2 [2026-01-15 15:45]
+
+**Iteration:** 2
+
+**Approach:**
+[Description of revised approach based on previous lessons]
+
+**Actions Taken:**
+1. [Step 1]
+2. [Step 2]
+
+**Result:**
+- [Status]
+- [Summary]
+
+**Errors Encountered:**
+```
+[Error details if any]
+```
+
+**Lessons Learned:**
+- [New insights from this attempt]
+
+---
+
+## Attempt N [YYYY-MM-DD HH:MM]
+
+**Iteration:** N
+
+**Approach:**
+[Approach description]
+
+**Actions Taken:**
+- [Action list]
+
+**Result:**
+- [Status]
+
+**Errors Encountered:**
+[Error details]
+
+**Lessons Learned:**
+[Insights]
+
+---
+
+# Summary
+
+**Total Attempts:** N
+**Final Status:** [COMPLETE/INCOMPLETE/FAILED/BLOCKED]
+
+**Key Lessons:**
+1. [Most important lesson 1]
+2. [Most important lesson 2]
+3. [Most important lesson 3]
+
+**Recommendations for Future:**
+[What would help complete this task faster or more reliably]

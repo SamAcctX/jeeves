@@ -1,0 +1,194 @@
+# RULES.md - Project Rules and Patterns
+
+This file contains project-specific rules, patterns, and learned behaviors.
+Place this file in the project root or any subdirectory to apply rules to that directory and its children.
+
+## IGNORE_PARENT_RULES Token
+
+To prevent inheriting rules from parent directories, add `IGNORE_PARENT_RULES` on its own line in this file.
+
+### Usage
+```
+IGNORE_PARENT_RULES
+```
+
+### Whitespace Variations
+The token is trimmed before matching, so the following variations work:
+- `IGNORE_PARENT_RULES`
+- `  IGNORE_PARENT_RULES` (leading whitespace)
+- `IGNORE_PARENT_RULES  ` (trailing whitespace)
+- `  IGNORE_PARENT_RULES  ` (both)
+
+### Commented Token
+A commented version will NOT stop traversal:
+- `# IGNORE_PARENT_RULES` - ignored, traversal continues
+
+This is useful when you want to document the token without activating it.
+
+## RULES.md Creation Guidelines
+
+This section defines when to create new RULES.md files in subdirectories. New RULES.md should be created when certain thresholds are met, indicating the subdirectory has unique patterns warranting its own rule set.
+
+### Threshold Definitions
+
+Create new RULES.md when ANY of these thresholds are met:
+
+1. **2+ Unique Patterns** - Directory has at least 2 patterns not covered by parent rules
+   - Example: Backend uses different error handling than frontend
+
+2. **3+ Parent Overrides** - Directory consistently needs to override parent rules
+   - Example: "Use tabs not spaces" contradicts parent "Use 2 spaces"
+
+3. **10+ Files** - Directory has significant file count warranting organization
+   - Example: Large feature module with many components
+
+4. **3+ Cross-Task Occurrences** - Same pattern observed across multiple tasks
+   - Example: All UI tasks need specific accessibility pattern
+
+### Decision Tree
+
+Use this decision tree to determine if a new RULES.md is needed:
+
+```
+Working in subdirectory?
+├─ Yes → See unique patterns emerging?
+│       ├─ Yes → Meets threshold (2+ patterns OR 3+ overrides)?
+│       │       ├─ Yes → Create RULES.md
+│       │       └─ No → Add to existing or parent RULES.md
+│       └─ No → Use parent RULES.md
+└─ No → Use root RULES.md
+```
+
+### Rule Override Behavior
+
+Child rules override parent rules. When both parent and child RULES.md exist, the child's rules take precedence for that directory and its subdirectories. This is called "deepest rules take precedence" - the rule closest to the working directory wins on conflicts.
+
+### Granularity Guidance
+
+- Don't create RULES.md for every subdirectory
+- Create at module/package boundaries
+- Consider IGNORE_PARENT_RULES for truly isolated codebases (e.g., separate projects, third-party libraries, completely different tech stacks)
+
+### When to Use IGNORE_PARENT_RULES vs Normal Inheritance
+
+**Use IGNORE_PARENT_RULES when:**
+- Subdirectory contains a completely different codebase or project
+- Subdirectory uses a different tech stack with conflicting conventions
+- Subdirectory is a third-party library or dependency
+- You want to completely isolate this directory from parent patterns
+
+**Use normal inheritance when:**
+- Subdirectory follows most parent conventions with minor additions
+- You want to inherit and extend parent rules
+- Directory is part of the same project and tech stack
+
+### Examples
+
+#### When to Create RULES.md
+
+**Example 1: Different Tech Stack**
+```
+/project/
+├── RULES.md              # JavaScript conventions
+└── backend/
+    └── RULES.md          # Python conventions (different tech stack)
+```
+
+**Example 2: Significant File Count**
+```
+/project/
+├── RULES.md
+└── components/           # 15+ React components
+    └── RULES.md          # Component-specific patterns
+```
+
+**Example 3: Consistent Overrides**
+```
+/project/
+├── RULES.md              # Says "Use 2 spaces"
+└── legacy-code/          # Uses tabs throughout
+    └── RULES.md          # Says "Use tabs"
+```
+
+#### When NOT to Create RULES.md
+
+**Example 1: Minimal Deviation**
+```
+/project/
+├── RULES.md              # Has "Use camelCase for functions"
+└── utils/
+    └── helper.js         # One file that uses snake_case - not enough for new RULES.md
+```
+
+**Example 2: Single Pattern**
+```
+/project/
+├── RULES.md
+└── docs/                 # Only has markdown files, no special patterns
+    └── README.md         # No RULES.md needed here
+```
+
+## Code Patterns
+
+<!-- Document reusable code patterns specific to this project -->
+
+### Pattern Name
+**Context**: When to use this pattern  
+**Rule**: Description of the pattern  
+**Example**: Code example
+
+## Common Pitfalls
+
+<!-- Document mistakes to avoid in this project -->
+
+### Pitfall Name
+**Context**: When this pitfall occurs  
+**Problem**: Description of the issue  
+**Solution**: How to avoid/fix
+
+## Standard Approaches
+
+<!-- Document preferred solutions for common problems -->
+
+### Approach Name
+**Context**: Problem being solved  
+**Approach**: Recommended solution  
+**Rationale**: Why this approach
+
+## Auto-Discovered Patterns
+
+<!-- Automatically discovered patterns during task execution -->
+
+### Format Specification
+
+Auto-rules follow this format:
+```markdown
+AUTO [YYYY-MM-DD][task-XXXX]:
+  Context: The situation that led to the discovery
+  Rule: The actual guidance or pattern to follow
+  Example: Optional code example (prefixed with backtick)
+```
+
+### Examples
+
+AUTO [2026-02-04][task-0087]:
+  Context: Multiple tasks required YAML parsing, each initially used different tools
+  Rule: Always use `yq` for YAML parsing in bash scripts. Do not use sed, awk, or grep for YAML.
+  Example: `yq -r '.tasks."0001".depends_on[]' deps-tracker.yaml`
+
+AUTO [2026-02-04][task-0092]:
+  Context: Scripts were failing silently on errors
+  Rule: All bash scripts must include `set -e` at the top to exit on error
+  Example: `#!/bin/bash` followed by `set -e`
+
+AUTO [2026-02-10][task-0090]:
+  Context: Patterns were being discovered but had no standard format for documentation
+  Rule: Use AUTO [YYYY-MM-DD][task-XXX]: format for grep-friendly pattern discovery
+  Example: `grep "AUTO \\[" RULES.md` to find all auto-discovered patterns
+
+AUTO [2026-02-15][task-0089]:
+  Context: Circular dependencies were detected across multiple task iterations
+  Rule: Always check deps-tracker.yaml before implementing to avoid circular dependencies
+  Example: `grep -A5 "depends_on:" deps-tracker.yaml`
+
+

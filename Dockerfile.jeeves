@@ -40,7 +40,12 @@ RUN apt-get update && \
     sed -i '/developer\.download\.nvidia\.com\/compute\/machine-learning\/repos/d' /etc/apt/sources.list.d/* && \
     wget https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb && \
     dpkg -i cuda-keyring_1.1-1_all.deb && \
+    # Deadsnakes for alt python versions
     add-apt-repository ppa:deadsnakes/ppa && \
+    # Needed for recent versions of yq that behave right from opensuse repo...
+    VERSION=$(. /etc/os-release && echo $VERSION_ID) && \
+    echo "deb http://download.opensuse.org/repositories/home:/alvistack/xUbuntu_${VERSION}/ /" > /etc/apt/sources.list.d/home:alvistack.list && \
+    curl -fsSL https://download.opensuse.org/repositories/home:/alvistack/xUbuntu_${VERSION}/Release.key | gpg --dearmor > /etc/apt/trusted.gpg.d/home_alvistack.gpg && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -123,7 +128,7 @@ ENV BUILD_DESKTOP=$BUILD_DESKTOP
 
 # Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
 # As of 09 Feb 2026, opencode requires bun 1.3.8 exactly...
-RUN npm install -g bun@1.3.8 && \
+RUN npm install -g bun@1.3.9 && \
     npm cache clear --force
 
 RUN git config --global http.postBuffer 524288000 \
@@ -411,6 +416,8 @@ COPY jeeves/bin /usr/local/bin/
 COPY jeeves/PRD /opt/jeeves/PRD/
 # Copy Deepest Thinking files
 COPY jeeves/Deepest-Thinking /opt/jeeves/Deepest-Thinking/
+# Copy Ralph ref files
+COPY jeeves/Ralph /opt/jeeves/Ralph/
 
 # Set permissions
 RUN chmod -R +x /usr/local/bin/ && \

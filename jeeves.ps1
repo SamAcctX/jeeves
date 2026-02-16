@@ -390,10 +390,7 @@ services:
         $composeContent += "      - ENABLE_DIND=true`n"
     }
     
-    $composeContent += @"
-    volumes:
-      - $($mountSpec.WorkspaceMount)`n
-"@
+    $composeContent += "`n    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
     
     foreach ($configMount in $mountSpec.ConfigMounts) {
         $composeContent += "      - $configMount`n"
@@ -1676,19 +1673,15 @@ function Show-ShellMenu {
     Clear-Host
     Write-Host @"
 ╔═══════════════════════════════════════════════════════════════╗
-║                Jeeves - Shell Options                          ║
+║                Jeeves - Shell Options                         ║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Select shell options:
 "@
 
     $shellOptions = @(
-        @{ Key = "1"; Label = "Attach to shell (without DinD)"; Action = "shell" }
-        @{ Key = "2"; Label = "Attach to shell with DinD"; Action = "shell-dind" }
-        @{ Key = "3"; Label = "Attach to new shell (without DinD)"; Action = "shell-new" }
-        @{ Key = "4"; Label = "Attach to new shell with DinD"; Action = "shell-new-dind" }
-        @{ Key = "5"; Label = "Attach to raw shell (without tmux)"; Action = "shell-raw" }
-        @{ Key = "6"; Label = "Attach to raw shell with DinD"; Action = "shell-raw-dind" }
+        @{ Key = "1"; Label = "Attach to shell (tmux)"; Action = "shell" }
+        @{ Key = "2"; Label = "Attach to raw shell (no tmux)"; Action = "shell-raw" }
         @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
         @{ Key = "0"; Label = "Exit"; Action = "exit" }
     )
@@ -1804,53 +1797,9 @@ function Main {
             "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container -Dind:$Dind }
             "^(rm)$" { Remove-Container }
             
-            # Shell options
+            # Shell options - uses running container, starts non-dind if not running
             "^(shell)$" { Enter-Shell -New:$false -Raw:$false }
-            "^(shell-dind)$" { 
-                # For shell with DinD, we need to ensure container is running with DinD
-                $containerId = Get-ContainerId
-                if (-not $containerId) {
-                    Start-Container -Dind:$true
-                    $containerId = Get-ContainerId
-                }
-                # Check if container is running with DinD by checking compose file
-                $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
-                if (Test-Path $composeFile) {
-                    $composeContent = Get-Content $composeFile -Raw
-                    if (-not $composeContent.Contains("ENABLE_DIND=true")) {
-                        Write-Log "Container is not running with DinD. Restarting with DinD..." -warning
-                        Stop-Container
-                        Start-Container -Dind:$true
-                    }
-                }
-                Enter-Shell -New:$false -Raw:$false
-            }
-            "^(shell-new)$" { Enter-Shell -New:$true -Raw:$false }
-            "^(shell-new-dind)$" { 
-                # For new shell with DinD, ensure we start fresh with DinD
-                Start-Container -Dind:$true -Clean:$true
-                Enter-Shell -New:$true -Raw:$false
-            }
             "^(shell-raw)$" { Enter-Shell -New:$false -Raw:$true }
-            "^(shell-raw-dind)$" { 
-                # For raw shell with DinD, ensure container is running with DinD
-                $containerId = Get-ContainerId
-                if (-not $containerId) {
-                    Start-Container -Dind:$true
-                    $containerId = Get-ContainerId
-                }
-                # Check if container is running with DinD by checking compose file
-                $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
-                if (Test-Path $composeFile) {
-                    $composeContent = Get-Content $composeFile -Raw
-                    if (-not $composeContent.Contains("ENABLE_DIND=true")) {
-                        Write-Log "Container is not running with DinD. Restarting with DinD..." -warning
-                        Stop-Container
-                        Start-Container -Dind:$true
-                    }
-                }
-                Enter-Shell -New:$false -Raw:$true
-            }
             
             # Logs and status
             "^(logs)$" { Show-Logs }
