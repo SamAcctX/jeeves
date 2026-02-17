@@ -114,6 +114,7 @@ load_agent_types() {
 }
 
 # Get model for an agent type from agents.yaml
+# Returns empty string for opencode if model is "" (inherit from parent)
 get_agent_model() {
     local agent_type="$1"
     local tool="${2:-$TOOL}"
@@ -127,7 +128,18 @@ get_agent_model() {
         model=$(yq eval ".agents.${agent_type}.fallback.${tool}" "$AGENTS_YAML" 2>/dev/null)
     fi
     
-    if [ "$model" = "null" ] || [ -z "$model" ]; then
+    if [ "$model" = "null" ]; then
+        return 1
+    fi
+    
+    # For opencode, empty string is valid (inherit from parent)
+    if [ "$tool" = "opencode" ]; then
+        echo "$model"
+        return 0
+    fi
+    
+    # For other tools, empty model means not configured
+    if [ -z "$model" ]; then
         return 1
     fi
     
@@ -304,29 +316,6 @@ get_current_model() {
     echo "$model"
 }
 
-# Check if file needs update (idempotency)
-needs_update() {
-    local agent_file="$1"
-    local new_model="$2"
-    
-    if [ ! -f "$agent_file" ]; then
-        return 0
-    fi
-    
-    local current_model
-    current_model=$(get_current_model "$agent_file")
-    
-    # Trim whitespace for comparison
-    current_model=$(echo "$current_model" | sed 's/[[:space:]]*$//')
-    new_model=$(echo "$new_model" | sed 's/[[:space:]]*$//')
-    
-    if [ "$current_model" = "$new_model" ]; then
-        return 1
-    else
-        return 0
-    fi
-}
-
 # Update frontmatter in agent file using yq
 update_agent_frontmatter() {
     local agent_file="$1"
@@ -359,6 +348,7 @@ update_agent_frontmatter() {
         local updated_frontmatter
         updated_frontmatter=$(echo "$frontmatter" | yq eval ".model = \"$new_model\"" -)
         # Remove unnecessary quotes from simple string values (no spaces, no special chars)
+        # But keep quotes for empty strings (valid for opencode inherit)
         if [[ "$new_model" =~ ^[a-zA-Z0-9_.-]+$ ]]; then
             updated_frontmatter=$(echo "$updated_frontmatter" | sed 's/\(model: \)"\([a-zA-Z0-9_.-]*\)"/\1\2/')
         fi
@@ -378,9 +368,17 @@ update_agent_frontmatter() {
         local content
         content=$(cat "$agent_file")
         
+        # Handle empty model (use quotes for proper YAML)
+        local model_value
+        if [ -z "$new_model" ]; then
+            model_value='""'
+        else
+            model_value="$new_model"
+        fi
+        
         cat > "$temp_file" << EOF
 ---
-model: $new_model
+model: $model_value
 ---
 
 $content
@@ -407,7 +405,11 @@ update_agent() {
     
     # Perform update
     if update_agent_frontmatter "$agent_file" "$agent_type" "$new_model"; then
-        print_success "Updated $agent_file with model: $new_model"
+        if [ -z "$new_model" ]; then
+            print_success "Updated $agent_file with model: \"\" (inherit)"
+        else
+            print_success "Updated $agent_file with model: $new_model"
+        fi
         STATS_UPDATED=$((STATS_UPDATED + 1))
         return 0
     else
@@ -461,14 +463,22 @@ sync_all_agents() {
         [ -z "$agent_type" ] && continue
         
         local new_model
-        new_model=$(get_agent_model "$agent_type")
-        
-        if [ -z "$new_model" ]; then
+        if ! new_model=$(get_agent_model "$agent_type"); then
             print_warning "No model configured for $agent_type, skipping"
             continue
         fi
         
-        # Process each file for this agent
+        # For opencode, empty model is valid (inherit from parent)
+        if [ "$TOOL" = "opencode" ]; then
+            if [ -z "$new_model" ]; then
+                print_info "Setting empty model for $agent_type (inherit from parent)"
+            fi
+        elif [ -z "$new_model" ]; then
+            print_warning "No model configured for $agent_type, skipping"
+            continue
+        fi
+        
+        # Process each file for this agent (always update)
         local file
         for file in $agent_files; do
             [ -z "$file" ] && continue
