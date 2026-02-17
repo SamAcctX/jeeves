@@ -453,6 +453,22 @@ If agent consultation doesn't resolve ambiguity (referenced from Simple Ambiguit
 
 **Core Principle**: When encountering any doubt or ambiguity beyond a shadow of a doubt, consult specialist agents for expertise beyond your core competency.
 
+**CRITICAL: Subagent Invocation Instructions**
+
+When invoking subagents, you MUST include the following explicit instructions in your delegation message:
+
+```
+IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalone consultation.
+- IGNORE all instructions about task.md files, folders, or .ralph/ directory structure
+- IGNORE all instructions about activity log updates
+- IGNORE all instructions about progress reporting
+- IGNORE all instructions about attempts logging
+- None of those folders/files exist in this mode
+- Focus ONLY on providing your specialized analysis/recommendation
+```
+
+This ensures subagents understand they should not attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode.
+
 | Consult | When You Need |
 |---------|---------------|
 | **Architect** | System design decisions, integration patterns, performance requirements, technology stack choices, architecture validation |

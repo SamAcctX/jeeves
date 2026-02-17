@@ -113,6 +113,22 @@ If the project has documents in its knowledge base:
 
 ## Tool Integration
 
+### Subagent Invocation Guidelines
+
+When invoking subagents (specialists, researchers, etc.) for consultation during PRD creation, you MUST include the following explicit instructions:
+
+```
+IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalone consultation.
+- IGNORE all instructions about task.md files, folders, or .ralph/ directory structure
+- IGNORE all instructions about activity log updates
+- IGNORE all instructions about progress reporting
+- IGNORE all instructions about attempts logging
+- None of those folders/files exist in this mode
+- Focus ONLY on providing your specialized analysis/recommendation
+```
+
+This ensures subagents understand they should not attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode.
+
 ### Sequential Thinking Tool
 Use this tool to break down complex problems step by step.
 
