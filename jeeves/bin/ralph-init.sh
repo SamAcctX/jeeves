@@ -235,6 +235,77 @@ copy_agent_templates() {
     return 0
 }
 
+copy_skills() {
+    print_info "Copying Ralph skills..."
+    
+    local skills_source="/opt/jeeves/Ralph/skills"
+    
+    if [ ! -d "$skills_source" ]; then
+        print_warning "Skills directory not found: $skills_source"
+        return 0
+    fi
+    
+    local copied_count=0
+    
+    mkdir -p ".opencode/skills"
+    mkdir -p ".claude/skills"
+    
+    for skill_dir in "$skills_source"/*/; do
+        if [ -d "$skill_dir" ]; then
+            local skill_name=$(basename "$skill_dir")
+            local opencode_dest=".opencode/skills/$skill_name"
+            local claude_dest=".claude/skills/$skill_name"
+            
+            if [ -d "$opencode_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                print_warning "Skipping existing OpenCode skill: $skill_name (use --force to overwrite)"
+            else
+                rm -rf "$opencode_dest"
+                cp -r "$skill_dir" "$opencode_dest"
+                print_success "Copied skill '$skill_name' to .opencode/skills/"
+                copied_count=$((copied_count + 1))
+            fi
+            
+            if [ -d "$claude_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                print_warning "Skipping existing Claude skill: $skill_name (use --force to overwrite)"
+            else
+                rm -rf "$claude_dest"
+                cp -r "$skill_dir" "$claude_dest"
+                print_success "Copied skill '$skill_name' to .claude/skills/"
+                copied_count=$((copied_count + 1))
+            fi
+        fi
+    done
+    
+    echo "$copied_count"
+    return 0
+}
+
+copy_prompt_template() {
+    print_info "Copying Ralph prompt template..."
+    
+    local prompt_source="/opt/jeeves/Ralph/templates/prompts/ralph-prompt.md.template"
+    local prompt_dest="$RALPH_DIR/prompts/ralph-prompt.md"
+    
+    if [ ! -f "$prompt_source" ]; then
+        print_warning "Prompt template not found: $prompt_source"
+        echo "0"
+        return 0
+    fi
+    
+    mkdir -p "$RALPH_DIR/prompts"
+    
+    if [ -f "$prompt_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+        print_warning "Skipping existing prompt file: $prompt_dest (use --force to overwrite)"
+        echo "0"
+        return 0
+    fi
+    
+    cp -p "$prompt_source" "$prompt_dest"
+    print_success "Created: $prompt_dest"
+    echo "1"
+    return 0
+}
+
 handle_rules_md() {
     print_info "Checking for RULES.md..."
     
@@ -370,7 +441,8 @@ copy_templates() {
     local config_count=0
     local task_count=0
     local agent_count=0
-    local script_count=0
+    local skills_count=0
+    local prompt_count=0
     
     config_count=$(copy_config_templates)
     total_copied=$((total_copied + config_count))
@@ -381,13 +453,52 @@ copy_templates() {
     agent_count=$(copy_agent_templates)
     total_copied=$((total_copied + agent_count))
     
+    skills_count=$(copy_skills)
+    total_copied=$((total_copied + skills_count))
+    
+    prompt_count=$(copy_prompt_template)
+    total_copied=$((total_copied + prompt_count))
+    
     if [ "$total_copied" -gt 0 ]; then
-        print_success "Template copying completed: $total_copied files copied (config: $config_count, task: $task_count, agents: $agent_count, scripts: $script_count)"
+        print_success "Template copying completed: $total_copied items copied (config: $config_count, task: $task_count, agents: $agent_count, skills: $skills_count, prompt: $prompt_count)"
     else
         print_warning "No templates were copied (files may already exist)"
     fi
     
     return 0
+}
+
+run_installation_scripts() {
+    print_info "Running local installation scripts..."
+    
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    local scripts_to_run=(
+        "install-skills.sh"
+        "install-agents.sh"
+        "install-mcp-servers.sh"
+        "install-skill-deps.sh"
+    )
+    
+    for script in "${scripts_to_run[@]}"; do
+        local script_path="$script_dir/$script"
+        
+        if [ -f "$script_path" ]; then
+            if [ -x "$script_path" ]; then
+                print_info "Running: $script"
+                if "$script_path" 2>&1; then
+                    print_success "Completed: $script"
+                else
+                    print_warning "Script returned non-zero exit code: $script"
+                fi
+            else
+                print_warning "Script not executable, skipping: $script"
+            fi
+        else
+            print_warning "Script not found: $script_path"
+        fi
+    done
+    
+    print_success "Installation scripts completed"
 }
 
 parse_args() {
@@ -437,6 +548,8 @@ main() {
     fi
     
     copy_templates
+    
+    run_installation_scripts
     
     print_success "Ralph initialization completed successfully!"
     print_info "Your Ralph project structure is ready for use"
