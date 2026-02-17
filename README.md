@@ -363,6 +363,403 @@ The script is designed for container startup:
 - Reports all failures at the end for troubleshooting
 - Safe to run multiple times (idempotent)
 
+## 📜 Container Scripts Reference
+
+The `jeeves/bin/` directory contains installation and utility scripts designed to run inside the Jeeves container. These scripts enhance your development workflow with MCP servers, AI agents, and project scaffolding.
+
+### Quick Reference
+
+| Script | Type | Purpose |
+|--------|------|---------|
+| [`install-mcp-servers.sh`](#install-mcp-serverssh) | Executable | Install MCP servers for OpenCode/Claude |
+| [`install-agents.sh`](#install-agentssh) | Executable | Install PRD Creator and Deepest-Thinking agents |
+| [`install-skill-deps.sh`](#install-skill-depssh) | Executable | Install skill dependencies (auto-runs on startup) |
+| [`install-skills.sh`](#install-skillssh) | Executable | Install Agent Skills for document/N8N workflows |
+| [`parse_skill_deps.py`](#parse_skill_depspy) | Executable | Parse SKILL.md files for dependencies |
+| [`ralph-init.sh`](#ralph-initsh) | Executable | Initialize Ralph project scaffolding |
+| [`ralph-loop.sh`](#ralph-loopsh) | Executable | Autonomous AI task execution loop |
+| [`sync-agents.sh`](#sync-agentssh) | Executable | Sync agent configs from agents.yaml |
+| [`apply-rules.sh`](#apply-ruless) | Executable | Apply rules from RULES.md files |
+| [`ralph-paths.sh`](#ralph-pathssh) | Library | Path detection utilities |
+| [`ralph-validate.sh`](#ralph-validatesh) | Library | Validation utilities |
+| [`find-rules-files.sh`](#find-rules-filessh) | Library | Find RULES.md files in directory tree |
+
+### Installation Scripts
+
+#### install-mcp-servers.sh
+
+Installs and configures MCP (Model Context Protocol) servers for OpenCode and Claude Code platforms.
+
+**MCP Servers Installed:**
+- 🧠 **Sequential Thinking** - Structured analysis and reasoning
+- 🌐 **Fetch** - Web content retrieval with markdown conversion
+- 🔍 **SearXNG** - Privacy-focused web search
+- 🎭 **Playwright** - Browser automation and testing
+
+**Usage:**
+```bash
+# Install to user scope (recommended)
+install-mcp-servers.sh --global
+
+# Preview installation without making changes
+install-mcp-servers.sh --dry-run
+
+# Full installation with preview
+install-mcp-servers.sh --global --dry-run
+```
+
+**Environment:**
+- `SEARXNG_URL` - Set before running to configure your SearXNG instance URL
+- Prompts for URL if not set
+
+**Configuration Locations:**
+- OpenCode: `~/.config/opencode/opencode.json`
+- Claude Code: `~/.claude.json` (global) or `.mcp.json` (project)
+
+---
+
+#### install-agents.sh
+
+Installs PRD Creator and Deepest-Thinking agent templates for AI-assisted development.
+
+**Agents Installed:**
+- 📋 **PRD Creator** - Product Requirements Document creation assistant
+- 🔬 **Deepest-Thinking** - Comprehensive research and investigation agent
+
+**Usage:**
+```bash
+# Install all agents to user scope (recommended)
+install-agents.sh --global
+
+# Install only Deepest-Thinking agent
+install-agents.sh --deepest
+
+# Show help
+install-agents.sh --help
+```
+
+**Installation Scopes:**
+| Scope | OpenCode Path | Claude Code Path |
+|-------|---------------|------------------|
+| Project | `/proj/.opencode/agents/` | `/proj/.claude/agents/` |
+| User | `~/.opencode/agents/` | `~/.claude/agents/` |
+
+---
+
+#### install-skill-deps.sh
+
+Discovers skills, parses dependencies from SKILL.md files, and installs required packages. Runs automatically on container startup.
+
+**Usage:**
+```bash
+# Install all skill dependencies (runs automatically on startup)
+install-skill-deps.sh
+
+# Preview what would be installed
+install-skill-deps.sh --dry-run
+
+# Verbose output with detailed logging
+install-skill-deps.sh --verbose
+
+# Combined options
+install-skill-deps.sh -v -d
+```
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-v, --verbose` | Enable detailed output |
+| `-d, --dry-run` | Preview without installing |
+| `-h, --help` | Show help message |
+
+**Package Managers:**
+- **APT**: System packages (pandoc, libreoffice, tesseract)
+- **PIP**: Python packages (defusedxml, markitdown)
+- **NPM**: Node packages (docx, pptxgenjs, playwright)
+
+**Docker Safety:**
+- Always exits with code 0 (never blocks container start)
+- Continues on individual package failures
+- Idempotent (safe to run multiple times)
+
+---
+
+#### install-skills.sh
+
+Installs Agent Skills for Claude Code and OpenCode platforms, including document processing and N8N workflow development skills.
+
+**Usage:**
+```bash
+# Install document processing skills
+install-skills.sh --doc-skills
+
+# Install N8N workflow development skills
+install-skills.sh --n8n-skills
+
+# Install to user scope
+install-skills.sh --doc-skills --global
+
+# Show help
+install-skills.sh --help
+```
+
+**Doc Skills Installed:**
+- `docx` - Word document processing
+- `pdf` - PDF manipulation and extraction
+- `xlsx` - Excel spreadsheet handling
+- `pptx` - PowerPoint presentation creation
+- `markitdown` - Markdown conversion utilities
+
+**N8N Skills Installed:**
+- 7 workflow development skills for N8N automation platform
+
+---
+
+### Utility Scripts
+
+#### parse_skill_deps.py
+
+Python script for parsing SKILL.md files to extract dependency declarations in JSON format.
+
+**Usage:**
+```bash
+# Parse a specific skill file
+python3 /proj/jeeves/bin/parse_skill_deps.py --skill-path /path/to/SKILL.md
+
+# Specify output file
+python3 /proj/jeeves/bin/parse_skill_deps.py \
+  --skill-path /path/to/SKILL.md \
+  --output deps.json
+
+# Verbose output
+python3 /proj/jeeves/bin/parse_skill_deps.py \
+  --skill-path /path/to/SKILL.md \
+  --verbose
+```
+
+**Options:**
+| Option | Required | Description |
+|--------|----------|-------------|
+| `--skill-path` | Yes | Path to SKILL.md file |
+| `--output` | No | Output JSON file path |
+| `--verbose` | No | Enable detailed logging |
+
+**Output Format:**
+```json
+{
+  "apt": ["pandoc", "tesseract-ocr"],
+  "pip": ["defusedxml", "markitdown[all]"],
+  "npm": ["docx", "pptxgenjs"]
+}
+```
+
+---
+
+#### ralph-init.sh
+
+Initializes Ralph project scaffolding with directory structure, configuration files, and agent templates.
+
+**Usage:**
+```bash
+# Initialize Ralph in current project
+ralph-init.sh
+
+# Force overwrite existing files
+ralph-init.sh --force
+
+# Initialize only rules system
+ralph-init.sh --rules
+
+# Show help
+ralph-init.sh --help
+```
+
+**Creates:**
+```
+.ralph/
+├── config/
+│   ├── agents.yaml
+│   └── deps-tracker.yaml
+├── tasks/
+├── templates/
+│   └── agents/
+└── rules/
+    └── RULES.md
+```
+
+---
+
+#### ralph-loop.sh
+
+Autonomous AI task execution loop for continuous task processing with Ralph agents.
+
+**Usage:**
+```bash
+# Run with default settings (opencode, 10 iterations)
+ralph-loop.sh
+
+# Specify tool and max iterations
+ralph-loop.sh --tool opencode --max-iterations 20
+
+# Skip initial sync and run immediately
+ralph-loop.sh --skip-sync
+
+# Disable delay between iterations
+ralph-loop.sh --no-delay
+
+# Dry run (preview without execution)
+ralph-loop.sh --dry-run
+```
+
+**Options:**
+| Option | Default | Description |
+|--------|---------|-------------|
+| `--tool` | opencode | AI tool to use (opencode/claude) |
+| `--max-iterations` | 10 | Maximum loop iterations |
+| `--skip-sync` | false | Skip initial agent sync |
+| `--no-delay` | false | Disable backoff delay |
+| `--dry-run` | false | Preview without execution |
+
+**Environment Variables:**
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `RALPH_TOOL` | opencode | Default AI tool |
+| `RALPH_MAX_ITERATIONS` | 10 | Max iterations |
+| `RALPH_BACKOFF_BASE` | 5 | Base backoff seconds |
+| `RALPH_BACKOFF_MAX` | 60 | Max backoff seconds |
+| `RALPH_MANAGER_MODEL` | - | Manager model override |
+
+---
+
+#### sync-agents.sh
+
+Synchronizes agent model configurations from `agents.yaml` to individual agent files.
+
+**Usage:**
+```bash
+# Sync all agents using default config
+sync-agents.sh
+
+# Specify tool platform
+sync-agents.sh --tool opencode
+
+# Show what would change without modifying
+sync-agents.sh --dry-run
+
+# Show current configuration
+sync-agents.sh --show
+
+# Specify custom config file
+sync-agents.sh --config /path/to/agents.yaml
+```
+
+**Options:**
+| Option | Description |
+|--------|-------------|
+| `-t, --tool TOOL` | Target platform (opencode/claude) |
+| `-c, --config FILE` | Custom agents.yaml path |
+| `-s, --show` | Display current configuration |
+| `-d, --dry-run` | Preview without changes |
+| `-h, --help` | Show help message |
+
+**Environment Variables:**
+- `RALPH_TOOL` - Default tool platform
+- `AGENTS_YAML` - Default config file path
+
+---
+
+#### apply-rules.sh
+
+Applies rules from RULES.md files to guide AI behavior.
+
+**Usage:**
+```bash
+# Apply single rules file
+apply-rules.sh /path/to/RULES.md
+
+# Apply multiple rules files
+apply-rules.sh rules/RULES.md tasks/RULES.md
+```
+
+---
+
+### Library Scripts
+
+These scripts are sourced by other scripts and provide utility functions. They are not intended to be run directly.
+
+#### ralph-paths.sh
+
+Path detection utilities for finding project roots, Ralph directories, and agent files.
+
+**Functions:**
+| Function | Description |
+|----------|-------------|
+| `find_project_root` | Locate project root directory |
+| `find_ralph_dir` | Find .ralph directory |
+| `find_task_dir` | Find tasks directory |
+| `find_agent_file` | Locate agent file by name |
+| `expand_path` | Expand relative paths to absolute |
+
+---
+
+#### ralph-validate.sh
+
+Validation utilities for ensuring data integrity and file existence.
+
+**Functions:**
+| Function | Description |
+|----------|-------------|
+| `validate_task_id` | Validate task ID format |
+| `validate_yaml` | Validate YAML file syntax |
+| `validate_file_exists` | Check file exists |
+| `validate_dir_exists` | Check directory exists |
+| `validate_git_repo` | Verify git repository |
+
+---
+
+#### find-rules-files.sh
+
+Utility for finding RULES.md files in directory tree.
+
+**Functions:**
+| Function | Description |
+|----------|-------------|
+| `find_rules_files` | Find all RULES.md files in tree |
+
+---
+
+### Common Workflows
+
+**Initial Setup Inside Container:**
+```bash
+# Install MCP servers globally
+install-mcp-servers.sh --global
+
+# Install AI agents globally
+install-agents.sh --global
+
+# Initialize Ralph project (if using Ralph)
+ralph-init.sh
+```
+
+**Skill Development:**
+```bash
+# Check skill dependencies
+install-skill-deps.sh --dry-run --verbose
+
+# Parse specific skill dependencies
+python3 /proj/jeeves/bin/parse_skill_deps.py \
+  --skill-path /proj/jeeves/Ralph/skills/git-automation/SKILL.md
+```
+
+**Ralph Automation:**
+```bash
+# Initialize and run autonomous loop
+ralph-init.sh
+sync-agents.sh --show
+ralph-loop.sh --max-iterations 5
+```
+
 ### MCP Server Configuration
 
 #### Adding New MCP Servers
