@@ -11,11 +11,15 @@ AGENTS_YAML="${AGENTS_YAML:-$RALPH_DIR/config/agents.yaml}"
 TOOL="${RALPH_TOOL:-opencode}"
 VALID_TOOLS=("opencode" "claude")
 
+
+# Detect project root from current working directory
+PROJECT_ROOT=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+
 # Agent search paths (priority: project-specific > user-global)
 AGENT_SEARCH_PATHS=(
-    ".ralph/agents"
-    ".opencode/agents"
-    ".claude/agents"
+    "$PROJECT_ROOT/.ralph/agents"
+    "$PROJECT_ROOT/.opencode/agents"
+    "$PROJECT_ROOT/.claude/agents"
     "$HOME/.config/opencode/agents"
     "$HOME/.claude/agents"
 )

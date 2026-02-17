@@ -233,36 +233,6 @@ copy_agent_templates() {
     return 0
 }
 
-copy_bash_scripts() {
-    print_info "Copying bash scripts..."
-    
-    if [ ! -d "$TEMPLATE_SOURCE/bin" ]; then
-        print_warning "Bash scripts directory not found: $TEMPLATE_SOURCE/bin"
-        return 0
-    fi
-    
-    local copied_count=0
-    
-    for script_file in "$TEMPLATE_SOURCE/bin"/*.sh; do
-        if [ -f "$script_file" ]; then
-            local script_name=$(basename "$script_file")
-            local dest_path="/usr/local/bin/$script_name"
-            
-            if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                print_warning "Skipping existing bash script: $script_name (use --force to overwrite)"
-            else
-                cp -p "$script_file" "$dest_path"
-                chmod +x "$dest_path"
-                print_success "Copied $(basename "$script_file") to /usr/local/bin/"
-                copied_count=$((copied_count + 1))
-            fi
-        fi
-    done
-    
-    echo "$copied_count"
-    return 0
-}
-
 handle_rules_md() {
     print_info "Checking for RULES.md..."
     
@@ -408,9 +378,6 @@ copy_templates() {
     
     agent_count=$(copy_agent_templates)
     total_copied=$((total_copied + agent_count))
-    
-    script_count=$(copy_bash_scripts)
-    total_copied=$((total_copied + script_count))
     
     if [ "$total_copied" -gt 0 ]; then
         print_success "Template copying completed: $total_copied files copied (config: $config_count, task: $task_count, agents: $agent_count, scripts: $script_count)"
