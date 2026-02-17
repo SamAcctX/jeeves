@@ -387,7 +387,7 @@ services:
 "@
 
     if ($Dind) {
-        $composeContent += "      - ENABLE_DIND=true`n"
+        $composeContent += "`n      - ENABLE_DIND=true`n"
     }
     
     $composeContent += "`n    volumes:`n      - $($mountSpec.WorkspaceMount)`n"

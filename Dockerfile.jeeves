@@ -477,6 +477,9 @@ start_docker_engine() {
   # Custom daemon.json to use the nvidia runtime and fuse-overlayfs storage driver
   echo '{"storage-driver":"fuse-overlayfs","runtimes":{"nvidia":{"path":"nvidia-container-runtime","runtimeArgs":[]}}}' | sudo tee /etc/docker/daemon.json > /dev/null
 
+  # Permissions reset on log folder - needed to permit the startup to execute
+  sudo chmod -R 755 /var/log/
+
   # Start dockerd in the background (unix socket only)
   # --group jeeves makes /var/run/docker.sock accessible to the jeeves user
   sudo sh -c "dockerd \
