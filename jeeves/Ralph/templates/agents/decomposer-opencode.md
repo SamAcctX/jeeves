@@ -9,7 +9,7 @@ permission:
   bash: allow
   webfetch: allow
   edit: allow
-model: inherit
+model: ""
 tools:
   read: true
   write: true
