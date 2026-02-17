@@ -6,71 +6,71 @@ agents:
   manager:
     description: "Ralph Loop Manager - orchestrates task execution, manages state, handles handoffs"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   architect:
     description: "System design and architecture tasks"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   developer:
     description: "Code implementation and debugging"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   ui-designer:
     description: "UI/UX design and implementation"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   tester:
     description: "Testing and quality assurance"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   researcher:
     description: "Research, analysis, and documentation"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   writer:
     description: "Documentation and content creation"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   decomposer:
     description: "Task decomposition, TODO management, agent coordination"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
