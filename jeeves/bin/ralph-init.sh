@@ -201,25 +201,27 @@ copy_agent_templates() {
             
             if [[ "$template_name" == *"-opencode.md" ]]; then
                 dest_dir=".opencode/agents"
-                dest_path="$dest_dir/$template_name"
+                local base_name="${template_name%-opencode.md}"
+                dest_path="$dest_dir/${base_name}.md"
                 
                 if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                    print_warning "Skipping existing OpenCode template: $template_name (use --force to overwrite)"
+                    print_warning "Skipping existing OpenCode template: $base_name.md (use --force to overwrite)"
                 else
                     cp -p "$template_file" "$dest_path"
-                    print_success "Copied $template_name to .opencode/agents/"
+                    print_success "Copied $template_name to .opencode/agents/${base_name}.md"
                     copied_count=$((copied_count + 1))
                 fi
                 
             elif [[ "$template_name" == *"-claude.md" ]]; then
                 dest_dir=".claude/agents"
-                dest_path="$dest_dir/$template_name"
+                local base_name="${template_name%-claude.md}"
+                dest_path="$dest_dir/${base_name}.md"
                 
                 if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                    print_warning "Skipping existing Claude template: $template_name (use --force to overwrite)"
+                    print_warning "Skipping existing Claude template: $base_name.md (use --force to overwrite)"
                 else
                     cp -p "$template_file" "$dest_path"
-                    print_success "Copied $template_name to .claude/agents/"
+                    print_success "Copied $template_name to .claude/agents/${base_name}.md"
                     copied_count=$((copied_count + 1))
                 fi
                 
