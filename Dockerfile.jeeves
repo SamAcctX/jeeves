@@ -641,6 +641,16 @@ fi
 echo "Dependency resolution and install complete."
 echo "Note: This process works by attempting to parse out deps from skill MD files.  Since this isn't required or standardized, detection and/or installation may silently fail, requiring manual installation."
 
+# Configure git user identity from host environment
+if [ -n "$GIT_AUTHOR_NAME" ]; then
+    echo "Setting git user.name to: $GIT_AUTHOR_NAME"
+    git config --global user.name "$GIT_AUTHOR_NAME"
+fi
+if [ -n "$GIT_AUTHOR_EMAIL" ]; then
+    echo "Setting git user.email to: $GIT_AUTHOR_EMAIL"
+    git config --global user.email "$GIT_AUTHOR_EMAIL"
+fi
+
 # If no arguments provided, default to opencode web
 if [ $# -eq 0 ]; then
     set -- opencode web --hostname 0.0.0.0 --port 3333

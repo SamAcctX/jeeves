@@ -389,6 +389,20 @@ services:
     if ($Dind) {
         $composeContent += "`n      - ENABLE_DIND=true`n"
     }
+
+    # Pass host git config to container
+    try {
+        $gitName = git config --global user.name
+        $gitEmail = git config --global user.email
+        if ($gitName) {
+            $composeContent += "`n      - GIT_AUTHOR_NAME=$gitName`n"
+        }
+        if ($gitEmail) {
+            $composeContent += "      - GIT_AUTHOR_EMAIL=$gitEmail`n"
+        }
+    } catch {
+        Write-Log "Warning: Could not read host git config" -warning
+    }
     
     $composeContent += "`n    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
     
