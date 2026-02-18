@@ -23,6 +23,7 @@ SHOULD_TERMINATE=0
 NO_DELAY=0
 SKIP_SYNC=0
 DRY_RUN=false
+VERBOSE=0
 
 RALPH_BACKOFF_BASE=${RALPH_BACKOFF_BASE:-2}
 RALPH_BACKOFF_MAX=${RALPH_BACKOFF_MAX:-60}
@@ -132,7 +133,7 @@ run_sync_agents() {
     
     local start_time=$(date +%s)
     
-    if sync-agents; then
+    if sync-agents.sh; then
         local duration=$(($(date +%s) - start_time))
         print_success "Agent sync completed in ${duration}s"
     else
@@ -240,14 +241,21 @@ invoke_manager() {
 invoke_opencode_manager() {
     local prompt_path="$1"
     local model_arg=""
+    local verbose_arg=""
     
-    [ -n "$RALPH_MANAGER_MODEL" ] && model_arg="--model $RALPH_MANAGER_MODEL"
+    if [ -n "$RALPH_MANAGER_MODEL" ]; then
+        model_arg="--model $RALPH_MANAGER_MODEL"
+    fi
+    
+    if [ "$VERBOSE" -eq 1 ]; then
+        verbose_arg="--print-logs"
+    fi
     
     print_info "Invoking OpenCode Manager..."
     
     MANAGER_OUTPUT=$(mktemp)
     
-    if opencode --agent manager $model_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if opencode run --agent manager $model_arg $verbose_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
         return 0
     else
         print_warning "OpenCode Manager invocation returned non-zero exit code"
@@ -257,13 +265,22 @@ invoke_opencode_manager() {
 
 invoke_claude_manager() {
     local prompt_path="$1"
-    local model="${RALPH_MANAGER_MODEL:-opus}"
+    local model_arg=""
+    local verbose_arg=""
     
-    print_info "Invoking Claude Manager (model: $model)..."
+    if [ -n "$RALPH_MANAGER_MODEL" ]; then
+        model_arg="--model $RALPH_MANAGER_MODEL"
+    fi
+    
+    if [ "$VERBOSE" -eq 1 ]; then
+        verbose_arg="--verbose"
+    fi
+    
+    print_info "Invoking Claude Manager..."
     
     MANAGER_OUTPUT=$(mktemp)
     
-    if claude -p --dangerously-skip-permissions --model "$model" < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if claude -p --dangerously-skip-permissions $model_arg $verbose_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
         return 0
     else
         print_warning "Claude Manager invocation returned non-zero exit code"
@@ -494,6 +511,10 @@ parse_arguments() {
                 DRY_RUN=true
                 shift
                 ;;
+            --verbose|-v)
+                VERBOSE=1
+                shift
+                ;;
             --help|-h)
                 show_usage
                 exit 0
@@ -536,6 +557,7 @@ Options:
     --skip-sync                 Skip pre-loop agent synchronization
     --no-delay                  Disable backoff delays
     --dry-run                   Print commands without executing
+    --verbose, -v               Enable verbose logging in CLI tool invocations
     --help, -h                  Show this help message
 
 Environment Variables:
@@ -543,7 +565,9 @@ Environment Variables:
     RALPH_MAX_ITERATIONS        Maximum loop iterations
     RALPH_BACKOFF_BASE          Backoff base delay (default: 2)
     RALPH_BACKOFF_MAX           Backoff max delay (default: 60)
-    RALPH_MANAGER_MODEL         Override Manager model
+    RALPH_MANAGER_MODEL         Override Manager model (optional;
+                                OpenCode: model="" in frontmatter;
+                                Claude: model=inherit from frontmatter)
 
 USAGE
 }
