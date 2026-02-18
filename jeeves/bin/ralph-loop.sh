@@ -109,7 +109,7 @@ sleep_with_backoff() {
 }
 
 verify_sync_agents() {
-    if ! command -v sync-agents &> /dev/null; then
+    if ! command -v sync-agents.sh &> /dev/null; then
         print_warning "sync-agents not found in PATH"
         return 1
     fi
