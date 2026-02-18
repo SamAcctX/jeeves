@@ -8,6 +8,7 @@ set -e  # Exit on error
 # Default values
 GLOBAL_SCOPE=false
 DEEPEST_ONLY=false
+INSTALL_ALL=false
 
 # Function to display usage instructions
 usage() {
@@ -16,9 +17,10 @@ usage() {
     echo "Install PRD agents for Claude Code and OpenCode platforms."
     echo ""
     echo "OPTIONS:"
-    echo "  --global    Install agents globally (user home directory)"
-    echo "  --deepest   Install Deepest-Thinking agent only"
-    echo "  --help      Display this help message"
+    echo "  -g, --global    Install agents globally (user home directory)"
+    echo "  -d, --deepest   Install Deepest-Thinking agent only"
+    echo "  -a, --all       Install all agents (PRD Creator and Deepest-Thinking)"
+    echo "  -h, --help      Display this help message"
     echo ""
     echo "SCOPE:"
     echo "  By default: Project scope (/proj/.claude/ and /proj/.opencode/)"
@@ -26,8 +28,9 @@ usage() {
     echo ""
     echo "EXAMPLES:"
     echo "  $0                    # Install to project scope"
-    echo "  $0 --global           # Install to user scope"
-    echo "  $0 --deepest         # Install Deepest-Thinking agent only"
+    echo "  $0 -g                 # Install to user scope"
+    echo "  $0 -d                 # Install Deepest-Thinking agent only"
+    echo "  $0 -a                 # Install all agents explicitly"
     echo ""
 }
 
@@ -55,15 +58,19 @@ warning_msg() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --global)
+        --global|-g)
             GLOBAL_SCOPE=true
             shift
             ;;
-        --deepest)
+        --deepest|-d)
             DEEPEST_ONLY=true
             shift
             ;;
-        --help)
+        --all|-a)
+            INSTALL_ALL=true
+            shift
+            ;;
+        --help|-h)
             usage
             exit 0
             ;;
@@ -256,6 +263,11 @@ install_deepest_agents() {
 # Check if running as root (for global installations)
 if [ "$GLOBAL_SCOPE" = true ] && [ "$(id -u)" -ne 0 ]; then
     warning_msg "Installing globally without root privileges. Some operations may fail."
+fi
+
+# Handle --all flag (install all agents)
+if [ "$INSTALL_ALL" = true ]; then
+    DEEPEST_ONLY=false
 fi
 
 # Check if Deepest-Thinking only installation

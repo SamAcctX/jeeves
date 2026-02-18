@@ -491,23 +491,23 @@ parse_arguments() {
     CLI_TOOL=""
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --tool)
+            --tool|-t)
                 CLI_TOOL="$2"
                 shift 2
                 ;;
-            --max-iterations)
+            --max-iterations|-m)
                 MAX_ITERATIONS="$2"
                 shift 2
                 ;;
-            --skip-sync)
+            --skip-sync|-s)
                 SKIP_SYNC=1
                 shift
                 ;;
-            --no-delay)
+            --no-delay|-n)
                 NO_DELAY=1
                 shift
                 ;;
-            --dry-run)
+            --dry-run|-d)
                 DRY_RUN=true
                 shift
                 ;;
@@ -552,13 +552,13 @@ Usage: ralph-loop.sh [OPTIONS]
 Ralph Loop - Autonomous AI task execution
 
 Options:
-    --tool {opencode|claude}    Select AI tool (default: opencode)
-    --max-iterations N          Maximum iterations (default: 100, 0=unlimited)
-    --skip-sync                 Skip pre-loop agent synchronization
-    --no-delay                  Disable backoff delays
-    --dry-run                   Print commands without executing
-    --verbose, -v               Enable verbose logging in CLI tool invocations
-    --help, -h                  Show this help message
+    -t, --tool {opencode|claude}    Select AI tool (default: opencode)
+    -m, --max-iterations N          Maximum iterations (default: 100, 0=unlimited)
+    -s, --skip-sync                 Skip pre-loop agent synchronization
+    -n, --no-delay                  Disable backoff delays
+    -d, --dry-run                   Print commands without executing
+    -v, --verbose                   Enable verbose logging in CLI tool invocations
+    -h, --help                      Show this help message
 
 Environment Variables:
     RALPH_TOOL                  Default tool selection
