@@ -7,6 +7,24 @@ print_success() { echo -e "\033[1;32m[SUCCESS]\033[0m $1" >&2; }
 print_warning() { echo -e "\033[1;33m[WARNING]\033[0m $1" >&2; }
 print_error() { echo -e "\033[1;31m[ERROR]\033[0m $1" >&2; }
 
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local log_line="[$timestamp] [$level] $message"
+    
+    case "$level" in
+        INFO) print_info "$message" ;;
+        SUCCESS) print_success "$message" ;;
+        WARNING) print_warning "$message" ;;
+        ERROR) print_error "$message" ;;
+    esac
+    
+    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+        echo "$log_line" >> "$LOG_FILE"
+    fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _SAVE_ARGS=("$@")
 set --
@@ -29,6 +47,9 @@ RALPH_BACKOFF_BASE=${RALPH_BACKOFF_BASE:-2}
 RALPH_BACKOFF_MAX=${RALPH_BACKOFF_MAX:-60}
 RALPH_DIR=".ralph"
 PROJECT_ROOT=""
+
+LOG_FILE=""
+LOG_DIR="logs"
 
 PROMPT_FILE=".ralph/prompts/ralph-prompt.md"
 MANAGER_OUTPUT=""
@@ -241,24 +262,26 @@ invoke_manager() {
 invoke_opencode_manager() {
     local prompt_path="$1"
     local model_arg=""
-    local verbose_arg=""
+    local format_arg=""
     
     if [ -n "$RALPH_MANAGER_MODEL" ]; then
         model_arg="--model $RALPH_MANAGER_MODEL"
     fi
     
     if [ "$VERBOSE" -eq 1 ]; then
-        verbose_arg="--print-logs"
+        format_arg="--format json"
     fi
     
-    print_info "Invoking OpenCode Manager..."
+    log_message INFO "Invoking OpenCode Manager..."
     
     MANAGER_OUTPUT=$(mktemp)
     
-    if opencode run --agent manager $model_arg $verbose_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    export OPENCODE_PERMISSION='{"*":"allow","question":"deny"}'
+    
+    if opencode run --agent manager $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
         return 0
     else
-        print_warning "OpenCode Manager invocation returned non-zero exit code"
+        log_message WARNING "OpenCode Manager invocation returned non-zero exit code"
         return 1
     fi
 }
@@ -557,7 +580,7 @@ Options:
     -s, --skip-sync                 Skip pre-loop agent synchronization
     -n, --no-delay                  Disable backoff delays
     -d, --dry-run                   Print commands without executing
-    -v, --verbose                   Enable verbose logging in CLI tool invocations
+    -v, --verbose                   Enable JSON format output in OpenCode
     -h, --help                      Show this help message
 
 Environment Variables:
@@ -568,6 +591,10 @@ Environment Variables:
     RALPH_MANAGER_MODEL         Override Manager model (optional;
                                 OpenCode: model="" in frontmatter;
                                 Claude: model=inherit from frontmatter)
+
+Logging:
+    A log file with timestamps is automatically created at:
+    .ralph/logs/ralph-loop-YYYYMMDD-HHMMSS.log
 
 USAGE
 }
@@ -588,14 +615,20 @@ initialize() {
         exit 1
     fi
     
-    print_info "Ralph Loop initialized"
-    print_info "  Tool: $SELECTED_TOOL"
+    local log_dir="$PROJECT_ROOT/$RALPH_DIR/$LOG_DIR"
+    mkdir -p "$log_dir"
+    LOG_FILE="$log_dir/ralph-loop-$(date +%Y%m%d-%H%M%S).log"
+    touch "$LOG_FILE"
+    
+    log_message INFO "Ralph Loop initialized"
+    log_message INFO "  Tool: $SELECTED_TOOL"
     if [ "$MAX_ITERATIONS" -gt 0 ]; then
-        print_info "  Max iterations: $MAX_ITERATIONS"
+        log_message INFO "  Max iterations: $MAX_ITERATIONS"
     else
-        print_info "  Max iterations: unlimited"
+        log_message INFO "  Max iterations: unlimited"
     fi
-    print_info "  Project root: $PROJECT_ROOT"
+    log_message INFO "  Project root: $PROJECT_ROOT"
+    log_message INFO "  Log file: $LOG_FILE"
 }
 
 main() {
