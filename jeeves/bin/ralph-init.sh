@@ -473,7 +473,7 @@ run_installation_scripts() {
     
     local script_dir="$(dirname "$(readlink -f "$0")")"
     local scripts_to_run=(
-        "install-skills.sh"
+        # "install-skills.sh"
         "install-agents.sh"
         "install-mcp-servers.sh"
         "install-skill-deps.sh"

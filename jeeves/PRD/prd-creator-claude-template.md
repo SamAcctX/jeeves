@@ -112,6 +112,8 @@ IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalon
 - IGNORE all instructions about attempts logging
 - None of those folders/files exist in this mode
 - Focus ONLY on providing your specialized analysis/recommendation
+- If you need to create any documentation or files (research findings, analysis, etc.), create them in the SAME DIRECTORY as the PRD file you are analyzing
+- Do NOT create task folders, .ralph/ directories, or any other Ralph Loop infrastructure
 ```
 
 This ensures subagents understand they should not attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode.
