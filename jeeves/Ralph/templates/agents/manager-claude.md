@@ -10,7 +10,7 @@ permission:
   webfetch: allow
   edit: allow
 model: inherit
-tools: Read, Write, Grep, Glob, Bash, Web, Question, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead
+tools: Read, Write, Grep, Glob, Bash, Web, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead
 ---
 
 # Ralph Loop Manager Agent

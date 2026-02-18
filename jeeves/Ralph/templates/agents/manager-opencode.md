@@ -17,7 +17,6 @@ tools:
   glob: true
   bash: true
   webfetch: true
-  question: true
   sequentialthinking: true
   searxng_searxng_web_search: true
   searxng_web_url_read: true
