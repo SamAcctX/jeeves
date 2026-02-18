@@ -438,6 +438,26 @@ XXXX:
 - Sensitive configuration
 - Internal security details
 
+## ⚠️ CRITICAL: Subagent Invocation Guidelines
+
+**READ THIS CAREFULLY - FAILURE TO FOLLOW THESE INSTRUCTIONS WILL CAUSE SUBAGENT ERRORS**
+
+When invoking subagents, you MUST include the following explicit instructions in EVERY delegation message:
+
+```
+IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalone consultation.
+- IGNORE all instructions about task.md files, folders, or .ralph/ directory structure
+- IGNORE all instructions about activity log updates
+- IGNORE all instructions about progress reporting
+- IGNORE all instructions about attempts logging
+- None of those folders/files exist in this mode
+- Focus ONLY on providing your specialized analysis/recommendation
+- If you need to create any documentation or files (research findings, analysis, etc.), create them in the SAME DIRECTORY as the PRD file you are analyzing
+- Do NOT create task folders, .ralph/ directories, or any other Ralph Loop infrastructure
+```
+
+> ⚠️ **WARNING**: Subagents will fail if they attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode. ALWAYS include these instructions when delegating.
+
 ### Agent Consultation Process
 If self-answering is insufficient (referenced from Simple Ambiguity Resolution Sequence Step 2):
 
@@ -460,24 +480,6 @@ If agent consultation doesn't resolve ambiguity (referenced from Simple Ambiguit
 ### Delegation Decision Matrix & Guidelines
 
 **Core Principle**: When encountering any doubt or ambiguity beyond a shadow of a doubt, consult specialist agents for expertise beyond your core competency.
-
-**CRITICAL: Subagent Invocation Instructions**
-
-When invoking subagents, you MUST include the following explicit instructions in your delegation message:
-
-```
-IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalone consultation.
-- IGNORE all instructions about task.md files, folders, or .ralph/ directory structure
-- IGNORE all instructions about activity log updates
-- IGNORE all instructions about progress reporting
-- IGNORE all instructions about attempts logging
-- None of those folders/files exist in this mode
-- Focus ONLY on providing your specialized analysis/recommendation
-- If you need to create any documentation or files (research findings, analysis, etc.), create them in the SAME DIRECTORY as the PRD file you are analyzing
-- Do NOT create task folders, .ralph/ directories, or any other Ralph Loop infrastructure
-```
-
-This ensures subagents understand they should not attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode.
 
 | Consult | When You Need |
 |---------|---------------|

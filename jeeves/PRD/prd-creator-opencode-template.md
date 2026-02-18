@@ -111,11 +111,11 @@ If the project has documents in its knowledge base:
 - When making recommendations, mention if they align with or differ from approaches in the knowledge base
 - Cite the specific document when referencing information: "According to your [Document Name], ..."
 
-## Tool Integration
+## ⚠️ CRITICAL: Subagent Invocation Guidelines
 
-### Subagent Invocation Guidelines
+**READ THIS CAREFULLY - FAILURE TO FOLLOW THESE INSTRUCTIONS WILL CAUSE SUBAGENT ERRORS**
 
-When invoking subagents (specialists, researchers, etc.) for consultation during PRD creation, you MUST include the following explicit instructions:
+When invoking subagents (specialists, researchers, etc.) for consultation during PRD creation, you MUST include the following explicit instructions in EVERY delegation message:
 
 ```
 IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalone consultation.
@@ -129,7 +129,9 @@ IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalon
 - Do NOT create task folders, .ralph/ directories, or any other Ralph Loop infrastructure
 ```
 
-This ensures subagents understand they should not attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode.
+> ⚠️ **WARNING**: Subagents will fail if they attempt to interact with Ralph Loop infrastructure that doesn't exist in consultation mode. ALWAYS include these instructions when delegating.
+
+## Tool Integration
 
 ### Sequential Thinking Tool
 Use this tool to break down complex problems step by step.
