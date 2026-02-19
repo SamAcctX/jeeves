@@ -272,19 +272,22 @@ invoke_opencode_manager() {
         format_arg="--format json"
     fi
     
-    log_message INFO "Invoking OpenCode Manager..."
+    log_message INFO "Invoking OpenCode Manager (iteration: $ITERATION, max: $MAX_ITERATIONS, tool: $SELECTED_TOOL)"
     
     MANAGER_OUTPUT=$(mktemp)
+    local start_time=$(date +%s)
     
     export OPENCODE_PERMISSION='{"*":"allow","question":"deny"}'
     
     if opencode run --agent manager $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+        local duration=$(($(date +%s) - start_time))
+        log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
     else
-        log_message WARNING "OpenCode Manager invocation returned non-zero exit code"
+        local duration=$(($(date +%s) - start_time))
+        log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
         return 1
     fi
-}
 
 invoke_claude_manager() {
     local prompt_path="$1"
@@ -299,14 +302,18 @@ invoke_claude_manager() {
         verbose_arg="--verbose"
     fi
     
-    print_info "Invoking Claude Manager..."
+    log_message INFO "Invoking Claude Manager (iteration: $ITERATION, max: $MAX_ITERATIONS, tool: $SELECTED_TOOL)"
     
     MANAGER_OUTPUT=$(mktemp)
+    local start_time=$(date +%s)
     
     if claude -p --dangerously-skip-permissions $model_arg $verbose_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+        local duration=$(($(date +%s) - start_time))
+        log_message INFO "Claude Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
     else
-        print_warning "Claude Manager invocation returned non-zero exit code"
+        local duration=$(($(date +%s) - start_time))
+        log_message WARNING "Claude Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
         return 1
     fi
 }
@@ -334,25 +341,25 @@ extract_signal_message() {
 
 handle_complete_signal() {
     local task_id="$1"
-    print_success "Task $task_id completed"
+    log_message SUCCESS "Task $task_id completed (iteration: $ITERATION)"
     SHOULD_TERMINATE=1
 }
 
 handle_incomplete_signal() {
     local task_id="$1"
-    print_info "Task $task_id incomplete - continuing loop"
+    log_message INFO "Task $task_id incomplete - continuing loop (iteration: $ITERATION)"
 }
 
 handle_failed_signal() {
     local task_id="$1"
     local message="$2"
-    print_warning "Task $task_id failed: $message"
+    log_message WARNING "Task $task_id failed: $message (iteration: $ITERATION)"
 }
 
 handle_blocked_signal() {
     local task_id="$1"
     local message="$2"
-    print_error "Task $task_id blocked: $message"
+    log_message ERROR "Task $task_id blocked: $message (iteration: $ITERATION)"
     SHOULD_TERMINATE=1
 }
 
@@ -382,21 +389,47 @@ parse_signals() {
     local output_file="$1"
     
     if [ ! -f "$output_file" ]; then
-        print_warning "No output file to parse"
+        print_warning "No output file to parse (iteration: $ITERATION)"
         return 1
     fi
     
-    local signal_count=$(grep -c -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || echo "0")
+    log_message INFO "Parsing signals from output (iteration: $ITERATION, file: $output_file)"
+    
+    local all_signals
+    all_signals=$(grep -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}(:.*)?($|[[:space:]])" "$output_file" 2>/dev/null | sed 's/^[[:space:]]*//' || true)
+    
+    local signal_count=0
+    if [ -n "$all_signals" ]; then
+        signal_count=$(echo "$all_signals" | wc -l | tr -d ' ')
+    fi
     
     if [ "$signal_count" -gt 1 ]; then
         print_warning "Multiple signals detected ($signal_count) - using first valid signal"
+        print_info "Signals found:"
+        echo "$all_signals" | head -5 | while read -r sig; do
+            print_info "  - $sig"
+        done
+        if [ "$signal_count" -gt 5 ]; then
+            print_info "  ... and $((signal_count - 5)) more"
+        fi
     fi
     
     local line
-    line=$(grep -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}(:.*)?($|[[:space:]])" "$output_file" 2>/dev/null | head -1)
+    line=$(echo "$all_signals" | head -1)
     
     if [ -z "$line" ]; then
-        print_info "No signal found in output"
+        print_info "No signal found in output (iteration: $ITERATION)"
+        print_info "Output file size: $(wc -c < "$output_file" 2>/dev/null || echo 'unknown') bytes"
+        local last_lines
+        last_lines=$(tail -20 "$output_file" 2>/dev/null | grep -v '^[[:space:]]*$' | head -10)
+        if [ -n "$last_lines" ]; then
+            print_info "Last non-empty lines from output:"
+            echo "$last_lines" | while read -r l; do
+                print_info "  $l"
+            done
+        else
+            print_info "Output file appears to be empty or contain only whitespace"
+        fi
         return 1
     fi
     
@@ -464,41 +497,46 @@ parse_manager_signal() {
 }
 
 main_loop() {
+    local loop_start_time=$(date +%s)
+    
     if [ "$MAX_ITERATIONS" -gt 0 ]; then
-        print_info "Starting Ralph Loop (iteration $ITERATION, max: $MAX_ITERATIONS)"
+        log_message INFO "Starting Ralph Loop (iteration: $ITERATION, max: $MAX_ITERATIONS)"
     else
-        print_info "Starting Ralph Loop (iteration $ITERATION, max: unlimited)"
+        log_message INFO "Starting Ralph Loop (iteration: $ITERATION, max: unlimited)"
     fi
     
     while true; do
         check_for_conflicts
         if [ $? -eq 1 ]; then
-            print_error "Conflict detected - terminating loop"
+            log_message ERROR "Conflict detected - terminating loop (iteration: $ITERATION)"
             break
         fi
         
         if should_terminate; then
-            print_info "Termination conditions met - exiting loop"
+            log_message INFO "Termination conditions met - exiting loop (iteration: $ITERATION)"
             break
         fi
         
-        print_info "=== Iteration $ITERATION ==="
+        log_message INFO "=== Iteration $ITERATION ==="
         
         invoke_manager
         MANAGER_EXIT_CODE=$?
         
         if [ -n "$MANAGER_OUTPUT" ] && [ -f "$MANAGER_OUTPUT" ]; then
             if parse_signals "$MANAGER_OUTPUT"; then
-                print_info "Signal processed successfully"
+                log_message INFO "Signal processed successfully (iteration: $ITERATION)"
             else
-                print_warning "No valid signal found in Manager output"
+                log_message WARNING "No valid signal found in Manager output (iteration: $ITERATION, see above for details)"
             fi
         else
-            print_warning "No Manager output file available"
+            log_message WARNING "No Manager output file available (iteration: $ITERATION)"
+            if [ -n "$MANAGER_OUTPUT" ]; then
+                log_message WARNING "Output path was: $MANAGER_OUTPUT (file does not exist)"
+            fi
         fi
         
         if [ "$SHOULD_TERMINATE" -eq 1 ]; then
-            print_info "Termination flag set - exiting loop"
+            log_message INFO "Termination flag set - exiting loop (iteration: $ITERATION)"
             break
         fi
         
@@ -507,7 +545,8 @@ main_loop() {
         sleep_with_backoff "$ITERATION"
     done
     
-    print_success "Ralph Loop finished after $ITERATION iterations"
+    local total_duration=$(($(date +%s) - loop_start_time))
+    log_message SUCCESS "Ralph Loop finished after $ITERATION iterations (total duration: ${total_duration}s)"
 }
 
 parse_arguments() {
