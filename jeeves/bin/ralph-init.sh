@@ -231,6 +231,41 @@ copy_agent_templates() {
         fi
     done
     
+    # Copy shared agent files
+    local shared_source="$TEMPLATE_SOURCE/agents/shared"
+    if [ -d "$shared_source" ]; then
+        mkdir -p ".opencode/agents/shared"
+        mkdir -p ".claude/agents/shared"
+        
+        for shared_file in "$shared_source"/*.md; do
+            if [ -f "$shared_file" ]; then
+                local shared_filename=$(basename "$shared_file")
+                
+                # Copy to OpenCode agents shared directory
+                local opencode_dest=".opencode/agents/shared/$shared_filename"
+                if [ -f "$opencode_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                    print_warning "Skipping existing OpenCode shared file: $shared_filename (use --force to overwrite)"
+                else
+                    cp -p "$shared_file" "$opencode_dest"
+                    print_success "Copied $shared_filename to .opencode/agents/shared/"
+                    copied_count=$((copied_count + 1))
+                fi
+                
+                # Copy to Claude agents shared directory
+                local claude_dest=".claude/agents/shared/$shared_filename"
+                if [ -f "$claude_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                    print_warning "Skipping existing Claude shared file: $shared_filename (use --force to overwrite)"
+                else
+                    cp -p "$shared_file" "$claude_dest"
+                    print_success "Copied $shared_filename to .claude/agents/shared/"
+                    copied_count=$((copied_count + 1))
+                fi
+            fi
+        done
+    else
+        print_warning "Shared agent templates directory not found: $shared_source"
+    fi
+    
     echo "$copied_count"
     return 0
 }
