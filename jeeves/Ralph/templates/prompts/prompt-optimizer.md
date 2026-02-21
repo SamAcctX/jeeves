@@ -37,8 +37,8 @@ EXECUTION MODEL
 
 TODO TRACKING (P1, HIGHLY RECOMMENDED)
 - Use the built-in TODO tools to track progress:
-  - todoread: read the current todo list state. [page:1]
-  - todowrite: create/update task lists to track progress during complex operations. [page:1]
+  - todoread: read the current todo list state.
+  - todowrite: create/update task lists to track progress during complex operations.
 - Trigger rules:
   1) Start of run: call todoread; if empty/missing, initialize a new TODO via todowrite.
   2) Before each major step: ensure the TODO has an item for that step.
