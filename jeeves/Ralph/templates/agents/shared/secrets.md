@@ -2,14 +2,14 @@
 
 **Priority**: P0 (Must-never-break)  
 **Scope**: Universal (all agents)  
-**Location**: `.prompt-optimizer/shared/secrets.md`  
+**Location**: `jeeves/Ralph/templates/agents/shared/secrets.md`  
 **Canonical ID**: SEC-01
 
 ---
 
-## P0-05: Never Write Secrets to Repository Files (MANDATORY)
+## SEC-P0-01: Never Write Secrets to Repository Files (MANDATORY)
 
-<rule priority="P0" id="P0-05" enforce="pre-write">
+<rule priority="P0" id="SEC-P0-01" enforce="pre-write">
 <forbidden>
 <item>Writing secrets to any repository file under any circumstances</item>
 <item>Including secrets in log files, activity.md, attempts.md, TODO.md</item>
@@ -39,6 +39,8 @@
 </validator>
 
 </rule>
+
+---
 
 ## Approved Methods for Secrets Handling
 
@@ -72,9 +74,9 @@
 
 ---
 
-## P1-07: Secret Exposure Response Protocol
+## SEC-P1-01: Secret Exposure Response Protocol
 
-<rule priority="P1" id="P1-07" enforce="on-detection">
+<rule priority="P1" id="SEC-P1-01" enforce="on-detection">
 <trigger when="secret-detected">
 <action>STOP</action>
 <required>Apply exposure response protocol immediately</required>
@@ -95,12 +97,12 @@
 
 ## Compliance Checkpoint
 
-<checkpoint trigger="pre-write">
+<checkpoint id="SEC-CP-01" trigger="pre-write">
 <required_checks>
-- [ ] P0-05: Content does not contain secrets
-- [ ] P0-05: No API keys, passwords, or tokens  
-- [ ] P0-05: No private keys or connection strings
-- [ ] P1-07: If exposed, rotate immediately
+- [ ] SEC-P0-01: Content does not contain secrets
+- [ ] SEC-P0-01: No API keys, passwords, or tokens  
+- [ ] SEC-P0-01: No private keys or connection strings
+- [ ] SEC-P1-01: If exposed, rotate immediately
 </required_checks>
 </checkpoint>
 
@@ -139,7 +141,7 @@
 </pattern>
 
 <action trigger="detection">
-STOP and apply P1-07 protocol immediately
+STOP and apply SEC-P1-01 protocol immediately
 </action>
 </detection_patterns>
 
@@ -151,7 +153,7 @@ STOP and apply P1-07 protocol immediately
 
 ### At Start of Turn
 - Review which files will be modified in this turn
-- Check if any file paths match forbidden paths (P0-05)
+- Check if any file paths match forbidden paths (SEC-P0-01)
 - Identify if task involves credentials, API keys, or configuration
 
 ### Before Tool Calls
@@ -166,17 +168,24 @@ STOP and apply P1-07 protocol immediately
 
 ### Before Response
 **Run compliance checkpoint:**
-- [ ] P0-05: Confirm no secrets written this turn
-- [ ] P1-07: If secret detected during turn, ensure protocol applied
+- [ ] SEC-P0-01: Confirm no secrets written this turn
+- [ ] SEC-P1-01: If secret detected during turn, ensure protocol applied
 - [ ] Document any exposure incidents in activity.md
 
 ### TODO Items for Secrets Detection
 
 <todoreference>
-- **P0-CHECK**: Before any write, scan content for secret patterns
-- **P1-RESPONSE**: If secret detected, invoke P1-07 protocol
-- **P0-VERIFY**: Confirm environment variable usage over hardcoded secrets
-- **P0-AUDIT**: Review any new .env additions are gitignored
+- **SEC-P0-01-CHECK**: Before any write, scan content for secret patterns
+- **SEC-P1-01-RESPONSE**: If secret detected, invoke SEC-P1-01 protocol
+- **SEC-P0-01-VERIFY**: Confirm environment variable usage over hardcoded secrets
+- **SEC-P0-01-AUDIT**: Review any new .env additions are gitignored
 </todoreference>
 
 </todo_guidance>
+
+---
+
+## Related Rules
+
+- **SIG-P0-03**: Signal types (see: signals.md)
+- **ACT-P1-12**: Activity.md updates (see: activity-format.md)

@@ -2,7 +2,7 @@
 
 **Priority**: P1 (Must-follow)
 **Scope**: Developer, Tester, Manager
-**Location**: `.prompt-optimizer/shared/tdd-phases.md`
+**Location**: `jeeves/Ralph/templates/agents/shared/tdd-phases.md`
 
 ---
 
@@ -17,7 +17,7 @@ Add these items to your TODO at start of turn:
 ```
 TODO:
 - [ ] Review relevant P0 rules for current role
-- [ ] Verify role boundary compliance (P0-06, P0-07)
+- [ ] Verify role boundary compliance (TDD-P0-02, TDD-P0-03)
 - [ ] Check TDD phase transition is valid
 - [ ] Run compliance checkpoint before response
 ```
@@ -26,14 +26,14 @@ TODO:
 
 - [ ] Identify current TDD phase (RED/GREEN/VALIDATE/REFACTOR/SAFETY_CHECK/DONE)
 - [ ] Check P0 rules for your role:
-  - **Developer**: P0-06 (Cannot emit TASK_COMPLETE)
-  - **Tester**: P0-07 (Cannot modify production code)
+  - **Developer**: TDD-P0-02 (Cannot emit TASK_COMPLETE)
+  - **Tester**: TDD-P0-03 (Cannot modify production code)
 - [ ] Review phase transition table for valid next states
 
 ### Before Tool Calls
 
-- [ ] P1-01: Verify phase transition is valid
-- [ ] P1-02: Confirm correct agent is acting in current phase
+- [ ] TDD-P1-01: Verify phase transition is valid
+- [ ] TDD-P1-02: Confirm correct agent is acting in current phase
 - [ ] Check stop conditions haven't been reached
 
 ### Before Response
@@ -57,9 +57,9 @@ TODO:
 
 ---
 
-## P0-05: Role Boundary Enforcement (MANDATORY)
+## TDD-P0-01: Role Boundary Enforcement (MANDATORY)
 
-<rule priority="P0" id="P0-05" enforce="start-of-turn">
+<rule priority="P0" id="TDD-P0-01" enforce="start-of-turn">
 
 **Rule**: Each role MUST operate only within defined boundaries.
 
@@ -75,9 +75,9 @@ TODO:
 
 ---
 
-## P0-06: Developer Cannot Emit TASK_COMPLETE (MANDATORY)
+## TDD-P0-02: Developer Cannot Emit TASK_COMPLETE (MANDATORY)
 
-<rule priority="P0" id="P0-06" enforce="pre-response">
+<rule priority="P0" id="TDD-P0-02" enforce="pre-response">
 
 **Rule**: Developer agents MUST NEVER emit `TASK_COMPLETE` signals.
 
@@ -86,7 +86,7 @@ TODO:
 **Correct Developer Signals**:
 - `HANDOFF_READY_FOR_TEST_XXXX` (implementation complete, needs validation)
 - `HANDOFF_DEFECT_FOUND_XXXX` (found issues during implementation)
-- `TASK_INCOMPLETE_XXXX:handoff_to:tester` (general handoff to Tester)
+- `TASK_INCOMPLETE_XXXX:handoff_to:tester:see_activity_md` (general handoff to Tester)
 
 **Incorrect**:
 - `TASK_COMPLETE_XXXX` (DEVELOPER CANNOT DO THIS)
@@ -97,9 +97,9 @@ TODO:
 
 ---
 
-## P0-07: Tester Cannot Modify Production Code (MANDATORY)
+## TDD-P0-03: Tester Cannot Modify Production Code (MANDATORY)
 
-<rule priority="P0" id="P0-07" enforce="pre-tool-call">
+<rule priority="P0" id="TDD-P0-03" enforce="pre-tool-call">
 
 **Rule**: Tester agents MUST NEVER modify production code.
 
@@ -109,17 +109,17 @@ TODO:
 
 **Detection & Enforcement**:
 1. If tempted to fix production code → STOP
-2. This is a SOD violation (P0-05)
+2. This is a SOD violation (TDD-P0-01)
 3. Create defect report
-4. Signal handoff to Developer: `TASK_INCOMPLETE_XXXX:handoff_to:developer`
+4. Signal handoff to Developer: `TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md`
 
 </rule>
 
 ---
 
-## P1-01: TDD Phase State Machine (REQUIRED)
+## TDD-P1-01: TDD Phase State Machine (REQUIRED)
 
-<rule priority="P1" id="P1-01" enforce="start-of-turn">
+<rule priority="P1" id="TDD-P1-01" enforce="start-of-turn">
 
 The Ralph Loop implements Test-Driven Development with strict role separation.
 
@@ -155,9 +155,9 @@ The Ralph Loop implements Test-Driven Development with strict role separation.
 
 ---
 
-## P1-02: Phase Transitions (REQUIRED)
+## TDD-P1-02: Phase Transitions (REQUIRED)
 
-<rule priority="P1" id="P1-02" enforce="pre-transition">
+<rule priority="P1" id="TDD-P1-02" enforce="pre-transition">
 
 | From State | To State | Trigger | Agent |
 |------------|----------|---------|-------|
@@ -177,9 +177,9 @@ The Ralph Loop implements Test-Driven Development with strict role separation.
 
 ---
 
-## P1-03: Verification Chain Requirements (REQUIRED)
+## TDD-P1-03: Verification Chain Requirements (REQUIRED)
 
-<rule priority="P1" id="P1-03" enforce="pre-response">
+<rule priority="P1" id="TDD-P1-03" enforce="pre-response">
 
 Before Manager marks task complete, verify:
 
@@ -198,9 +198,9 @@ Before Manager marks task complete, verify:
 
 ---
 
-## P2-01: Stop Conditions (SHOULD)
+## TDD-P2-01: Stop Conditions (SHOULD)
 
-<rule priority="P2" id="P2-01" enforce="start-of-turn">
+<rule priority="P2" id="TDD-P2-01" enforce="start-of-turn">
 
 - **Context > 90%**: Signal `TASK_INCOMPLETE_XXXX:context_limit_approaching`
 - **Handoff limit reached**: Signal `TASK_INCOMPLETE_XXXX:handoff_limit_reached`
@@ -220,26 +220,26 @@ Before Manager marks task complete, verify:
 
 ### For Developer
 
-- [ ] P0-05: Operating within role boundaries
-- [ ] P0-06: Will NOT emit TASK_COMPLETE
-- [ ] P0-06: Will handoff to Tester instead
-- [ ] P1-01: Current phase allows Developer action
-- [ ] P1-02: Transition to next state is valid
+- [ ] TDD-P0-01: Operating within role boundaries
+- [ ] TDD-P0-02: Will NOT emit TASK_COMPLETE
+- [ ] TDD-P0-02: Will handoff to Tester instead
+- [ ] TDD-P1-01: Current phase allows Developer action
+- [ ] TDD-P1-02: Transition to next state is valid
 
 ### For Tester
 
-- [ ] P0-05: Operating within role boundaries
-- [ ] P0-07: Not modifying production code
-- [ ] P0-07: Only test code changes
-- [ ] P1-01: Current phase allows Tester action
-- [ ] P1-02: Transition to next state is valid
+- [ ] TDD-P0-01: Operating within role boundaries
+- [ ] TDD-P0-03: Not modifying production code
+- [ ] TDD-P0-03: Only test code changes
+- [ ] TDD-P1-01: Current phase allows Tester action
+- [ ] TDD-P1-02: Transition to next state is valid
 
 ### For Manager
 
-- [ ] P0-05: Operating within role boundaries
-- [ ] P1-03: Verification chain satisfied before marking complete
-- [ ] P1-03: Final signal came from Tester
-- [ ] P1-03: All defects resolved (if any)
+- [ ] TDD-P0-01: Operating within role boundaries
+- [ ] TDD-P1-03: Verification chain satisfied before marking complete
+- [ ] TDD-P1-03: Final signal came from Tester
+- [ ] TDD-P1-03: All defects resolved (if any)
 
 </checkpoint>
 </trigger>
@@ -251,31 +251,31 @@ Before Manager marks task complete, verify:
 <xml_structure>
 
 ```xml
-<rule priority="P0" id="P0-05" enforce="start-of-turn">
+<rule priority="P0" id="TDD-P0-01" enforce="start-of-turn">
   Role Boundary Enforcement
 </rule>
 
-<rule priority="P0" id="P0-06" enforce="pre-response">
+<rule priority="P0" id="TDD-P0-02" enforce="pre-response">
   Developer Cannot Emit TASK_COMPLETE
 </rule>
 
-<rule priority="P0" id="P0-07" enforce="pre-tool-call">
+<rule priority="P0" id="TDD-P0-03" enforce="pre-tool-call">
   Tester Cannot Modify Production Code
 </rule>
 
-<rule priority="P1" id="P1-01" enforce="start-of-turn">
+<rule priority="P1" id="TDD-P1-01" enforce="start-of-turn">
   TDD Phase State Machine
 </rule>
 
-<rule priority="P1" id="P1-02" enforce="pre-transition">
+<rule priority="P1" id="TDD-P1-02" enforce="pre-transition">
   Phase Transitions
 </rule>
 
-<rule priority="P1" id="P1-03" enforce="pre-response">
+<rule priority="P1" id="TDD-P1-03" enforce="pre-response">
   Verification Chain Requirements
 </rule>
 
-<rule priority="P2" id="P2-01" enforce="start-of-turn">
+<rule priority="P2" id="TDD-P2-01" enforce="start-of-turn">
   Stop Conditions
 </rule>
 
@@ -292,4 +292,11 @@ Before Manager marks task complete, verify:
 
 </xml_structure>
 
-(End of file - total 252 lines)
+---
+
+## Related Rules
+
+- **SIG-P0-01**: Signal format (see: signals.md)
+- **SIG-P1-04**: TDD phase signals (see: signals.md)
+- **HOF-P1-04**: TDD handoff patterns (see: handoff.md)
+- **ACT-P1-12**: Activity.md updates (see: activity-format.md)

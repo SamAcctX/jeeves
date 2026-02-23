@@ -2,17 +2,17 @@
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
-**Location**: `.prompt-optimizer/shared/context-check.md`
+**Location**: `jeeves/Ralph/templates/agents/shared/context-check.md`
 
 ---
 
-## P0-01: Context Hard Stop (MANDATORY)
+## CTX-P0-01: Context Hard Stop (MANDATORY)
 
-<rule priority="P0" id="P0-01" type="hard_stop">
+<rule priority="P0" id="CTX-P0-01" type="hard_stop">
 When context usage exceeds **90%**, the agent MUST:
 1. STOP all operations immediately
 2. Signal `TASK_INCOMPLETE_XXXX:context_limit_exceeded`
-3. Create a Context Resumption Checkpoint (see P1-08)
+3. Create a Context Resumption Checkpoint (see CTX-P1-02)
 4. Do NOT attempt any further tool calls
 
 **Enforcement**: Any tool call attempted after 90% threshold is a compliance violation.
@@ -20,25 +20,25 @@ When context usage exceeds **90%**, the agent MUST:
 
 ---
 
-## P1-02: Context Thresholds (MANDATORY)
+## CTX-P1-01: Context Thresholds (MANDATORY)
 
-<rule priority="P1" id="P1-02" type="monitoring">
+<rule priority="P1" id="CTX-P1-01" type="monitoring">
 Monitor context usage throughout execution. Take action at these thresholds:
 
 | Threshold | Action Required |
 |-----------|-----------------|
 | **> 60%** | Prepare for graceful handoff; minimize verbose operations |
 | **> 80%** | Signal `TASK_INCOMPLETE_XXXX:context_limit_approaching` |
-| **> 90%** | Execute P0-01 hard stop immediately |
+| **> 90%** | Execute CTX-P0-01 hard stop immediately |
 
 **Enforcement**: At start-of-turn, agent MUST check current context level against thresholds.
 </rule>
 
 ---
 
-## P2-03: Context Limit Warning Signs
+## CTX-P2-01: Context Limit Warning Signs
 
-<rule priority="P2" id="P2-03" type="guidance">
+<rule priority="P2" id="CTX-P2-01" type="guidance">
 Watch for these indicators of context pressure:
 
 - Conversation history exceeds ~50k tokens
@@ -50,15 +50,15 @@ Watch for these indicators of context pressure:
 
 ---
 
-## P1-08: Context Limit Response Protocol
+## CTX-P1-02: Context Limit Response Protocol
 
-<rule priority="P1" id="P1-08" type="response_protocol">
+<rule priority="P1" id="CTX-P1-02" type="response_protocol">
 <trigger when="context_above_80_percent">
 When context > 80%:
 
 1. **Signal immediately**:
    ```
-   TASK_INCOMPLETE_XXXX:context_limit_approaching: [brief work summary]
+   TASK_INCOMPLETE_XXXX:context_limit_approaching
    ```
 
 2. **Create Context Resumption Checkpoint** in activity.md:
@@ -83,9 +83,9 @@ When context > 80%:
 
 ---
 
-## P2-04: Context Limit Pattern Detection
+## CTX-P2-02: Context Limit Pattern Detection
 
-<rule priority="P2" id="P2-04" type="guidance">
+<rule priority="P2" id="CTX-P2-02" type="guidance">
 If same task repeatedly hits context limits:
 
 - **Task too large**: Needs decomposition into smaller subtasks
@@ -99,21 +99,21 @@ If same task repeatedly hits context limits:
 
 ## Compliance Checkpoint
 
-<checkpoint id="CP-01" triggers="start-of-turn, pre-tool-call, pre-response">
-- [ ] P0-01: If context >90%, STOP and do not make any tool calls
-- [ ] P1-02: Context usage monitored (check threshold level)
-- [ ] P1-02: At >80%, signal context limit approaching
-- [ ] P1-02: At >90%, execute P0-01 hard stop
-- [ ] P1-08: Checkpoint documented in activity.md (if >80%)
+<checkpoint id="CTX-CP-01" triggers="start-of-turn, pre-tool-call, pre-response">
+- [ ] CTX-P0-01: If context >90%, STOP and do not make any tool calls
+- [ ] CTX-P1-01: Context usage monitored (check threshold level)
+- [ ] CTX-P1-01: At >80%, signal context limit approaching
+- [ ] CTX-P1-01: At >90%, execute CTX-P0-01 hard stop
+- [ ] CTX-P1-02: Checkpoint documented in activity.md (if >80%)
 </checkpoint>
 
 **Enforcement**: This checkpoint MUST be run at each trigger point. Missing checkpoint execution is a compliance violation.
 
 ---
 
-## P3-05: Estimation Guidelines
+## CTX-P3-01: Estimation Guidelines
 
-<rule priority="P3" id="P3-05" type="guidance">
+<rule priority="P3" id="CTX-P3-01" type="guidance">
 **Typical Token Costs** (approximate):
 
 - Read small file (~100 lines): ~500 tokens
@@ -131,9 +131,9 @@ If same task repeatedly hits context limits:
 
 ---
 
-## P1-09: Context Recovery Strategy
+## CTX-P1-03: Context Recovery Strategy
 
-<rule priority="P1" id="P1-09" type="recovery_protocol">
+<rule priority="P1" id="CTX-P1-03" type="recovery_protocol">
 **When resuming from context limit:**
 
 1. Read the Context Resumption Checkpoint from activity.md
@@ -159,37 +159,45 @@ Add these items to your TODO list at the start of each session:
 
 ```
 TODO items for context management:
-- [ ] Check current context usage against P1-02 thresholds
-- [ ] Verify compliance checkpoint CP-01 is scheduled
-- [ ] If resuming from checkpoint: Execute P1-09 recovery protocol
+- [ ] Check current context usage against CTX-P1-01 thresholds
+- [ ] Verify compliance checkpoint CTX-CP-01 is scheduled
+- [ ] If resuming from checkpoint: Execute CTX-P1-03 recovery protocol
 ```
 
 ### When to Reference This Rule File
 
 | Trigger Point | Action Required |
 |---------------|-----------------|
-| **Start of Turn** | Check P1-02 thresholds; update TODO with current context level |
-| **Pre-Tool-Call** | Verify P0-01 hard stop not triggered; run CP-01 checkpoint |
+| **Start of Turn** | Check CTX-P1-01 thresholds; update TODO with current context level |
+| **Pre-Tool-Call** | Verify CTX-P0-01 hard stop not triggered; run CTX-CP-01 checkpoint |
 | **Post-Tool-Call** | Monitor context after large operations (read/write/fetch) |
-| **Pre-Response** | Final CP-01 checkpoint; ensure no pending signals |
-| **Task Handoff** | Execute P1-08 response protocol if >80% |
+| **Pre-Response** | Final CTX-CP-01 checkpoint; ensure no pending signals |
+| **Task Handoff** | Execute CTX-P1-02 response protocol if >80% |
 
 ### Context Monitoring Workflow
 
 <workflow id="CONTEXT-MONITOR">
-1. **At session start**: Read context usage, add P1-02 threshold check to TODO
-2. **Every 5 tool calls**: Run CP-01 compliance checkpoint
+1. **At session start**: Read context usage, add CTX-P1-01 threshold check to TODO
+2. **Every 5 tool calls**: Run CTX-CP-01 compliance checkpoint
 3. **At >60%**: Add graceful handoff preparation to TODO
-4. **At >80%**: Execute P1-08 protocol immediately; signal user
-5. **At >90%**: Execute P0-01 hard stop; do NOT proceed
-6. **On resumption**: Execute P1-09 recovery protocol before continuing
+4. **At >80%**: Execute CTX-P1-02 protocol immediately; signal user
+5. **At >90%**: Execute CTX-P0-01 hard stop; do NOT proceed
+6. **On resumption**: Execute CTX-P1-03 recovery protocol before continuing
 </workflow>
 
 ### Rule Priority Reference
 
 | Priority | Rule IDs | Action |
 |----------|----------|--------|
-| **P0** | P0-01 | HARD STOP - Must never be bypassed |
-| **P1** | P1-02, P1-08, P1-09 | Must-follow workflow gates |
-| **P2** | P2-03, P2-04 | Should-follow guidance |
-| **P3** | P3-05 | Best-practice estimates |
+| **P0** | CTX-P0-01 | HARD STOP - Must never be bypassed |
+| **P1** | CTX-P1-01, CTX-P1-02, CTX-P1-03 | Must-follow workflow gates |
+| **P2** | CTX-P2-01, CTX-P2-02 | Should-follow guidance |
+| **P3** | CTX-P3-01 | Best-practice estimates |
+
+---
+
+## Related Rules
+
+- **ACT-P1-12**: Activity.md updates (see: activity-format.md)
+- **SIG-P0-01**: Signal format (see: signals.md)
+- **HOF-P0-01**: Handoff limit (see: handoff.md)

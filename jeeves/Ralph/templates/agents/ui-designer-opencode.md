@@ -27,7 +27,7 @@ tools:
 ## PRECEDENCE LADDER (P0 - TOP PRIORITY) [P0-NO-DRIFT]
 
 Priority hierarchy (higher wins on conflict):
-1. **P0 Safety/Format**: Secrets (P0-05), Signal format (P0-01), Forbidden actions
+1. **P0 Safety/Format**: Secrets (SEC-P0-01), Signal format (SIG-P0-01), Forbidden actions
 2. **P0/P1 State Contract**: State updates before signals
 3. **P1 Workflow Gates**: Handoff limits, Context thresholds, Role boundaries
 4. **P2/P3 Best Practices**: Design principles, activity.md updates
@@ -109,7 +109,7 @@ Tie-break: If lower priority conflicts with higher priority, drop the lower prio
 - [ ] V5: Context >40%
 - [ ] V6: Handoff count <8
 - [ ] V7: WCAG requirements met (if delivering design)
-- [ ] P0-05: No secrets in output
+- [ ] SEC-P0-01: No secrets in output
 
 **If any P0 check fails:** STOP and fix before proceeding.
 </checkpoints>
@@ -119,19 +119,19 @@ Tie-break: If lower priority conflicts with higher priority, drop the lower prio
 
 | ID | Rule | Reference File |
 |----|------|----------------|
-| P0-01 | Signal Format (first token) | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
-| P0-02 | Task ID Format (4 digits) | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
-| P0-03 | Signal Types and Messages | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
-| P0-04 | One Signal Per Execution | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
-| P0-05 | Never Write Secrets | [secrets.md](../../../.prompt-optimizer/shared/secrets.md) |
-| P0-06 | Developer Cannot Emit TASK_COMPLETE | [tdd-phases.md](../../../.prompt-optimizer/shared/tdd-phases.md) |
-| P0-07 | Tester Cannot Modify Production Code | [tdd-phases.md](../../../.prompt-optimizer/shared/tdd-phases.md) |
-| P1-01 | Signal Emission Timing | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
-| P1-02 | Context Thresholds | [context-check.md](../../../.prompt-optimizer/shared/context-check.md) |
-| P1-03 | Handoff Limit (8 max) | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
-| P1-09 | Handoff Signal Format | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
-| P1-10 | Handoff Process | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
-| P1-12 | Activity.md Updates | [activity-format.md](../../../.prompt-optimizer/shared/activity-format.md) |
+| SIG-P0-01 | Signal Format (first token) | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
+| SIG-P0-02 | Task ID Format (4 digits) | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
+| SIG-P0-03 | Signal Types and Messages | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
+| SIG-P0-04 | One Signal Per Execution | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
+| SEC-P0-01 | Never Write Secrets | [secrets.md](../../../.prompt-optimizer/shared/secrets.md) |
+| TDD-P0-02 | Developer Cannot Emit TASK_COMPLETE | [tdd-phases.md](../../../.prompt-optimizer/shared/tdd-phases.md) |
+| TDD-P0-03 | Tester Cannot Modify Production Code | [tdd-phases.md](../../../.prompt-optimizer/shared/tdd-phases.md) |
+| SIG-P1-01 | Signal Emission Timing | [signals.md](../../../.prompt-optimizer/shared/signals.md) |
+| CTX-P1-01 | Context Thresholds | [context-check.md](../../../.prompt-optimizer/shared/context-check.md) |
+| HOF-P0-01 | Handoff Limit (8 max) | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
+| HOF-P1-02 | Handoff Signal Format | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
+| HOF-P1-03 | Handoff Process | [handoff.md](../../../.prompt-optimizer/shared/handoff.md) |
+| ACT-P1-12 | Activity.md Updates | [activity-format.md](../../../.prompt-optimizer/shared/activity-format.md) |
 </references>
 
 <statemachine>

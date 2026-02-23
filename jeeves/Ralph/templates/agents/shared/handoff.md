@@ -2,13 +2,13 @@
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
-**Location**: `.prompt-optimizer/shared/handoff.md`
+**Location**: `jeeves/Ralph/templates/agents/shared/handoff.md`
 
 ---
 
-## <rule id="P0-01">Forbidden: Exceeding Handoff Limit</rule>
+## HOF-P0-01: Forbidden - Exceeding Handoff Limit
 
-<rule priority="P0" type="forbidden">
+<rule priority="P0" id="HOF-P0-01" type="forbidden">
 <condition>handoff_count >= 8</condition>
 <action>STOP - emit TASK_INCOMPLETE_XXXX:handoff_limit_reached</action>
 </rule>
@@ -17,9 +17,9 @@
 
 ---
 
-## <rule id="P0-02">Forbidden: Handoff Loops</rule>
+## HOF-P0-02: Forbidden - Handoff Loops
 
-<rule priority="P0" type="forbidden">
+<rule priority="P0" id="HOF-P0-02" type="forbidden">
 <condition>target_agent == current_agent</condition>
 <action>STOP - emit TASK_INCOMPLETE_XXXX:handoff_loop_detected</action>
 </rule>
@@ -28,7 +28,7 @@
 
 ---
 
-## P1-03: Handoff Limit (MANDATORY)
+## HOF-P1-01: Handoff Limit (MANDATORY)
 
 **Maximum 8 total Worker subagent invocations per task.**
 
@@ -38,9 +38,9 @@
 
 ---
 
-## <process id="HANDOFF-COUNTER">Handoff Counter</process>
+## Handoff Counter State Machine
 
-<state_machine>
+<state_machine id="HOF-COUNTER">
 <state name="initialized" value="1"/>
 <transition event="handoff" condition="count < 8" action="count += 1"/>
 <transition event="handoff" condition="count >= 8" action="STOP"/>
@@ -58,7 +58,7 @@
 
 ---
 
-## P1-09: Handoff Signal Format
+## HOF-P1-02: Handoff Signal Format
 
 <validator type="regex">^TASK_INCOMPLETE_[0-9]+:handoff_to:[a-z-]+:see_activity_md$</validator>
 
@@ -83,7 +83,7 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 
 ---
 
-## P1-10: Handoff Process
+## HOF-P1-03: Handoff Process
 
 <workflow>
 <step id="1">Update activity.md with handoff details</step>
@@ -123,7 +123,7 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 
 ---
 
-## P1-11: TDD Handoff Patterns
+## HOF-P1-04: TDD Handoff Patterns
 
 | Current State | Signal | Next Agent | Instruction |
 |---------------|--------|------------|-------------|
@@ -136,7 +136,7 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 
 ---
 
-## P2-05: Handoff Best Practices
+## HOF-P2-01: Handoff Best Practices
 
 **DO**:
 - Document context clearly in activity.md
@@ -152,17 +152,17 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 
 ---
 
-## P1-12: Compliance Checkpoint
+## HOF-P1-05: Compliance Checkpoint
 
 <trigger when="pre-handoff">
 
-- [ ] **P0-01**: handoff_count < 8 (STOP if at limit)
-- [ ] **P0-02**: target_agent != current_agent (no loops)
-- [ ] **P1-03**: Handoff count verified
-- [ ] **P1-09**: Signal format matches regex
-- [ ] **P1-09**: Target agent in valid list
-- [ ] **P1-10**: activity.md updated with handoff details
-- [ ] **P1-10**: Context summary provided
+- [ ] **HOF-P0-01**: handoff_count < 8 (STOP if at limit)
+- [ ] **HOF-P0-02**: target_agent != current_agent (no loops)
+- [ ] **HOF-P1-01**: Handoff count verified
+- [ ] **HOF-P1-02**: Signal format matches regex
+- [ ] **HOF-P1-02**: Target agent in valid list
+- [ ] **HOF-P1-03**: activity.md updated with handoff details
+- [ ] **HOF-P1-03**: Context summary provided
 
 </trigger>
 
@@ -175,24 +175,24 @@ This section provides TODO guidance for agents managing handoffs.
 ### At Start of Turn
 
 <todolist>
-<item priority="P0">Check P0-01: Verify handoff_count from state file</item>
-<item priority="P0">Check P0-02: Verify target != current agent (no loop risk)</item>
+<item priority="P0">Check HOF-P0-01: Verify handoff_count from state file</item>
+<item priority="P0">Check HOF-P0-02: Verify target != current agent (no loop risk)</item>
 </todolist>
 
 ### Before Tool Call (subagent invocation)
 
 <todolist>
-<item priority="P0">Run P0-01 check: handoff_count >= 8 → STOP with handoff_limit_reached</item>
-<item priority="P0">Run P0-02 check: target == current → STOP with handoff_loop_detected</item>
-<item priority="P1">Run P1-09 check: Validate signal format against regex</item>
-<item priority="P1">Run P1-10 check: Verify activity.md updated</item>
+<item priority="P0">Run HOF-P0-01 check: handoff_count >= 8 → STOP with handoff_limit_reached</item>
+<item priority="P0">Run HOF-P0-02 check: target == current → STOP with handoff_loop_detected</item>
+<item priority="P1">Run HOF-P1-02 check: Validate signal format against regex</item>
+<item priority="P1">Run HOF-P1-03 check: Verify activity.md updated</item>
 </todolist>
 
 ### Before Response (handoff completion)
 
 <todolist>
-<item priority="P1">Run P1-12 Compliance Checkpoint (7 items)</item>
-<item priority="P1">Verify P1-10: Context summary clear for next agent</item>
+<item priority="P1">Run HOF-P1-05 Compliance Checkpoint (7 items)</item>
+<item priority="P1">Verify HOF-P1-03: Context summary clear for next agent</item>
 </todolist>
 
 ### Example TODO Items for Handoff Management
@@ -214,4 +214,11 @@ TODO: Pre-handoff checkpoint - validate all P0/P1 rules
 | activity.md | target_agent | valid agent list | STOP if invalid |
 | activity.md | last_handoff_from | agent name | Compare to prevent loops |
 
-(End of file)
+---
+
+## Related Rules
+
+- **SIG-P0-01**: Signal format (see: signals.md)
+- **SIG-P1-03**: Handoff signal format (see: signals.md)
+- **ACT-P1-12**: Activity.md updates (see: activity-format.md)
+- **TDD-P0-01**: Role boundary enforcement (see: tdd-phases.md)

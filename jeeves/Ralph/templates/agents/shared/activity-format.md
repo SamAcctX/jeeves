@@ -2,24 +2,24 @@
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
-**Location**: `.prompt-optimizer/shared/activity-format.md`
+**Location**: `jeeves/Ralph/templates/agents/shared/activity-format.md`
 
 ---
 
-## Rule ID: P1-12
+## Rule ID: ACT-P1-12
 
 ### Activity.md Update Requirements
 
 **Location**: `.ralph/tasks/{id}/activity.md`
 
-<rule id="P1-12" priority="P1" scope="universal" trigger="start_of_turn">
+<rule id="ACT-P1-12" priority="P1" scope="universal" trigger="start_of_turn">
   <requirement>At start: Document current attempt</requirement>
   <requirement>During work: Log progress and decisions</requirement>
   <requirement>Before handoff: Create handoff record</requirement>
   <requirement>Before signal: Document results</requirement>
   <enforcement>
     <checkpoint trigger="pre_response">
-      - [ ] P1-12: activity.md updated with results
+      - [ ] ACT-P1-12: activity.md updated with results
       - [ ] Handoff documented (if applicable)
       - [ ] State consistent with signal
     </checkpoint>
@@ -81,7 +81,7 @@ Status: {in_progress|completed|blocked}
 **Invoke at**: pre-response
 
 <validator type="checkpoint" trigger="pre_response">
-  - [ ] P1-12: activity.md updated with results
+  - [ ] ACT-P1-12: activity.md updated with results
   - [ ] Handoff documented (if applicable)
   - [ ] State consistent with signal
 </validator>
@@ -95,7 +95,7 @@ Status: {in_progress|completed|blocked}
 Use the following TODO checkpoints when working with activity.md:
 
 #### At Start of Turn
-- [ ] Check P1-12: Verify activity.md exists for current task
+- [ ] Check ACT-P1-12: Verify activity.md exists for current task
 - [ ] Review previous attempt status before starting work
 - [ ] Verify context resumption checkpoint if resuming
 
@@ -104,9 +104,9 @@ Use the following TODO checkpoints when working with activity.md:
 - [ ] Update status to "in_progress" when starting significant work
 
 #### Before Response
-- [ ] Run P1-12 compliance checkpoint
+- [ ] Run ACT-P1-12 compliance checkpoint
 - [ ] Verify handoff record complete if transferring to another agent
-- [ ] Ensure signal readiness (document results per P1-12)
+- [ ] Ensure signal readiness (document results per ACT-P1-12)
 
 ### Example TODO Items for Activity.md Updates
 
@@ -122,7 +122,7 @@ TODO: Validate activity.md state matches signal output
 ### Drift Prevention
 
 - **Trigger**: Every pre-response checkpoint
-- **Check**: P1-12 compliance list
+- **Check**: ACT-P1-12 compliance list
 - **Fail condition**: Missing required sections or incomplete handoff
 - **Recovery**: Prompt for missing documentation before proceeding
 
@@ -130,7 +130,6 @@ TODO: Validate activity.md state matches signal output
 
 ## Related Rules
 
-- **P0-01**: Signal format (see: signal-format.md)
-- **P1-10**: Handoff requirements (see: handoff-format.md)
-- **P1-11**: Context resumption protocol (see: context-resumption.md)
-
+- **SIG-P0-01**: Signal format (see: signals.md)
+- **HOF-P1-03**: Handoff process (see: handoff.md)
+- **CTX-P1-02**: Context resumption protocol (see: context-check.md)
