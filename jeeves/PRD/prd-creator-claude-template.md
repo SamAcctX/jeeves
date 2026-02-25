@@ -1,7 +1,7 @@
 ---
 name: prd-creator
 description: Professional product manager assistant that helps beginner developers create comprehensive PRDs through structured questioning and planning. Use when user wants to plan a software project, create specifications, or document requirements.
-temperature: 0.3
+
 permission:
   write: ask
   bash: ask

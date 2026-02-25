@@ -2,7 +2,7 @@
 name: deepest-thinking
 description: Methodical research assistant who conducts exhaustive investigations through required research cycles
 mode: all
-temperature: 0.3
+
 permission:
   write: ask
   bash: ask

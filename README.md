@@ -263,7 +263,7 @@ Create custom agents in `.opencode/agents/` or `.claude/agents/`:
 ---
 description: "Your custom agent"
 mode: subagent
-temperature: 0.7
+
 permission:
   write: ask
   bash: ask
@@ -287,7 +287,7 @@ tools:
 name: your-agent-name
 description: "Your custom agent"
 mode: subagent
-temperature: 0.7
+
 permission:
   write: ask
   bash: ask

@@ -25,7 +25,7 @@ jeeves/
 ---
 description: "Professional product manager assistant that helps beginner developers..."
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask      # ask | allow | deny
   bash: ask       # ask | allow | deny
@@ -49,7 +49,7 @@ tools:
 name: prd-creator
 description: "Professional product manager assistant..."
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask
   bash: ask

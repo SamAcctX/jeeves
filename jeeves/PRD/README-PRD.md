@@ -93,7 +93,7 @@ The OpenCode template includes:
 ---
 description: Professional product manager assistant that helps beginner developers create comprehensive PRDs through structured questioning and planning
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask      # User approval for file operations
   bash: ask       # User approval for terminal commands

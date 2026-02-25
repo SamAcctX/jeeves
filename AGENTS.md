@@ -138,7 +138,7 @@ Example:
 ---
 description: "Agent description here"
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask
   bash: ask

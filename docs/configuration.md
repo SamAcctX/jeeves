@@ -154,7 +154,7 @@ networks:
 ---
 description: "Brief description of agent capabilities"
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask
   bash: ask

@@ -93,7 +93,7 @@ The OpenCode template includes:
 ---
 description: Methodical research assistant who conducts exhaustive investigations through required research cycles
 mode: subagent
-temperature: 0.3
+
 permission:
   write: ask      # User approval for file operations
   bash: ask       # User approval for terminal commands

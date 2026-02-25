@@ -1,34 +1,49 @@
 # Handoff Guidelines (DUP-06)
 
-**Priority**: P1 (Must-follow)
+<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+
+**Priority**: P1 (Must-follow); P0 rules embedded below
 **Scope**: Universal (all agents)
 **Location**: `jeeves/Ralph/templates/agents/shared/handoff.md`
 
 ---
 
-## HOF-P0-01: Forbidden - Exceeding Handoff Limit
+## Rule Precedence (Tie-break order)
 
-<rule priority="P0" id="HOF-P0-01" type="forbidden">
-<condition>handoff_count >= 8</condition>
-<action>STOP - emit TASK_INCOMPLETE_XXXX:handoff_limit_reached</action>
-</rule>
+1. P0 Safety & forbidden actions
+2. P0 Output format & validators
+3. P1 Workflow/state-machine steps
+4. P2/P3 Style guidance
 
-**Enforcement**: Any attempt to invoke a 9th Worker subagent must be blocked. No exceptions.
+If any lower-priority rule conflicts with a higher-priority rule, the lower-priority rule is dropped.
 
 ---
 
-## HOF-P0-02: Forbidden - Handoff Loops
+## HOF-P0-01: Forbidden — Exceeding Handoff Limit (CRITICAL — NEVER EXCEED)
+
+<rule priority="P0" id="HOF-P0-01" type="forbidden">
+<condition>handoff_count >= 8</condition>
+<action>STOP — emit TASK_INCOMPLETE_XXXX:handoff_limit_reached</action>
+</rule>
+
+**Maximum: 8 Worker subagent invocations per task.**
+**Enforcement**: Any attempt to invoke a 9th Worker subagent MUST be blocked. No exceptions.
+**Signal**: `TASK_INCOMPLETE_XXXX:handoff_limit_reached` (DO NOT reference elsewhere — this limit is absolute)
+
+---
+
+## HOF-P0-02: Forbidden — Handoff Loops
 
 <rule priority="P0" id="HOF-P0-02" type="forbidden">
 <condition>target_agent == current_agent</condition>
-<action>STOP - emit TASK_INCOMPLETE_XXXX:handoff_loop_detected</action>
+<action>STOP — emit TASK_INCOMPLETE_XXXX:handoff_loop_detected</action>
 </rule>
 
 **Enforcement**: Cannot handoff to same agent type twice in succession. This creates infinite loops.
 
 ---
 
-## HOF-P1-01: Handoff Limit (MANDATORY)
+## HOF-P1-01: Handoff Limit Details (MANDATORY)
 
 **Maximum 8 total Worker subagent invocations per task.**
 
@@ -43,16 +58,15 @@
 <state_machine id="HOF-COUNTER">
 <state name="initialized" value="1"/>
 <transition event="handoff" condition="count < 8" action="count += 1"/>
-<transition event="handoff" condition="count >= 8" action="STOP"/>
+<transition event="handoff" condition="count >= 8" action="STOP — emit handoff_limit_reached"/>
 </state_machine>
 
-**Initialize**: `handoff_count = 1` (for original Worker invocation)
-
-**Increment**: `handoff_count += 1` on each handoff
-
-**Check**: Before each handoff, verify `handoff_count < 8`
-
-**At Limit**: Emit `TASK_INCOMPLETE_XXXX:handoff_limit_reached`
+| Step | Action |
+|------|--------|
+| Initialize | `handoff_count = 1` (for original Worker invocation) |
+| Increment | `handoff_count += 1` on each handoff |
+| Check | Before each handoff, verify `handoff_count < 8` |
+| At Limit | Emit `TASK_INCOMPLETE_XXXX:handoff_limit_reached` |
 
 **Enforcement**: Pre-tool-call validator MUST check handoff_count before invoking subagent.
 
@@ -60,7 +74,9 @@
 
 ## HOF-P1-02: Handoff Signal Format
 
-<validator type="regex">^TASK_INCOMPLETE_[0-9]+:handoff_to:[a-z-]+:see_activity_md$</validator>
+<validator type="regex" id="HOF-SIG-REGEX">
+^TASK_INCOMPLETE_\d{4}:handoff_to:[a-z-]+:see_activity_md$
+</validator>
 
 **Standard Format**:
 ```
@@ -72,23 +88,25 @@ TASK_INCOMPLETE_XXXX:handoff_to:AGENT:see_activity_md
 TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 ```
 
+**Note**: Task ID is exactly 4 digits with leading zeros (see SIG-P0-02 in signals.md). This regex uses `\d{4}` to enforce that.
+
 **Valid Target Agents**:
-- `developer` - Code implementation
-- `tester` - Test validation
-- `architect` - System design
-- `researcher` - Investigation
-- `writer` - Documentation
-- `ui-designer` - Interface design
-- `decomposer` - Task breakdown
+- `developer` — Code implementation
+- `tester` — Test validation
+- `architect` — System design
+- `researcher` — Investigation
+- `writer` — Documentation
+- `ui-designer` — Interface design
+- `decomposer` — Task breakdown
 
 ---
 
 ## HOF-P1-03: Handoff Process
 
-<workflow>
+<workflow id="HOF-PROCESS">
 <step id="1">Update activity.md with handoff details</step>
 <step id="2">Signal handoff with TASK_INCOMPLETE format</step>
-<step id="3">Manager verifies count & invokes target agent</step>
+<step id="3">Manager verifies count and invokes target agent</step>
 </workflow>
 
 **Initiating Handoff**:
@@ -152,67 +170,67 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 
 ---
 
-## HOF-P1-05: Compliance Checkpoint
+## HOF-P1-05: Compliance Checkpoint (Pre-Handoff)
 
-<trigger when="pre-handoff">
+**Invoke at**: pre-handoff (before any subagent invocation)
 
-- [ ] **HOF-P0-01**: handoff_count < 8 (STOP if at limit)
-- [ ] **HOF-P0-02**: target_agent != current_agent (no loops)
-- [ ] **HOF-P1-01**: Handoff count verified
-- [ ] **HOF-P1-02**: Signal format matches regex
-- [ ] **HOF-P1-02**: Target agent in valid list
-- [ ] **HOF-P1-03**: activity.md updated with handoff details
-- [ ] **HOF-P1-03**: Context summary provided
+<checkpoint id="HOF-CP-01" trigger="pre-handoff">
+- [ ] HOF-P0-01: handoff_count < 8 (STOP immediately if at limit — emit handoff_limit_reached)
+- [ ] HOF-P0-02: target_agent != current_agent (no self-loops)
+- [ ] HOF-P1-01: Handoff count verified and will be incremented
+- [ ] HOF-P1-02: Signal format matches regex `^TASK_INCOMPLETE_\d{4}:handoff_to:[a-z-]+:see_activity_md$`
+- [ ] HOF-P1-02: Target agent is in valid list (developer/tester/architect/researcher/writer/ui-designer/decomposer)
+- [ ] HOF-P1-03: activity.md updated with handoff details
+- [ ] HOF-P1-03: Context summary provided for receiving agent
+</checkpoint>
 
-</trigger>
+**[P0 REINFORCEMENT — verify before EVERY subagent invocation]**
+```
+HOF-P0-01: handoff_count < 8? If NO → STOP, emit handoff_limit_reached
+HOF-P0-02: target != current agent? If NO → STOP, emit handoff_loop_detected
+```
+
+---
+
+## File-Based State Requirements
+
+| State Field | Valid Range | Action if Invalid |
+|-------------|-------------|-------------------|
+| handoff_count | 1–8 | STOP if > 8 (HOF-P0-01) |
+| target_agent | valid agent list | STOP if invalid |
+| last_handoff_from | agent name | Compare to prevent loops (HOF-P0-02) |
 
 ---
 
 ## Using This Rule File (TODO Integration)
 
-This section provides TODO guidance for agents managing handoffs.
-
 ### At Start of Turn
 
-<todolist>
-<item priority="P0">Check HOF-P0-01: Verify handoff_count from state file</item>
-<item priority="P0">Check HOF-P0-02: Verify target != current agent (no loop risk)</item>
-</todolist>
+- [ ] Check HOF-P0-01: Read handoff_count from activity.md state
+- [ ] Check HOF-P0-02: Verify target != current agent (no loop risk)
 
 ### Before Tool Call (subagent invocation)
 
-<todolist>
-<item priority="P0">Run HOF-P0-01 check: handoff_count >= 8 → STOP with handoff_limit_reached</item>
-<item priority="P0">Run HOF-P0-02 check: target == current → STOP with handoff_loop_detected</item>
-<item priority="P1">Run HOF-P1-02 check: Validate signal format against regex</item>
-<item priority="P1">Run HOF-P1-03 check: Verify activity.md updated</item>
-</todolist>
+- [ ] HOF-P0-01: handoff_count >= 8 → STOP with handoff_limit_reached
+- [ ] HOF-P0-02: target == current → STOP with handoff_loop_detected
+- [ ] HOF-P1-02: Validate signal format against regex
+- [ ] HOF-P1-03: Verify activity.md updated
 
 ### Before Response (handoff completion)
 
-<todolist>
-<item priority="P1">Run HOF-P1-05 Compliance Checkpoint (7 items)</item>
-<item priority="P1">Verify HOF-P1-03: Context summary clear for next agent</item>
-</todolist>
+- [ ] Run HOF-CP-01 compliance checkpoint (all 7 items)
+- [ ] HOF-P1-03: Context summary clear for next agent
 
-### Example TODO Items for Handoff Management
+### Example TODO Items
 
 ```
 TODO: Initialize handoff_count=1 on first Worker invocation
-TODO: Before each subagent call - verify handoff_count < 8
-TODO: On each handoff - increment handoff_count and update activity.md
-TODO: At limit (8) - emit TASK_INCOMPLETE_XXXX:handoff_limit_reached
-TODO: Verify no handoff loops - target_agent != current_agent
-TODO: Pre-handoff checkpoint - validate all P0/P1 rules
+TODO: Before each subagent call — verify handoff_count < 8
+TODO: On each handoff — increment handoff_count and update activity.md
+TODO: At limit (8) — emit TASK_INCOMPLETE_XXXX:handoff_limit_reached
+TODO: Verify no handoff loops — target_agent != current_agent
+TODO: Pre-handoff checkpoint — validate all HOF-CP-01 items
 ```
-
-### File-Based State Requirements
-
-| State File | Field | Valid Range | Action if Invalid |
-|------------|-------|-------------|-------------------|
-| activity.md | handoff_count | 1-8 | STOP if > 8 |
-| activity.md | target_agent | valid agent list | STOP if invalid |
-| activity.md | last_handoff_from | agent name | Compare to prevent loops |
 
 ---
 
