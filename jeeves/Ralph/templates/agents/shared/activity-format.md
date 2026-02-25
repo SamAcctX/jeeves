@@ -1,6 +1,6 @@
 # Activity.md Format (DUP-09)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
@@ -52,15 +52,25 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 
 ## Standard Sections
 
-### Attempt Header
+### Attempt Header (MANDATORY — every attempt must start with this)
 
 ```markdown
 ## Attempt {N} [{timestamp}]
 Iteration: {number}
-Status: {in_progress|completed|blocked}
+Status: {in_progress|completed|blocked|failed}
 ```
 
-### Work Completed
+**Field Requirements**:
+| Field | Required | Valid Values |
+|-------|----------|-------------|
+| N | YES | Integer, 1-indexed, monotonically increasing |
+| timestamp | YES | ISO 8601 or human-readable timestamp |
+| Iteration | YES | Integer matching current iteration count |
+| Status | YES | `in_progress`, `completed`, `blocked`, `failed` |
+
+**Status must match signal**: `completed` → TASK_COMPLETE, `blocked` → TASK_BLOCKED, `failed` → TASK_FAILED, `in_progress` → work ongoing or TASK_INCOMPLETE.
+
+### Work Completed (MANDATORY — log all work done)
 
 ```markdown
 ### Work Completed
@@ -68,7 +78,9 @@ Status: {in_progress|completed|blocked}
 - [item 2]
 ```
 
-### Handoff Record
+**Requirement**: At least one bullet item. Empty "Work Completed" sections are a compliance violation — if no work was done, state why (e.g., "Blocked by dependency YYYY").
+
+### Handoff Record (MANDATORY when transferring to another agent)
 
 ```markdown
 ### Handoff Record
@@ -78,7 +90,15 @@ Status: {in_progress|completed|blocked}
 **Context**: [summary]
 ```
 
-### Context Resumption Checkpoint
+**Field Requirements**:
+| Field | Required | Valid Values |
+|-------|----------|-------------|
+| From | YES | Current agent role (developer, tester, architect, etc.) |
+| To | YES | Target agent role (must be in valid agent list per HOF-P1-02) |
+| State | YES | `READY_FOR_DEV`, `READY_FOR_TEST`, `READY_FOR_TEST_REFACTOR`, `DEFECT_FOUND`, or TDD phase state |
+| Context | YES | Non-empty summary of work done and what remains |
+
+### Context Resumption Checkpoint (MANDATORY when context >80%)
 
 ```markdown
 ### Context Resumption Checkpoint
@@ -88,6 +108,8 @@ Status: {in_progress|completed|blocked}
 **Next Steps**: [ordered list]
 **Critical Context**: [key state]
 ```
+
+**Field Requirements**: All 5 fields are MANDATORY. An incomplete checkpoint prevents proper resumption. See CTX-P1-02 in context-check.md for protocol details.
 
 ---
 

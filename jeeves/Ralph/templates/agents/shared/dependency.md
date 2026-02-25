@@ -1,6 +1,6 @@
 # Dependency Discovery Rules (DUP-04)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow); P0 rule embedded below
 **Scope**: Universal (all agents)
@@ -33,6 +33,7 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 1. Identify missing prerequisites (files, APIs, data)
 2. Check TODO.md for task completion status
 3. Evaluate if hard or soft dependency
+4. If deps-tracker.yaml exists, verify dependency graph is consistent
 
 **Reporting in activity.md**:
 ```markdown
@@ -62,8 +63,13 @@ Dependency Discovered:
 - Dependency chain loops back to start
 - deps-tracker.yaml shows cycle
 
-**Response** (all steps mandatory):
-1. STOP immediately
+**Edge Case — deps-tracker.yaml missing**:
+- If deps-tracker.yaml does not exist: Skip automated cycle detection
+- Still check TODO.md for obvious circular references (A blocks B, B blocks A)
+- If no dependency tracking file exists and circular dependency is suspected, create deps-tracker.yaml and document the suspected cycle before signaling
+
+**Response** (all steps mandatory, in order):
+1. STOP immediately — no further work on the task
 2. Document in activity.md: cycle description (A→B→C→A)
 3. Signal:
    ```
@@ -129,3 +135,5 @@ TODO: Record dependency findings in activity.md
 - **SIG-P0-03**: Signal types (see: signals.md)
 - **ACT-P1-12**: Activity.md updates (see: activity-format.md)
 - **CTX-P0-01**: Context hard stop (see: context-check.md)
+- **LPD-P1-01**: Loop detection — repeated dependency failures may indicate circular pattern (see: loop-detection.md)
+- **HOF-P0-01**: Handoff limit — dependency resolution may consume handoffs (see: handoff.md)

@@ -1,6 +1,6 @@
 # Signal System Rules (DUP-01)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P0 (Must-never-break)
 **Scope**: Universal (all agents)
@@ -154,18 +154,25 @@ SIGNAL_XXXX
 
 ---
 
-## SIG-P1-04: TDD Phase Signals
+## SIG-P1-04: TDD Phase Signals (SEPARATE NAMESPACE)
 
 <rule priority="P1" id="SIG-P1-04" enforce="parsing">
-| Phase | Signal Format | Next Agent |
-|-------|---------------|------------|
-| Ready for Dev | `HANDOFF_READY_FOR_DEV_XXXX` | Developer |
-| Ready for Test | `HANDOFF_READY_FOR_TEST_XXXX` | Tester |
-| Ready for Refactor | `HANDOFF_READY_FOR_TEST_REFACTOR_XXXX` | Tester |
-| Defect Found | `HANDOFF_DEFECT_FOUND_XXXX` | Developer |
 
-**Note**: TDD phase signals are parsed from Worker responses, not emitted as output signals.
-**Enforcement**: Parse incoming Worker responses for these patterns.
+**IMPORTANT**: TDD phase signals are a **separate signal namespace**. They are emitted BY Worker agents and parsed BY Manager. They are **NOT validated against SIG-REGEX** (the authoritative regex above applies only to TASK_* and ALL_TASKS_COMPLETE signals).
+
+| Phase | Signal Format | Next Agent | Emitted By |
+|-------|---------------|------------|-----------|
+| Ready for Dev | `HANDOFF_READY_FOR_DEV_XXXX` | Developer | Tester |
+| Ready for Test | `HANDOFF_READY_FOR_TEST_XXXX` | Tester | Developer |
+| Ready for Refactor | `HANDOFF_READY_FOR_TEST_REFACTOR_XXXX` | Tester | Developer |
+| Defect Found | `HANDOFF_DEFECT_FOUND_XXXX` | Developer | Tester |
+
+**TDD Phase Signal Regex** (for Manager parsing only):
+```regex
+^HANDOFF_(READY_FOR_DEV|READY_FOR_TEST|READY_FOR_TEST_REFACTOR|DEFECT_FOUND)_\d{4}$
+```
+
+**Enforcement**: Manager MUST parse incoming Worker responses for these patterns. Workers emit these as their first token (same first-token discipline as SIG-P0-01). Task ID must be exactly 4 digits (SIG-P0-02 applies).
 </rule>
 
 ---
@@ -225,14 +232,16 @@ If multiple states apply, emit the highest severity:
 
 ## Common Errors to Avoid
 
-| Error | Fix |
-|-------|-----|
-| Adding text before signal | Ensure signal is first token — nothing before it |
-| Space before colon in FAILED/BLOCKED | Use `:` not ` : ` |
-| Multiple signals | Choose highest severity only |
-| Task ID not 4 digits | Pad with leading zeros: `0042` not `42` |
-| Spaces in message | Use underscores: `Circular_dependency` |
-| INCOMPLETE without context | Add `:context_limit_approaching` or `:handoff_to:agent:see_activity_md` |
+| Error | Rule Violated | Fix |
+|-------|--------------|-----|
+| Adding text before signal | SIG-P0-01 | Ensure signal is first token — nothing before it |
+| Space before colon in FAILED/BLOCKED | SIG-P0-03 | Use `:` not ` : ` |
+| Multiple signals | SIG-P0-04 | Choose highest severity only |
+| Task ID not 4 digits | SIG-P0-02 | Pad with leading zeros: `0042` not `42` |
+| Spaces in message after colon | SIG-P0-03 | Use underscores: `Circular_dependency` |
+| INCOMPLETE without context | SIG-P0-03 | Add `:context_limit_approaching` or `:handoff_to:agent:see_activity_md` |
+| Mixing TASK_* and HANDOFF_* signals | SIG-P1-04 | These are separate namespaces — emit only one per response |
+| Developer emitting TASK_COMPLETE | TDD-P0-02 | Developer MUST hand off to Tester — see tdd-phases.md |
 
 ---
 

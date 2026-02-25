@@ -1,6 +1,6 @@
 # RULES.md Lookup (DUP-03)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **File ID**: RUL-LOOKUP-01
 **Priority**: P1 (Must-follow)
@@ -29,6 +29,8 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 3. Stop if file named `IGNORE_PARENT_RULES` is encountered in any directory
 4. Read files in root-to-leaf order
 5. Apply rules with later (deeper) files overriding earlier (shallower) files
+
+**Edge Case — No RULES.md found**: If no RULES.md files are found in any directory from working directory to root, proceed with shared rules only. Document "No RULES.md files found" in activity.md. This is not an error — the shared rules in this directory are always in effect.
 
 **Enforcement**: Compliance checkpoint at reference point.
 </rule>

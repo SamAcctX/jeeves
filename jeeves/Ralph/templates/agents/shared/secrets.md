@@ -1,6 +1,6 @@
 # Secrets Protection Rules (DUP-02)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P0 (Must-never-break)
 **Scope**: Universal (all agents)
@@ -106,6 +106,8 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
    ```
 
 **Never ignore exposed secrets** — they remain in git history forever unless properly cleaned.
+
+**Edge Case — Uncertain if value is a secret**: If content looks like it might be a secret (high-entropy string, key-like format) but you're unsure, treat it AS a secret. Apply SEC-P0-01 (do not write it) and signal TASK_BLOCKED for human review. False positives are acceptable; false negatives are P0 violations.
 
 </rule>
 

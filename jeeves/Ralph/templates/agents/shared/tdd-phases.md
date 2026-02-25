@@ -1,6 +1,6 @@
 # TDD Workflow State Machine (DUP-07)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow); P0 rules embedded below
 **Scope**: Developer, Tester, Manager
@@ -28,8 +28,8 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 | Role | Allowed Actions | Forbidden Actions |
 |------|-----------------|-------------------|
 | Tester | Write tests, validate, confirm safety | Implement features, fix production bugs, modify production code |
-| Developer | Implement features, fix bugs, refactor | Write tests, validate own work, mark complete |
-| Manager | Orchestrate workflow, assign agents, mark complete | Read task files, implement features, write tests |
+| Developer | Implement features, fix bugs, refactor | Write tests, validate own work, emit TASK_COMPLETE |
+| Manager | Orchestrate workflow, assign agents, mark complete | Read/modify implementation or test files directly, implement features, write tests |
 
 **On SOD Violation**: STOP → Create defect report → Signal handoff to correct role.
 **Enforcement**: Any SOD violation is a P0 breach. Stop immediately.
@@ -185,14 +185,16 @@ Monitor these conditions throughout TDD execution:
 
 ## TDD Phase Management Reference
 
-| Phase | Primary Agent | Must NOT Emit | Must Emit |
+| Phase | Primary Agent | Must NOT Emit | Must Emit (with task ID suffix `_XXXX`) |
 |-------|---------------|----------------|------------|
-| RED | Tester | TASK_COMPLETE | HANDOFF_READY_FOR_DEV |
-| GREEN | Developer | TASK_COMPLETE | HANDOFF_READY_FOR_TEST |
-| VALIDATE | Tester | — | TASK_COMPLETE or HANDOFF_DEFECT |
-| REFACTOR | Developer | TASK_COMPLETE | HANDOFF_READY_FOR_TEST_REFACTOR |
-| SAFETY_CHECK | Tester | — | TASK_COMPLETE or HANDOFF_DEFECT |
-| DONE | Manager | — | TASK_COMPLETE |
+| RED | Tester | `TASK_COMPLETE_XXXX` | `HANDOFF_READY_FOR_DEV_XXXX` |
+| GREEN | Developer | `TASK_COMPLETE_XXXX` | `HANDOFF_READY_FOR_TEST_XXXX` |
+| VALIDATE | Tester | — | `TASK_COMPLETE_XXXX` or `HANDOFF_DEFECT_FOUND_XXXX` |
+| REFACTOR | Developer | `TASK_COMPLETE_XXXX` | `HANDOFF_READY_FOR_TEST_REFACTOR_XXXX` |
+| SAFETY_CHECK | Tester | — | `TASK_COMPLETE_XXXX` or `HANDOFF_DEFECT_FOUND_XXXX` |
+| DONE | Manager | — | `TASK_COMPLETE_XXXX` |
+
+**Note**: `XXXX` = 4-digit task ID with leading zeros (SIG-P0-02). All HANDOFF_* signals are in the TDD phase signal namespace (SIG-P1-04) — see signals.md for details.
 
 ---
 

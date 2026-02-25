@@ -1,6 +1,6 @@
 # Infinite Loop Detection (DUP-08)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
@@ -26,7 +26,7 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 | **session** | One continuous agent invocation (start of turn to signal emission) |
 | **iteration** | One complete handoff cycle (e.g., Developer → Tester → Developer) |
 | **attempt** | One fix attempt for a specific error or issue |
-| **error signature** | Unique identifier for an error (error type + location + message hash) |
+| **error signature** | Unique identifier for an error (error type + location + message hash). Persisted in activity.md across sessions/iterations. |
 
 ---
 
@@ -38,7 +38,7 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
   <name>Error Loop Detection</name>
   <limits>
     <limit id="LPD-P1-01a" type="per-issue">3 attempts to fix SAME issue in ONE session → TASK_FAILED</limit>
-    <limit id="LPD-P1-01b" type="cross-iteration">Same error across 3 SEPARATE iterations → TASK_BLOCKED</limit>
+    <limit id="LPD-P1-01b" type="cross-iteration">Same error across 3 SEPARATE iterations → TASK_BLOCKED (check activity.md history for previous iteration error signatures)</limit>
     <limit id="LPD-P1-01c" type="multi-issue">5+ DIFFERENT errors in ONE session → TASK_FAILED</limit>
     <limit id="LPD-P1-01d" type="total">10 total attempts per task (absolute maximum)</limit>
   </limits>
@@ -160,3 +160,6 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 - **SIG-P0-03**: Signal types (see: signals.md)
 - **ACT-P1-12**: Activity.md updates (see: activity-format.md)
 - **DEP-P0-01**: Circular dependency detection (see: dependency.md)
+- **HOF-P0-01**: Handoff limit — repeated handoff cycles may indicate a loop (see: handoff.md)
+- **HOF-P0-02**: Handoff loops — self-handoff prevention (see: handoff.md)
+- **CTX-P0-01**: Context hard stop — loop may exhaust context (see: context-check.md)

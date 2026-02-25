@@ -1,6 +1,6 @@
 # Handoff Guidelines (DUP-06)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow); P0 rules embedded below
 **Scope**: Universal (all agents)
@@ -35,11 +35,18 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 ## HOF-P0-02: Forbidden — Handoff Loops
 
 <rule priority="P0" id="HOF-P0-02" type="forbidden">
-<condition>target_agent == current_agent</condition>
+<condition>target_agent == last_handoff_from_agent (same agent type as the immediately preceding handoff source)</condition>
 <action>STOP — emit TASK_INCOMPLETE_XXXX:handoff_loop_detected</action>
 </rule>
 
-**Enforcement**: Cannot handoff to same agent type twice in succession. This creates infinite loops.
+**Enforcement**: Cannot handoff BACK to the same agent type that just handed off to you. This creates A→B→A→B infinite loops.
+
+**Clarification**:
+- `Developer → Tester → Developer` is **ALLOWED** (normal TDD cycle — different agent initiated handoff)
+- `Developer → Developer` is **FORBIDDEN** (self-handoff)
+- `Developer → Tester → Developer → Tester → Developer` — each individual handoff is valid, but if the same error persists, LPD-P1-01b (loop-detection.md) applies after 3 cross-iteration repetitions
+
+**Detection**: Compare `target_agent` against `last_handoff_from` field in activity.md. If equal → block.
 
 ---
 
@@ -238,5 +245,8 @@ TODO: Pre-handoff checkpoint — validate all HOF-CP-01 items
 
 - **SIG-P0-01**: Signal format (see: signals.md)
 - **SIG-P1-03**: Handoff signal format (see: signals.md)
+- **SIG-P1-04**: TDD phase signals — separate namespace for HANDOFF_* (see: signals.md)
 - **ACT-P1-12**: Activity.md updates (see: activity-format.md)
 - **TDD-P0-01**: Role boundary enforcement (see: tdd-phases.md)
+- **LPD-P1-01b**: Cross-iteration loop detection — same error across 3+ handoff cycles (see: loop-detection.md)
+- **CTX-P0-01**: Context hard stop — may force handoff at >90% (see: context-check.md)

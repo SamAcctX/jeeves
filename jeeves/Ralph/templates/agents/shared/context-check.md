@@ -1,6 +1,6 @@
 # Context Window Management (DUP-05)
 
-<!-- version: 1.1.0 | last_updated: 2026-02-24 | canonical: YES -->
+<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
 
 **Priority**: P1 (Must-follow); P0 rule embedded below
 **Scope**: Universal (all agents)
@@ -102,13 +102,15 @@ When context > 80%:
 ## CTX-P2-01: Context Limit Warning Signs
 
 <rule priority="P2" id="CTX-P2-01" type="guidance">
-Watch for these indicators of context pressure:
+Watch for these measurable indicators of context pressure:
 
-- Conversation history exceeds ~50k tokens
-- Repeated content appearing in conversation history
-- Struggling to recall earlier parts of conversation
-- Slow response times
-- References to "context" or "memory" issues
+- **Token count indicator**: Conversation history exceeds ~50k tokens (estimated by cumulative tool call count × average cost from CTX-P3-01)
+- **Repetition indicator**: Same file read more than twice in one session without modification
+- **Recall indicator**: Agent references information that contradicts earlier tool output (sign of context truncation)
+- **Tool count indicator**: More than 30 tool calls in a single session without checkpoint
+- **Error indicator**: Tool calls returning unexpected results that worked earlier in the session
+
+**Action**: If 2+ indicators are active simultaneously, treat as >60% threshold and begin handoff preparation per CTX-P1-01.
 </rule>
 
 ---
@@ -225,3 +227,5 @@ TODO items for context management:
 - **ACT-P1-12**: Activity.md updates (see: activity-format.md)
 - **SIG-P0-01**: Signal format (see: signals.md)
 - **HOF-P0-01**: Handoff limit (see: handoff.md)
+- **LPD-P1-01**: Loop detection — repeated context limits may indicate task too large (see: loop-detection.md)
+- **DEP-P0-01**: Circular dependency — may cause context exhaustion (see: dependency.md)
