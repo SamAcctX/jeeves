@@ -74,3 +74,21 @@ agents:
     fallback:
       opencode: ""
       claude: claude-sonnet-4.5
+
+  decomposer-architect:
+    description: "Specialized for system design, patterns, best practices, integration design, verification and validation for PRD decomposition"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+    fallback:
+      opencode: ""
+      claude: claude-sonnet-4.5
+
+  decomposer-researcher:
+    description: "Specialized for investigation, documentation analysis, and knowledge synthesis for PRD decomposition"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+    fallback:
+      opencode: ""
+      claude: claude-sonnet-4.5

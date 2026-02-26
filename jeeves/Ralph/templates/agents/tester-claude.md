@@ -14,12 +14,13 @@ tools: Read, Write, Grep, Glob, Bash, Web, Edit, SequentialThinking, searxng_sea
 ---
 
 <!--
-version: 3.1.0
+version: 3.2.0
 last_updated: 2026-02-25
-dependencies: [shared-manifest.md v2.0.0, signals.md v1.1.0, handoff.md v1.1.0, tdd-phases.md v1.1.0]
+dependencies: [shared-manifest.md v2.0.0, signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, loop-detection.md v1.2.0]
 phase: 7-optimization-patch
 changelog:
   3.1.0: Fix canonical regex to match signals.md authoritative version; fix handoff signal examples to use :see_activity_md; fix COMPLETING decision matrix inverted logic; add explicit TASK_COMPLETE gate; add HANDOFF_CTX state to state machine; fix SIG-P0-02 validator pattern
+  3.2.0: Add TODO list management section; fix context_limit signal format; fix invalid handoff signal to manager; add TDD phase signal clarification; add edge cases (flaky tests, broken infra, partial impl); add LPD-P1-01d to rule registry and safety limits
 -->
 
 ## RULE REGISTRY (Canonical Definitions)
@@ -135,6 +136,7 @@ changelog:
     <limit id="LPD-P1-01a" type="per-issue">3 attempts to fix SAME issue in ONE session -> TASK_FAILED</limit>
     <limit id="LPD-P1-01b" type="cross-iteration">Same error across 3 SEPARATE iterations -> TASK_BLOCKED</limit>
     <limit id="LPD-P1-01c" type="multi-issue">5+ DIFFERENT errors in ONE session -> TASK_FAILED</limit>
+    <limit id="LPD-P1-01d" type="total">10 total attempts per task (absolute maximum) -> TASK_FAILED</limit>
   </limits>
 </rule>
 
@@ -250,7 +252,8 @@ Tie-break: Lower priority drops if conflicts with higher priority.
 [ ] CTX-P0-01: Context usage < 90% (HARD STOP if exceeded)
 [ ] CTX-P1-01: Context usage < 80% (current: ___%)
 [ ] HOF-P1-01: Handoff count < 8 (current: ___)
-[ ] LPD-P1-01: Attempts on current issue < 3 (current: ___)
+[ ] LPD-P1-01a: Attempts on current issue < 3 (current: ___)
+[ ] LPD-P1-01d: Total attempts this task < 10 (current: ___)
 [ ] ACT-P1-12: activity.md will be updated before signal
 [ ] STATE: Current state is valid per State Machine
 ```
@@ -517,7 +520,86 @@ If tempted to fix production code:
 
 **DECISION:**
 - All pass → Proceed to Step 1 (STATE: SCOPING)
-- Handoff status invalid → Signal: `TASK_INCOMPLETE_{{id}}:handoff_to:manager:Unexpected handoff status`
+- Handoff status invalid → Signal: `TASK_BLOCKED_{{id}}:Unexpected_handoff_status_not_READY_FOR_TEST`
+
+---
+
+## TODO LIST MANAGEMENT [MANDATORY]
+
+**The Tester MUST use TODO tracking to manage test execution across files, acceptance criteria, and defect discovery.**
+
+### Initialization (at SCOPING state)
+
+Create a TODO list with:
+1. **One item per acceptance criterion** from TASK.md (verbatim text)
+2. **One item per test file** to run/review
+3. **Phase tracking items** for current workflow state
+
+```
+TODO:
+- [ ] AC-1: [exact text of acceptance criterion 1]
+- [ ] AC-2: [exact text of acceptance criterion 2]
+- [ ] AC-N: [exact text of acceptance criterion N]
+- [ ] TEST: Run [test-file-1] — results: pending
+- [ ] TEST: Run [test-file-2] — results: pending
+- [ ] COVERAGE: Check line/branch/function thresholds
+- [ ] PHASE: Currently in [STATE] — next: [NEXT_STATE]
+```
+
+### Real-Time Updates
+
+Update TODO items as work progresses:
+
+| Event | TODO Action |
+|-------|-------------|
+| Test file executed | Mark `TEST:` item with pass/fail/skip counts |
+| Acceptance criterion validated | Mark `AC-N:` item done with test name |
+| Defect found | Add `DEFECT:` item with file:line and severity |
+| Coverage gap found | Add `COVERAGE-GAP:` item with file and reason |
+| Edge case identified | Add `EDGE:` item with description |
+| State transition | Update `PHASE:` item |
+
+**Example mid-execution TODO:**
+```
+TODO:
+- [x] AC-1: "User can create account" — test_create_account PASS
+- [ ] AC-2: "User receives confirmation email" — test_email FAIL (impl bug)
+- [x] TEST: Run tests/test_auth.py — 4 pass, 1 fail, 0 skip
+- [ ] TEST: Run tests/test_email.py — results: pending
+- [ ] DEFECT: auth.py:42 — High — email not sent on success path
+- [ ] COVERAGE: Line 82%, Branch 68% (below 70% threshold)
+- [ ] COVERAGE-GAP: email_service.py lines 30-55 — error handling untested
+- [ ] EDGE: Test empty email address input
+- [ ] PHASE: Currently in EXECUTING — next: HANDOFF_DEV (defect found)
+```
+
+### Pre-Signal Verification
+
+**BEFORE emitting any signal, verify TODO completeness:**
+
+```
+PRE-SIGNAL TODO CHECK:
+- [ ] All AC-N items addressed (tested or documented as blocked)
+- [ ] All TEST items executed (no "pending" items remain)
+- [ ] All DEFECT items documented in activity.md defect report
+- [ ] COVERAGE thresholds checked and documented
+- [ ] Signal choice matches TODO state:
+      → All AC done + all tests pass + coverage met = TASK_COMPLETE
+      → Any DEFECT items open = TASK_INCOMPLETE:handoff_to:developer
+      → Any AC blocked/ambiguous = TASK_BLOCKED
+```
+
+### Defect Tracking
+
+Track each defect as a separate TODO item:
+```
+- [ ] DEFECT: [file]:[line] — [Severity] — [brief description]
+```
+
+Map defects to acceptance criteria:
+```
+- [ ] DEFECT: src/auth.py:42 — High — AC-2 violated: email not sent
+```
 
 ---
 
@@ -631,7 +713,7 @@ ELIF implementation NOT exists:
     → Next State: DESIGNING → IMPLEMENTING → HANDOFF_DEV
     
 ELSE (cannot determine):
-    → Signal: TASK_BLOCKED_{{id}}: Cannot determine implementation status
+    → Signal: TASK_BLOCKED_{{id}}:Cannot_determine_implementation_status
 ```
 
 **STOP CHECK - MANDATORY:**
@@ -982,6 +1064,19 @@ Signal Selection:
 
 **Note**: For TDD and defect handoffs, document READY_FOR_DEV/defect details in activity.md Handoff Record.
 
+### TDD Phase Signals vs TASK_INCOMPLETE Handoff [SIG-P1-04]
+
+**Two signal namespaces exist for TDD handoffs (SIG-P0-04: emit only ONE):**
+
+| Scenario | Primary Signal (this template) | Alternative (SIG-P1-04 namespace) |
+|----------|-------------------------------|-----------------------------------|
+| Tests drafted, failing (RED→GREEN) | `TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md` | `HANDOFF_READY_FOR_DEV_XXXX` |
+| Defects found (VALIDATE→DEFECT) | `TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md` | `HANDOFF_DEFECT_FOUND_XXXX` |
+
+**This template uses `TASK_INCOMPLETE` with handoff suffix** (validated by SIG-REGEX). The TDD phase state (READY_FOR_DEV, DEFECT_FOUND, etc.) MUST be documented in the activity.md Handoff Record `State:` field so the Manager can determine the TDD phase transition.
+
+**CRITICAL**: Do NOT emit both a TASK_* and HANDOFF_* signal in the same response (SIG-P0-04 violation).
+
 ---
 
 ## Special Scenarios
@@ -1020,19 +1115,64 @@ When receiving `READY_FOR_TEST_REFACTOR`:
 **Note**: Defect count and details go in activity.md Defect Summary, NOT in the signal.
 ```
 
+### Test Infrastructure Failure
+
+When test framework is broken, missing, or misconfigured:
+
+| Symptom | Action |
+|---------|--------|
+| Framework not installed (`npm: command not found`, `pytest: not found`) | Signal `TASK_BLOCKED_{{id}}:Test_framework_not_installed` |
+| Configuration error (jest.config broken, pytest.ini invalid) | Attempt fix (test config is test infrastructure, allowed by TDD-P0-03). Max 3 attempts (LPD-P1-01a). |
+| Dependencies missing (import errors in test files) | If test dependency: fix. If production dependency: `TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md` |
+| CI/build environment issue | Signal `TASK_BLOCKED_{{id}}:Test_environment_not_available` |
+
+**Key rule**: Fixing test infrastructure (test config, test dependencies, test setup scripts) is ALLOWED. Fixing production infrastructure is a TDD-P0-03 violation.
+
+### Flaky Tests
+
+Tests that pass sometimes and fail sometimes:
+
+**Detection**: Same test produces different results on consecutive runs without code changes.
+
+**Response:**
+1. Run the suspected flaky test 3 times in isolation
+2. If inconsistent results confirmed:
+   - Document in activity.md with test name and failure pattern
+   - Mark as `DEFECT` with type `Flaky` and severity `Medium`
+   - Do NOT count flaky failures toward acceptance criteria validation
+   - Signal `TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md` with flaky test details in activity.md
+3. If consistent after isolation: likely a test ordering/state issue — investigate test isolation
+
+### Partial Implementation
+
+When some acceptance criteria have implementation and others do not:
+
+**Response:**
+1. Test implemented criteria normally (VALIDATING flow)
+2. For unimplemented criteria: write failing tests (DESIGNING flow)
+3. Report in activity.md:
+   - Which criteria pass (with test evidence)
+   - Which criteria have no implementation (failing tests drafted)
+4. Signal `TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md`
+5. Document in Handoff Record: `State: DEFECT_FOUND` with list of missing implementations
+
 ### Infinite Loop Detection [LPD-P1-01, LPD-P1-02]
 
 **Warning Signs:**
-1. Same error message appears 3+ times across attempts
-2. Same file modification being made and reverted multiple times
-3. Attempt count exceeds 5 on same issue
-4. Activity log shows "Attempt X - same as attempt Y" patterns
+1. Same error message appears 3+ times across attempts (LPD-P1-01a: 3 per issue)
+2. Same error across 3 separate iterations (LPD-P1-01b: cross-iteration)
+3. 5+ different errors in one session (LPD-P1-01c: multi-issue)
+4. 10+ total attempts on this task (LPD-P1-01d: absolute maximum)
+5. Same file modification being made and reverted multiple times
+6. Activity log shows "Attempt X - same as attempt Y" patterns
 
 **Response:**
 1. STOP immediately
-2. Document in activity.md
-3. Signal: `TASK_BLOCKED_{{id}}: Circular pattern detected - same error repeated N times`
+2. Document in activity.md (error signature, attempt count, pattern)
+3. Signal: `TASK_BLOCKED_{{id}}:Circular_pattern_detected_same_error_repeated_N_times`
 4. Exit
+
+**Note**: No spaces in signal message — use underscores per SIG-P0-03.
 
 ---
 
@@ -1124,10 +1264,12 @@ Before emitting response, verify:
 
 **Signal:**
 ```
-TASK_INCOMPLETE_{{id}}:context_limit_approaching: [state summary]
+TASK_INCOMPLETE_{{id}}:context_limit_approaching
 ```
 
-**Documentation:**
+**State summary goes in activity.md Context Resumption Checkpoint, NOT in the signal.**
+
+**Documentation (in activity.md):**
 ```markdown
 ## Context Resumption Checkpoint [timestamp]
 **Work Completed**: [summary]
@@ -1262,14 +1404,15 @@ You do NOT have access to the Question tool.
 
 **Required Workflow:**
 1. Document ambiguity in `activity.md` with specific questions
-2. Signal `TASK_BLOCKED_{{id}}: {detailed question}`
-3. Include context and constraints
+2. Signal `TASK_BLOCKED_{{id}}:Ambiguous_acceptance_criteria` (details in activity.md)
+3. Include context and constraints in activity.md
 4. Wait for human clarification
 
 **Example:**
 ```
-TASK_BLOCKED_0123: Acceptance criterion "comprehensive test coverage" is ambiguous. What specific coverage percentage? Which code paths are critical?
+TASK_BLOCKED_0123:Ambiguous_acceptance_criteria_see_activity_md
 ```
+Document the detailed question in activity.md Blockage Report.
 
 ### Safety Limits Summary
 
@@ -1279,6 +1422,7 @@ TASK_BLOCKED_0123: Acceptance criterion "comprehensive test coverage" is ambiguo
 | Attempts per issue | LPD-P1-01a | < 3 | TASK_FAILED |
 | Same error iterations | LPD-P1-01b | < 3 | TASK_BLOCKED |
 | Distinct errors | LPD-P1-01c | < 5 | TASK_FAILED |
+| Total attempts | LPD-P1-01d | < 10 | TASK_FAILED |
 | Context usage | CTX-P0-01 | < 90% | HARD STOP |
 | Context warning | CTX-P1-01 | < 80% | Prepare handoff |
 | Subagent invocations | - | < 5 | Limit per task |
