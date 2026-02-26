@@ -852,19 +852,11 @@ When rules aren't working as expected:
 For persistent issues:
 
 1. Review this documentation thoroughly
-2. Check test files in `/proj/jeeves/Ralph/tests/`
-3. Examine working RULES.md examples in the project
-4. Review activity.md for similar past issues
+2. Examine working RULES.md examples in the project
+3. Review activity.md for similar past issues
 
 ## Related Files
 
 - `/proj/jeeves/bin/find-rules-files.sh` - Rule file discovery
 - `/proj/jeeves/bin/apply-rules.sh` - Rule application and merging
 - `/proj/jeeves/Ralph/templates/RULES.md.template` - Template for new files
-
-## Related Tests
-
-- `/proj/jeeves/Ralph/tests/test-rules-lookup.sh` - Lookup algorithm tests
-- `/proj/jeeves/Ralph/tests/test-rules-application.sh` - Application tests
-- `/proj/jeeves/Ralph/tests/test-auto-rule-format.sh` - Auto-rule format tests
-- `/proj/jeeves/Ralph/tests/test-creation-criteria.sh` - Creation criteria tests
