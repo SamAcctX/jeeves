@@ -76,6 +76,7 @@ RUN apt-get update && \
         libgbm1 \
         libxss1 \
         libasound2t64 \
+        supervisor \
         # Docker
         docker-ce \
         docker-ce-cli \
@@ -305,7 +306,9 @@ if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
   echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
   echo -e "\033[1;34m=============================================\033[0m"
   echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
-  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
+  echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
+  echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
   echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
@@ -345,7 +348,9 @@ if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
   echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
   echo -e "\033[1;34m=============================================\033[0m"
   echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
-  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
+  echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
+  echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
   echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
@@ -467,6 +472,102 @@ RUN if [ -d "/home/jeeves/.claude" ] && [ "$(ls -A /home/jeeves/.claude 2>/dev/n
 
 # Make sure the OOB config directories have proper permissions
 RUN sudo chown -R jeeves:jeeves /opt/oob-config
+
+# ============================================================================
+# Configure supervisord for service management
+# ============================================================================
+
+# Create supervisord configuration directory structure
+RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor /var/run
+
+# Main supervisord configuration
+RUN cat << 'EOF' > /etc/supervisor/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[inet_http_server]
+port=127.0.0.1:9001
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=http://127.0.0.1:9001
+
+[include]
+files = /etc/supervisor/conf.d/*.conf
+EOF
+
+# Opencode web service configuration
+RUN cat << 'EOF' > /etc/supervisor/conf.d/opencode-web.conf
+[program:opencode-web]
+command=/usr/local/bin/opencode web --hostname 0.0.0.0 --port 3333
+directory=/proj
+user=jeeves
+autostart=false
+autorestart=unexpected
+startsecs=5
+startretries=3
+stopsignal=TERM
+stopwaitsecs=30
+stdout_logfile=/var/log/supervisor/opencode-web.log
+stderr_logfile=/var/log/supervisor/opencode-web-error.log
+environment=HOME="/home/jeeves",USER="jeeves"
+EOF
+
+# Create opencode-web helper script for service management
+RUN cat << 'EOF' > /usr/local/bin/opencode-web
+#!/bin/bash
+
+print_usage() {
+    echo "Usage: opencode-web {start|stop|restart|status|logs}"
+    echo ""
+    echo "Commands:"
+    echo "  start    Start the opencode web service"
+    echo "  stop     Stop the opencode web service"
+    echo "  restart  Restart the opencode web service"
+    echo "  status   Check the service status"
+    echo "  logs     View the service logs"
+}
+
+case "${1:-}" in
+    start)
+        echo "Starting opencode-web service..."
+        supervisorctl start opencode-web
+        ;;
+    stop)
+        echo "Stopping opencode-web service..."
+        supervisorctl stop opencode-web
+        ;;
+    restart)
+        echo "Restarting opencode-web service..."
+        supervisorctl restart opencode-web
+        ;;
+    status)
+        supervisorctl status opencode-web
+        ;;
+    logs)
+        if [ -f /var/log/supervisor/opencode-web.log ]; then
+            tail -f /var/log/supervisor/opencode-web.log
+        else
+            echo "Log file not found. Service may not have started yet."
+            exit 1
+        fi
+        ;;
+    *)
+        print_usage
+        exit 1
+        ;;
+esac
+EOF
+
+RUN chmod +x /usr/local/bin/opencode-web
+
+# Ensure supervisor log directory is writable by jeeves user
+RUN chown -R jeeves:jeeves /var/log/supervisor
 
 # ============================================================================
 # Install PRD Creator Toolkit
@@ -719,16 +820,35 @@ if [ -n "$GIT_AUTHOR_EMAIL" ]; then
     git config --global user.email "$GIT_AUTHOR_EMAIL"
 fi
 
-# If no arguments provided, default to opencode web
+# If no arguments provided, start supervisord and the opencode-web service
 if [ $# -eq 0 ]; then
-    # Run opencode web from /proj directory
-    # Ensure we're in /proj directory before executing the command
+    echo "Starting supervisord..."
+    # Start supervisord in background first
+    supervisord -c /etc/supervisor/supervisord.conf &
+    SUPERVISORD_PID=$!
+    
+    # Wait for supervisord to be ready
+    sleep 2
+    for i in $(seq 1 30); do
+        if supervisorctl status >/dev/null 2>&1; then
+            break
+        fi
+        sleep 1
+    done
+    
+    # Ensure we're in /proj directory
     cd /proj || exit 1
-    set -- opencode web --hostname 0.0.0.0 --port 3333
+    
+    # Start the opencode-web service
+    echo "Starting opencode-web service..."
+    supervisorctl start opencode-web
+    
+    # Wait for supervisord (keeps container running)
+    wait $SUPERVISORD_PID
+else
+    # Execute the provided command
+    exec "$@"
 fi
-
-# Execute the command
-exec "$@"
 EOF
 
 RUN chmod +x /usr/local/bin/entrypoint.sh
