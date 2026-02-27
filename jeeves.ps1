@@ -886,6 +886,72 @@ function Stop-Container {
 
 <#
 .SYNOPSIS
+    Restarts the container without recreating it
+
+.DESCRIPTION
+    Restarts the container using docker compose restart (or docker restart for legacy),
+    which preserves container state. If the container is not running, it will be started.
+    Ensures the image exists before attempting to restart.
+
+.PARAMETER Dind
+    If specified, ensures the container is started with Docker-in-Docker support
+
+.PARAMETER NoCache
+    If specified and image needs to be built, builds without cache
+
+.PARAMETER Desktop
+    If specified and image needs to be built, builds with desktop support
+
+.PARAMETER InstallClaudeCode
+    If specified and image needs to be built, installs Claude Code
+
+.EXAMPLE
+    Restart-Container
+
+.EXAMPLE
+    Restart-Container -Dind
+#>
+function Restart-Container {
+    param(
+        [switch]$Dind,
+        [switch]$NoCache,
+        [switch]$Desktop,
+        [switch]$InstallClaudeCode
+    )
+
+    Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
+
+    $containerId = Get-ContainerId
+    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $usingCompose = Test-Path $composeFile
+
+    if ($containerId) {
+        Write-Log "Restarting container '${Script:CONTAINER_NAME}'..." -debug
+
+        if ($usingCompose) {
+            & docker compose -f $composeFile restart jeeves
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Log "Container restarted successfully" -success
+            } else {
+                Write-Log "Failed to restart container with docker compose, falling back to docker restart" -warning
+                docker restart $containerId
+            }
+        } else {
+            docker restart $containerId
+
+            if ($LASTEXITCODE -eq 0) {
+                Write-Log "Container restarted successfully" -success
+            }
+        }
+    } else {
+        Write-Log "Container '${Script:CONTAINER_NAME}' is not running, starting it..." -warning
+        Start-Container -Dind:$Dind
+    }
+}
+
+<#
+.SYNOPSIS
     Removes the container
 
 .DESCRIPTION
@@ -1304,34 +1370,45 @@ NOTES:
 Jeeves restart - Restart the Container
 
 DESCRIPTION:
-    Stops and immediately starts the container. Useful for applying changes
-    that don't require a full rebuild, such as environment variable changes
-    or when troubleshooting. Can also rebuild the image with specific options.
+    Restarts the container using docker compose restart (or docker restart for
+    legacy setups), which preserves container state and is faster than stop-then-start.
+    If the container is not running, it will be started instead.
+    Useful for applying changes that don't require a full rebuild.
 
 USAGE:
     jeeves restart [options]
 
 OPTIONS:
+    --dind                Enable Docker-in-Docker (DinD) support
+                          Runs the container in privileged mode with Docker
+                          socket access inside the container.
+
     --no-cache            Build without using Docker's layer cache
                           Forces a complete rebuild of all layers.
+                          Only used if image needs to be built.
 
     --desktop             Build desktop binaries (Linux, Windows)
                           Includes the OpenCode desktop application.
+                          Only used if image needs to be built.
 
     --install-claude-code Install Claude Code in the container
                           Downloads and installs Claude Code.
+                          Only used if image needs to be built.
 
     --help                Show this help message
 
 EXAMPLES:
     jeeves restart
+    jeeves restart --dind
     jeeves restart --no-cache
     jeeves restart --desktop
     jeeves restart --no-cache --desktop --install-claude-code
 
 NOTES:
-- Equivalent to: jeeves stop && jeeves start
-- Builds image if missing before starting
+- Uses docker compose restart (faster, preserves state)
+- Falls back to docker restart for legacy setups
+- If not running, starts container normally
+- Builds image if missing before restarting
 - Container data in /proj is preserved
 - Container name and configuration remain the same
 "@
@@ -1824,7 +1901,7 @@ function Main {
             "^(stop-force-remove)$" { Stop-Container -Force:$true -Remove:$true }
             
             # Restart and other commands
-            "^(restart)$" { Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container -Dind:$Dind }
+            "^(restart)$" { Restart-Container -Dind:$Dind -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode }
             "^(rm)$" { Remove-Container }
             
             # Shell options - uses running container, starts non-dind if not running
@@ -1857,7 +1934,7 @@ function Main {
         }
         "^(restart)$" {
             if ($Help) { Show-CommandHelp "restart"; exit 0 }
-            Stop-Container; Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode; Start-Container -Dind:$Dind
+            Restart-Container -Dind:$Dind -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
         }
         "^(rm|remove)$" {
             if ($Help) { Show-CommandHelp "rm"; exit 0 }
