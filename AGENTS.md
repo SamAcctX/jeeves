@@ -60,6 +60,37 @@ No formal linting configured. Follow code style guidelines below.
 
 Example:
 ```powershell
+function Write-Log {
+    param(
+        [string]$message,
+        [switch]$info,
+        [switch]$trace,
+        [switch]$error,
+        [switch]$warning,
+        [switch]$success,
+        [switch]$debug
+    )
+    $timestamp = ((Get-Date -Format "MM/dd/yyyy HH:mm:ss.fff").toString() + ": ")
+    
+    # Determine colors based on switches
+    $foregroundColor = $null
+    if ($error) {
+        $foregroundColor = "Red"
+    } elseif ($warning) {
+        $foregroundColor = "Yellow"
+    } elseif ($success) {
+        $foregroundColor = "Green"
+    } elseif ($info) {
+        $foregroundColor = "White"
+    } elseif ($trace) {
+        $foregroundColor = "Gray"
+    } elseif ($debug) {
+        $foregroundColor = "Cyan"
+    }
+    
+    Write-Host -ForegroundColor $foregroundColor ($timestamp + $message)
+}
+
 function Get-ContainerStatus {
     [CmdletBinding()]
     param(
@@ -166,23 +197,54 @@ tools:
 ## File Organization
 
 ```
-/proj/                         # Working directory (mounted from host)
+/home/bweigel/Desktop/jeeves/   # Working directory (host machine)
 ├── jeeves.ps1                 # Main PowerShell management script
 ├── Dockerfile.jeeves          # Multi-stage Docker build file
 ├── .tmp/                      # Generated docker-compose files (git-ignored)
 ├── jeeves/
-│   ├── bin/                   # Installation scripts
+│   ├── bin/                   # Installation and utility scripts
 │   │   ├── install-mcp-servers.sh
-│   │   └── install-agents.sh
+│   │   ├── install-agents.sh
+│   │   ├── install-skill-deps.sh
+│   │   ├── install-skills.sh
+│   │   ├── apply-rules.sh
+│   │   ├── sync-agents.sh
+│   │   ├── ralph-*.sh         # Ralph system scripts
+│   │   └── parse_skill_deps.py # Python dependency parser
 │   ├── PRD/                   # PRD Creator agent templates
 │   │   ├── prd-creator-opencode-template.md
-│   │   └── prd-creator-claude-template.md
-│   └── Deepest-Thinking/      # Research agent templates
-│       ├── deepest-thinking-opencode-template.md
-│       └── deepest-thinking-claude-template.md
+│   │   ├── prd-creator-claude-template.md
+│   │   ├── prd-creator-prompt.md
+│   │   └── README-PRD.md
+│   ├── Deepest-Thinking/      # Research agent templates
+│   │   ├── deepest-thinking-opencode-template.md
+│   │   ├── deepest-thinking-claude-template.md
+│   │   ├── deepest-thinking-prompt.md
+│   │   └── README-Deepest-Thinking.md
+│   ├── Ralph/                 # Ralph Rules System
+│   │   ├── templates/         # Agent and task templates
+│   │   │   ├── agents/        # Ralph agent templates
+│   │   │   │   ├── architect-*.md
+│   │   │   │   ├── decomposer-*.md
+│   │   │   │   ├── developer-*.md
+│   │   │   │   ├── manager-*.md
+│   │   │   │   ├── researcher-*.md
+│   │   │   │   ├── tester-*.md
+│   │   │   │   ├── ui-designer-*.md
+│   │   │   │   ├── writer-*.md
+│   │   │   │   └── shared/    # Shared template content
+│   │   │   ├── prompts/       # Prompt templates
+│   │   │   ├── config/        # Configuration templates
+│   │   │   └── task/          # Task templates
+│   │   ├── skills/            # Skill definitions
+│   │   │   ├── dependency-tracking/
+│   │   │   ├── git-automation/
+│   │   │   └── system-prompt-compliance/
+│   │   └── docs/              # Ralph documentation
 ├── docs/                      # Documentation
 │   ├── commands.md
 │   ├── configuration.md
+│   ├── how-to-guide.md
 │   └── troubleshooting.md
 ├── AGENTS.md                  # This file
 ├── README.md                  # Project overview
@@ -221,13 +283,13 @@ Prefer SearXNG tools over Exa for web searches:
 ## Skill Discovery
 At the beginning of every conversation, automatically invoke: skill using-superpowers
 
-Before non-trivial tasks, invoke relevant skills first:
-1. Process skills: brainstorming, systematic-debugging, planning
-2. Implementation skills: frontend-design, architecture-patterns, api-design
-3. Domain-specific skills: check skills-discovery for relevant skills
+Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option)
 
-If a relevant skill is not found, attempt to locate a suitable one and install it for use.
-Since skills are only loaded at startup, if a new skill is installed, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option).
+## Web Search Tool Preference
+When performing web searches, prefer searxng tools over exa tools:
+- Use searxng_searxng_web_search for general web searches
+- Use searxng_web_url_read for content extraction  
+- Only use exa tools as fallback when searxng is unavailable
 
 ## Error Handling Best Practices
 
@@ -259,4 +321,4 @@ fi
 - Web UI: http://localhost:3333 (when container is running)
 - Config paths: `~/.config/opencode/`, `~/.claude/`
 - Container workdir: `/proj` (maps to host's project directory)
-- Container user: `jeeves` (UID/GID mapped from host)
+- Container user: `jeeves` (UID/GID: 1000/1000 by default, mapped from host on Linux/macOS)

@@ -1,6 +1,110 @@
 # Configuration Reference
 
-This document provides detailed information about configuring Jeeves, including Docker, agents, MCP servers, and development environment settings.
+This document provides detailed information about configuring Jeeves and the Ralph Loop, including Docker, agents, MCP servers, and development environment settings.
+
+## Ralph Loop Configuration
+
+### Ralph Directory Structure
+
+The Ralph Loop creates and uses a `.ralph/` directory structure in your project root:
+
+```
+.ralph/
+├── config/
+│   ├── agents.yaml          # Agent model mappings
+│   └── deps-tracker.yaml    # Task dependencies
+├── prompts/
+│   └── ralph-prompt.md      # Ralph Loop prompt
+├── specs/
+│   └── PRD-*.md             # Product Requirements Documents
+├── tasks/
+│   ├── TODO.md              # Task checklist
+│   ├── done/                # Completed tasks (preserved)
+│   └── XXXX/                # Individual task folders
+└── logs/
+    └── ralph-loop-YYYYMMDD-HHMMSS.log  # Loop execution logs
+```
+
+### agents.yaml Configuration
+
+Defines model mappings for each agent type:
+
+```yaml
+# .ralph/config/agents.yaml
+
+# Default model for all agents
+default:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Manager agent - orchestrates task execution
+manager:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Architect agent - system design and architecture planning
+architect:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Developer agent - code implementation and debugging
+developer:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Tester agent - QA, test creation, and validation
+tester:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# UI Designer agent - interface design and responsive layout
+ui-designer:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Researcher agent - investigation and documentation
+researcher:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Writer agent - content creation and editing
+writer:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Decomposer agent - task breakdown and TODO management
+decomposer:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# PRD Creator agent - Product Requirements Document creation
+prd-creator:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+
+# Deepest-Thinking agent - comprehensive research and investigation
+deepest-thinking:
+  model: "anthropic/claude-3-5-sonnet"
+  temperature: 0.1
+```
+
+### deps-tracker.yaml Configuration
+
+Tracks task dependencies:
+
+```yaml
+# .ralph/config/deps-tracker.yaml
+
+dependencies:
+  "0001": []
+  "0002": ["0001"]
+  "0003": ["0001"]
+  "0004": ["0002", "0003"]
+
+metadata:
+  generated: "2024-01-01T00:00:00Z"
+  version: 1
+```
 
 ## Docker Configuration
 
@@ -53,7 +157,13 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile.jeeves
+    image: jeeves:latest
+    runtime: nvidia
+    shm_size: "2gb"
+    gpus: all
     environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - CUDA_VISIBLE_DEVICES=all
       - PLAYWRIGHT_MCP_HEADLESS=1
       - PLAYWRIGHT_MCP_BROWSER=chromium
       - PLAYWRIGHT_MCP_NO_SANDBOX=1
@@ -68,6 +178,10 @@ services:
       - "3333:3333"
     networks:
       - jeeves-network
+    # Docker-in-Docker support (only added when --dind flag is used)
+    # privileged: true
+    # environment:
+    #   - ENABLE_DIND=true
 
 networks:
   jeeves-network:
@@ -93,6 +207,7 @@ networks:
 | `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS` | `1` | Allow file access |
 | `OPENCODE_ENABLE_EXA` | `false` | Disable Exa web search |
 | `SEARXNG_URL` | (empty) | SearxNG search service URL |
+| `ENABLE_DIND` | `false` | Enable Docker-in-Docker support |
 
 ## OpenCode Configuration
 
@@ -116,7 +231,26 @@ networks:
     "sequentialthinking": {
       "type": "local",
       "command": ["npx", "-y", "@modelcontextprotocol/server-sequential-thinking"]
-    }
+    },
+    "fetch": {
+      "type": "local",
+      "command": ["python", "-m", "mcp_server_fetch"]
+    },
+    "searxng": {
+      "type": "local",
+      "command": ["npx", "-y", "mcp-searxng"],
+      "environment": {
+        "SEARXNG_URL": "https://searxng.example.com"
+      }
+    },
+        "playwright": {
+          "type": "local",
+          "command": ["npx", "-y", "@playwright/mcp@latest", "--isolated", "--no-sandbox"],
+          "environment": {
+            "PLAYWRIGHT_MCP_HEADLESS": "true",
+            "PLAYWRIGHT_MCP_BROWSER": "chromium"
+          }
+        }
   }
 }
 ```
@@ -141,6 +275,21 @@ networks:
     },
     "fetch": {
       "command": ["python", "-m", "mcp_server_fetch"]
+    },
+    "searxng": {
+      "command": ["npx", "-y", "mcp-searxng"],
+      "env": {
+        "SEARXNG_URL": "https://searxng.example.com"
+      }
+    },
+    "playwright": {
+      "command": ["npx", "-y", "@playwright/mcp@latest", "--isolated", "--no-sandbox"],
+      "env": {
+        "PLAYWRIGHT_MCP_HEADLESS": "true",
+        "PLAYWRIGHT_MCP_BROWSER": "chromium",
+        "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
+        "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+      }
     }
   }
 }
@@ -160,6 +309,7 @@ permission:
   bash: ask
   webfetch: allow
   edit: deny
+
 tools:
   read: true
   write: true
@@ -246,6 +396,7 @@ services:
 ### Common Issues
 
 #### API Key Problems
+
 ```bash
 # Test API key
 curl -X POST https://api.anthropic.com/v1/messages \
@@ -263,6 +414,7 @@ claude config show
 ### Custom MCP Servers
 
 #### Creating Custom Server
+
 ```json
 {
   "mcp": {
@@ -318,4 +470,4 @@ git config --global core.fscache true
 git config --global merge.ff only
 ```
 
-For additional configuration examples, see the [troubleshooting guide](https://github.com/SamAcctX/jeeves/blob/main/docs/troubleshooting.md).
+For additional configuration examples, see the [troubleshooting guide](troubleshooting.md).

@@ -14,9 +14,9 @@ Skills are modular, reusable components that:
 
 ```
 jeeves/Ralph/skills/
-├── dependency-tracking/  # Dependency management utilities
-├── git-automation/      # Git workflow automation
-└── system-prompt-compliance/  # System prompt compliance checking
+├── dependency-tracking/         # Dependency management utilities
+├── git-automation/             # Git workflow automation
+└── system-prompt-compliance/   # System prompt compliance checking
 ```
 
 ## Key Skills
@@ -29,7 +29,8 @@ Comprehensive dependency management for Ralph Loop:
 - Runtime dependency updates
 - Transitive dependency resolution
 
-**Main File**: `dependency-tracking/SKILL.md`
+**Documentation**: `dependency-tracking/README.md`
+**Metadata**: `dependency-tracking/SKILL.md`
 **Scripts**: `dependency-tracking/scripts/`
 **Tests**: `dependency-tracking/tests/`
 
@@ -41,7 +42,8 @@ Git workflow automation for task lifecycle management:
 - Squash merge operations
 - Conflict detection and resolution
 
-**Main File**: `git-automation/SKILL.md`
+**Documentation**: `git-automation/README.md`
+**Metadata**: `git-automation/SKILL.md`
 **Scripts**: `git-automation/scripts/`
 **References**: `git-automation/references/`
 
@@ -52,7 +54,8 @@ System prompt compliance verification:
 - State file read requirements
 - Signal format validation
 
-**Main File**: `system-prompt-compliance/SKILL.md`
+**Documentation**: `system-prompt-compliance/README.md`
+**Metadata**: `system-prompt-compliance/SKILL.md`
 
 ## Usage
 

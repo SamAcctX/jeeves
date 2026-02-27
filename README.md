@@ -1,30 +1,103 @@
-# Jeeves - Containerized AI Development Environment
+# Ralph Toolkit - Autonomous AI Task Execution Framework
 
 [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://www.docker.com/)
 [![PowerShell](https://img.shields.io/badge/PowerShell-7.0+-purple.svg)](https://github.com/PowerShell/PowerShell)
 [![License](https://img.shields.io/badge/License-AGPLv3-green.svg)](https://github.com/SamAcctX/jeeves/blob/main/LICENSE)
 
-> A sophisticated Docker-based development environment that containerizes OpenCode and Claude Code with pre-configured MCP servers and AI agents
+> A sophisticated autonomous AI task execution framework that combines containerization, specialized agents, and intelligent task orchestration
 
-## ✨ Key Features
+## ✨ What is the Ralph Toolkit?
 
-- 🐳 **Containerized Environment** - Consistent, portable development setup with NVIDIA CUDA base image
-- 🤖 **AI Platforms** - OpenCode with optional Claude Code support
-- 🛠️ **Pre-configured MCP Servers** - Sequential Thinking, Fetch, SearxNG, Playwright
-- 🎯 **Specialized AI Agents** - PRD Creator and Deepest-Thinking research agent
-- 📦 **Automatic Dependency Resolution** - Skills' pip/npm/apt dependencies installed automatically
-- 🌐 **Web UI Access** - Browser-based development at http://localhost:3333
-- ⚡ **Cross-platform Support** - Windows, Linux, and macOS with proper file permissions
+The Ralph Toolkit is an intelligent, iterative approach to autonomous software development that prioritizes fresh context over accumulated state. Named after the persistent Ralph Wiggum, it embodies the philosophy that **iteration beats perfection**.
 
-## 🚀 Quick Start
+Ralph uses a Manager-Worker architecture with:
+- **Fresh Context Per Iteration**: Every task runs with a clean slate
+- **Zero Context Accumulation**: No conversation history between iterations  
+- **Eventual Consistency**: Failures become data for the next attempt
+- **Smart Zone Preservation**: Each task gets the full benefit of the model's optimal context window
 
-### Prerequisites
-- **Docker Desktop** (Windows/Mac) or **Docker Engine** (Linux)
-- **PowerShell 7.0+** for Windows, or **PowerShell Core** for cross-platform support
-- **Git** for cloning repository
-- **Sufficient disk space**: ~5GB recommended for container image
+## 🚀 Key Features
 
-### Installation
+### Core Capabilities
+- **Autonomous Task Execution**: Ralph Loop orchestrates task completion with minimal human intervention
+- **Multi-LLM Support**: Works with OpenCode (default) or Claude Code
+- **Agent Specialization**: Different agents for different task types (architecture, UI, testing, development)
+- **Dependency Tracking**: Automatic task dependency management via deps-tracker.yaml
+- **TDD Compliance**: Test-Driven Development built into the workflow
+- **Git Integration**: Branch-per-task workflow with squash merges
+- **Safety Limits**: Configurable iteration caps and automatic loop detection
+
+### Containerized Environment
+- **Consistent Setup**: Docker-based container with NVIDIA CUDA base image
+- **Pre-configured MCP Servers**: Sequential Thinking, Fetch, SearxNG, Playwright
+- **AI Platform Support**: OpenCode with optional Claude Code support
+- **Automatic Dependency Resolution**: Skills' pip/npm/apt dependencies installed automatically
+- **Web UI Access**: Browser-based development at http://localhost:3333
+- **Cross-platform Support**: Windows, Linux, and macOS with proper file permissions
+
+### Specialized AI Agents
+- **Manager**: Orchestrates task execution and agent selection
+- **Architect**: System design and architecture planning
+- **Developer**: Code implementation and debugging
+- **Tester**: QA, test creation, and validation
+- **UI Designer**: Interface design and responsive layout
+- **Researcher**: Investigation and documentation
+- **Writer**: Content creation and editing
+- **Decomposer**: Task breakdown and TODO management
+- **PRD Creator**: Product Requirements Document creation
+- **Deepest-Thinking**: Comprehensive research and investigation
+
+## 📦 Repository Structure
+
+```
+/proj/                         # Working directory (mounted from host)
+├── jeeves.ps1                 # Main PowerShell management script
+├── Dockerfile.jeeves          # Multi-stage Docker build file
+├── .tmp/                      # Generated docker-compose files (git-ignored)
+├── jeeves/
+│   ├── bin/                   # Installation and utility scripts
+│   │   ├── install-mcp-servers.sh
+│   │   ├── install-agents.sh
+│   │   ├── install-skill-deps.sh
+│   │   └── ralph-loop.sh
+│   ├── PRD/                   # PRD Creator agent templates
+│   ├── Deepest-Thinking/      # Research agent templates
+│   └── Ralph/                 # Ralph Loop framework
+│       ├── README-Ralph.md    # Detailed Ralph documentation
+│       ├── docs/              # Ralph-specific documentation
+│       ├── skills/            # Task execution skills
+│       │   ├── dependency-tracking/
+│       │   ├── git-automation/
+│       │   └── system-prompt-compliance/
+│       └── templates/         # Agent and configuration templates
+│           ├── agents/        # OpenCode and Claude Code agent definitions
+│           ├── config/        # Configuration file templates
+│           └── task/          # Task file templates
+├── docs/                      # Project documentation
+├── AGENTS.md                  # Agent development guidelines
+├── README.md                  # This file - project overview
+└── CONTRIBUTING.md            # Contribution guidelines
+```
+
+## 🛠️ Prerequisites & System Requirements
+
+### Hardware Requirements
+- **CPU**: 2+ cores for compilation tasks
+- **RAM**: 8GB+ (16GB recommended for large projects)
+- **Storage**: 5GB+ available disk space
+- **GPU**: NVIDIA GPU with CUDA support (optional but recommended for faster processing)
+
+### Software Requirements
+- **Docker**: Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+- **PowerShell**: PowerShell 7.0+ (Windows) or PowerShell Core (Linux/macOS)
+- **Git**: Version control system
+- **yq**: YAML processing tool (v4.x)
+- **jq**: JSON processing tool (v1.6+)
+
+## 🚀 Getting Started
+
+### 1. Installation & Setup
+
 ```bash
 # 1. Clone the repository
 git clone https://github.com/SamAcctX/jeeves.git
@@ -36,830 +109,246 @@ cd jeeves
 # 3. Start the container
 ./jeeves.ps1 start
 
-# 4. Access your development environment
-# Web UI: http://localhost:3333
-# Terminal: ./jeeves.ps1 shell
-```
-
-### Verification
-```bash
-# Check container status
-./jeeves.ps1 status
-
-# Access the terminal for verification
+# 4. Access the container shell
 ./jeeves.ps1 shell
-
-# Inside the container, verify installations
-opencode --version
-
-# If you built with --install-claude-code flag:
-claude --version
 ```
 
-## 📖 What is Jeeves?
+### 2. Verify Installation
 
-Jeeves is a comprehensive development environment that combines the power of AI coding assistants with specialized tools and agents. It provides:
-
-- **Unified AI Experience**: Seamlessly switch between OpenCode and Claude Code
-- **Enhanced Capabilities**: MCP servers provide web search, browser automation, and structured reasoning
-- **Specialized Agents**: AI assistants for product requirements and deep research
-- **Production-Ready Setup**: Optimized configurations for serious development work
-
-### Why Use Jeeves?
-
-- 🔄 **Consistency**: Same environment across all machines
-- 🚀 **Productivity**: Pre-configured tools and agents ready to use
-- 📦 **Zero-Config Dependencies**: Skill dependencies installed automatically
-- 🔒 **Privacy**: Local container with optional cloud AI services
-- 🎯 **Focus**: Spend time coding, not configuring
-
-## 🏗️ Architecture Overview
-
-```mermaid
-graph LR
-    A[🐳 Container] --> B[🤖 AI Platforms]
-    A --> C[🔌 MCP Servers]
-    A --> D[👤 User Access]
-    A --> E[🎯 AI Agents]
-    A --> F[📦 Dependency Resolver]
-    
-    B --> B1[OpenCode]
-    B --> B2[Claude Code]
-    
-    E --> E1[📋 PRD Creator]
-    E --> E2[🔬 Deepest Thinking]
-    
-    C --> C1[🧠 Sequential Thinking]
-    C --> C2[🌐 Fetch]
-    C --> C3[🔍 SearxNG]
-    C --> C4[🎭 Playwright]
-    
-    D --> D1[🌐 Web UI:3333]
-    D --> D2[💻 CLI/TUI]
-    D --> D3[🖥️ Shell]
-    
-    F --> F1[Auto-install skill deps]
-    F --> F2[pip/npm/apt support]
-```
-
-## 🎯 Features Deep Dive
-
-### AI Agents
-
-#### PRD Creator
-Helps beginner developers create comprehensive Product Requirements Documents through structured questioning and technology recommendations.
-
-**Usage:**
-```bash
-# Inside the container
-@prd-creator
-```
-
-#### Deepest-Thinking
-Conducts exhaustive research investigations using systematic methodology and academic-style reporting.
-
-**Usage:**
-```bash
-# Inside the container
-@deepest-thinking
-```
-
-### MCP Servers
-
-#### Sequential Thinking
-Structured analysis and reasoning tool for complex problem-solving.
-
-#### Fetch Server
-Web content retrieval and processing with automatic markdown conversion.
-
-#### SearxNG
-Privacy-focused web search capabilities with customizable search engines.
-
-#### Playwright
-Browser automation and web interaction for testing and scraping.
-
-### Development Environment
-
-- **Container Features**: NVIDIA CUDA base (Ubuntu 24.04) with modern Python/Node.js toolchain
-- **OpenCode Integration**: CLI, TUI, and Web UI interfaces
-- **Claude Code Support**: Dual platform capabilities with shared configuration
-- **File Management**: Volume mounts for workspace and configuration persistence
-
-## 📋 Usage Guide
-
-### PowerShell Management Script
-
-The `jeeves.ps1` script provides comprehensive container management:
-
-| Command | Alias | Description | Example |
-|---------|-------|-------------|---------|
-| `build` | `b` | Build Docker image | `./jeeves.ps1 build --no-cache --desktop --install-claude-code` |
-| `start` | `up` | Launch container | `./jeeves.ps1 start --clean` |
-| `stop` | `down` | Stop container | `./jeeves.ps1 stop --remove --force` |
-| `restart` | - | Restart container | `./jeeves.ps1 restart --no-cache --desktop --install-claude-code` |
-| `shell` | `attach`, `sh` | Terminal access | `./jeeves.ps1 shell --new` |
-| `rm` | `remove` | Remove container | `./jeeves.ps1 rm` |
-| `logs` | `log` | View logs | `./jeeves.ps1 logs` |
-| `status` | `st`, `ps` | Check status | `./jeeves.ps1 status` |
-| `clean` | - | Cleanup | `./jeeves.ps1 clean` |
-
-#### Interactive Mode
-```powershell
-# Run without arguments for interactive menu
-./jeeves.ps1
-```
-
-#### Platform Requirements
-- **Windows**: PowerShell 7.0+ (pre-installed on Windows 10+)
-- **Linux/macOS**: Install PowerShell Core:
-  ```bash
-  # Ubuntu/Debian
-  sudo apt-get update && sudo apt-get install -y powershell
-  
-  # macOS
-  brew install powershell
-  ```
-
-### Development Workflows
-
-#### Web UI Workflow
-1. Start container: `./jeeves.ps1 start`
-2. Open browser: http://localhost:3333
-3. Use browser-based development environment
-4. Leverage AI assistance directly in browser
-5. Switch between AI agents as needed
-
-#### Terminal Workflow
-1. Get shell access: `./jeeves.ps1 shell`
-2. Work in `/proj` directory (mounted workspace)
-3. Use OpenCode CLI/TUI commands
-4. Access tmux sessions for persistent work
-5. Utilize pre-installed development tools
-
-**Shell Options:**
-```bash
-# Enter existing container (default)
-./jeeves.ps1 shell
-
-# Stop/remove current container and enter fresh instance
-./jeeves.ps1 shell --new
-```
-
-**Environment Variables:**
-- `DISABLE_TMUX=1` - Disable automatic tmux attachment when entering shell
-
-#### Agent-Assisted Development
-1. **PRD Creation**: Use `@prd-creator` for project planning
-2. **Research Tasks**: Use `@deepest-thinking` for comprehensive investigation
-3. **Code Development**: Leverage OpenCode/Claude Code AI
-4. **Tool Integration**: Use MCP servers for enhanced functionality
-
-## ⚙️ Configuration & Customization
-
-### Docker Configuration
-
-#### Custom Dockerfile
-Modify `Dockerfile.jeeves` to add custom tools or dependencies:
-
-```dockerfile
-# Add your custom tools
-RUN apt-get update && apt-get install -y \
-    your-tool \
-    && rm -rf /var/lib/apt/lists/*
-```
-
-#### Environment Variables
-These environment variables are automatically configured by `jeeves.ps1` when starting the container:
-
-**Playwright MCP:**
-- `PLAYWRIGHT_MCP_HEADLESS=1` - Run browser in headless mode
-- `PLAYWRIGHT_MCP_BROWSER=chromium` - Default browser
-- `PLAYWRIGHT_MCP_NO_SANDBOX=1` - Disable browser sandbox
-- `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1` - Allow file system access
-
-**OpenCode:**
-- `OPENCODE_ENABLE_EXA=false` - Disable Exa web search (uses SearXNG instead)
-
-**GPU Support:**
-- `NVIDIA_DRIVER_CAPABILITIES=all` - Enable all NVIDIA GPU capabilities
-- `CUDA_VISIBLE_DEVICES=all` - Make all GPUs visible to container
-
-**SearXNG:**
-- `SEARXNG_URL` - Set this when running `install-mcp-servers.sh` to configure your SearxNG instance URL
-
-### Agent Configuration
-
-#### Installing Custom Agents
-```bash
-# Inside the container
-install-agents.sh --global
-```
-
-#### Agent Templates
-Create custom agents in `.opencode/agents/` or `.claude/agents/`:
-
-**OpenCode Format:**
-```yaml
----
-description: "Your custom agent"
-mode: subagent
-
-permission:
-  write: ask
-  bash: ask
-  webfetch: allow
-  edit: deny
-tools:
-  read: true
-  write: true
-  grep: true
-  glob: true
-  bash: true
-  webfetch: true
-  question: true
-  sequentialthinking: true
----
-```
-
-**Claude Code Format:**
-```yaml
----
-name: your-agent-name
-description: "Your custom agent"
-mode: subagent
-
-permission:
-  write: ask
-  bash: ask
-  webfetch: allow
-  edit: deny
-tools: Read, Write, Grep, Glob, Bash, Web, SequentialThinking, Question
-model: inherit
----
-```
-
-### Skill Dependency Resolver
-
-Jeeves automatically installs dependencies required by AI skills (pip packages, npm modules, and apt packages).
-
-#### How It Works
-When the container starts, the `install-skill-deps.sh` script automatically:
-1. Discovers all installed skills (global and project-local)
-2. Parses each skill's `SKILL.md` for dependency declarations
-3. Categorizes packages by manager (apt, pip, npm)
-4. Deduplicates packages across all skills
-5. Installs everything with appropriate privileges
-
-#### Supported Dependency Patterns
-Skills can declare dependencies in three ways:
-
-**Pattern 1: Dependencies Section**
-```markdown
-## Dependencies
-
-- **pandoc**: `sudo apt-get install pandoc` (for text extraction)
-- **docx**: `npm install -g docx` (for creating documents)
-- **defusedxml**: `pip install defusedxml` (for XML parsing)
-```
-
-**Pattern 2: Installation Section**
-```markdown
-### Installation
+Once inside the container:
 
 ```bash
-pip install 'markitdown[all]'
-```
+# Check Ralph commands are available
+command -v ralph-init.sh && echo "ralph-init.sh: OK"
+command -v ralph-loop.sh && echo "ralph-loop.sh: OK"
+command -v sync-agents && echo "sync-agents: OK"
+
+# Verify tools are installed
+yq --version
+jq --version
+git --version
+
+# Verify Ralph templates exist
+ls /opt/jeeves/Ralph/templates/
 ```
 
-**Pattern 3: Inline Comments**
-```markdown
-Requires: pip install pytesseract pdf2image
-```
+### 3. Initialize Your Project
 
-#### Manual Usage
 ```bash
-# Install all skill dependencies (runs automatically on startup)
-./install-skill-deps.sh
+# Navigate to your project directory
+cd /proj/my-project
 
-# Preview what would be installed without installing
-./install-skill-deps.sh --dry-run
-
-# Verbose output with detailed logging
-./install-skill-deps.sh --verbose
-
-# Parse a specific skill file to JSON
-python3 /proj/jeeves/bin/parse_skill_deps.py --skill-path /path/to/SKILL.md
-```
-
-#### Package Managers
-- **APT**: System packages installed with `sudo` (pandoc, libreoffice, tesseract)
-- **PIP**: Python packages installed without sudo (defusedxml, markitdown[pptx])
-- **NPM**: Node packages installed globally with `sudo` (docx, pptxgenjs, playwright)
-
-#### Docker Safety
-The script is designed for container startup:
-- Always exits with code 0 (never blocks container start)
-- Continues on individual package failures
-- Reports all failures at the end for troubleshooting
-- Safe to run multiple times (idempotent)
-
-## 📜 Container Scripts Reference
-
-The `jeeves/bin/` directory contains installation and utility scripts designed to run inside the Jeeves container. These scripts enhance your development workflow with MCP servers, AI agents, and project scaffolding.
-
-### Quick Reference
-
-| Script | Type | Purpose |
-|--------|------|---------|
-| [`install-mcp-servers.sh`](#install-mcp-serverssh) | Executable | Install MCP servers for OpenCode/Claude |
-| [`install-agents.sh`](#install-agentssh) | Executable | Install PRD Creator and Deepest-Thinking agents |
-| [`install-skill-deps.sh`](#install-skill-depssh) | Executable | Install skill dependencies (auto-runs on startup) |
-| [`install-skills.sh`](#install-skillssh) | Executable | Install Agent Skills for document/N8N workflows |
-| [`parse_skill_deps.py`](#parse_skill_depspy) | Executable | Parse SKILL.md files for dependencies |
-| [`ralph-init.sh`](#ralph-initsh) | Executable | Initialize Ralph project scaffolding |
-| [`ralph-loop.sh`](#ralph-loopsh) | Executable | Autonomous AI task execution loop |
-| [`sync-agents.sh`](#sync-agentssh) | Executable | Sync agent configs from agents.yaml |
-| [`apply-rules.sh`](#apply-ruless) | Executable | Apply rules from RULES.md files |
-| [`ralph-paths.sh`](#ralph-pathssh) | Library | Path detection utilities |
-| [`ralph-validate.sh`](#ralph-validatesh) | Library | Validation utilities |
-| [`find-rules-files.sh`](#find-rules-filessh) | Library | Find RULES.md files in directory tree |
-
-### Installation Scripts
-
-#### install-mcp-servers.sh
-
-Installs and configures MCP (Model Context Protocol) servers for OpenCode and Claude Code platforms.
-
-**MCP Servers Installed:**
-- 🧠 **Sequential Thinking** - Structured analysis and reasoning
-- 🌐 **Fetch** - Web content retrieval with markdown conversion
-- 🔍 **SearXNG** - Privacy-focused web search
-- 🎭 **Playwright** - Browser automation and testing
-
-**Usage:**
-```bash
-# Install to user scope (recommended)
-install-mcp-servers.sh --global
-
-# Preview installation without making changes
-install-mcp-servers.sh --dry-run
-
-# Full installation with preview
-install-mcp-servers.sh --global --dry-run
-```
-
-**Environment:**
-- `SEARXNG_URL` - Set before running to configure your SearXNG instance URL
-- Prompts for URL if not set
-
-**Configuration Locations:**
-- OpenCode: `~/.config/opencode/opencode.json`
-- Claude Code: `~/.claude.json` (global) or `.mcp.json` (project)
-
----
-
-#### install-agents.sh
-
-Installs PRD Creator and Deepest-Thinking agent templates for AI-assisted development.
-
-**Agents Installed:**
-- 📋 **PRD Creator** - Product Requirements Document creation assistant
-- 🔬 **Deepest-Thinking** - Comprehensive research and investigation agent
-
-**Usage:**
-```bash
-# Install all agents to user scope (recommended)
-install-agents.sh --global
-
-# Install only Deepest-Thinking agent
-install-agents.sh --deepest
-
-# Show help
-install-agents.sh --help
-```
-
-**Installation Scopes:**
-| Scope | OpenCode Path | Claude Code Path |
-|-------|---------------|------------------|
-| Project | `/proj/.opencode/agents/` | `/proj/.claude/agents/` |
-| User | `~/.opencode/agents/` | `~/.claude/agents/` |
-
----
-
-#### install-skill-deps.sh
-
-Discovers skills, parses dependencies from SKILL.md files, and installs required packages. Runs automatically on container startup.
-
-**Usage:**
-```bash
-# Install all skill dependencies (runs automatically on startup)
-install-skill-deps.sh
-
-# Preview what would be installed
-install-skill-deps.sh --dry-run
-
-# Verbose output with detailed logging
-install-skill-deps.sh --verbose
-
-# Combined options
-install-skill-deps.sh -v -d
-```
-
-**Options:**
-| Option | Description |
-|--------|-------------|
-| `-v, --verbose` | Enable detailed output |
-| `-d, --dry-run` | Preview without installing |
-| `-h, --help` | Show help message |
-
-**Package Managers:**
-- **APT**: System packages (pandoc, libreoffice, tesseract)
-- **PIP**: Python packages (defusedxml, markitdown)
-- **NPM**: Node packages (docx, pptxgenjs, playwright)
-
-**Docker Safety:**
-- Always exits with code 0 (never blocks container start)
-- Continues on individual package failures
-- Idempotent (safe to run multiple times)
-
----
-
-#### install-skills.sh
-
-Installs Agent Skills for Claude Code and OpenCode platforms, including document processing and N8N workflow development skills.
-
-**Usage:**
-```bash
-# Install document processing skills
-install-skills.sh --doc-skills
-
-# Install N8N workflow development skills
-install-skills.sh --n8n-skills
-
-# Install to user scope
-install-skills.sh --doc-skills --global
-
-# Show help
-install-skills.sh --help
-```
-
-**Doc Skills Installed:**
-- `docx` - Word document processing
-- `pdf` - PDF manipulation and extraction
-- `xlsx` - Excel spreadsheet handling
-- `pptx` - PowerPoint presentation creation
-- `markitdown` - Markdown conversion utilities
-
-**N8N Skills Installed:**
-- 7 workflow development skills for N8N automation platform
-
----
-
-### Utility Scripts
-
-#### parse_skill_deps.py
-
-Python script for parsing SKILL.md files to extract dependency declarations in JSON format.
-
-**Usage:**
-```bash
-# Parse a specific skill file
-python3 /proj/jeeves/bin/parse_skill_deps.py --skill-path /path/to/SKILL.md
-
-# Specify output file
-python3 /proj/jeeves/bin/parse_skill_deps.py \
-  --skill-path /path/to/SKILL.md \
-  --output deps.json
-
-# Verbose output
-python3 /proj/jeeves/bin/parse_skill_deps.py \
-  --skill-path /path/to/SKILL.md \
-  --verbose
-```
-
-**Options:**
-| Option | Required | Description |
-|--------|----------|-------------|
-| `--skill-path` | Yes | Path to SKILL.md file |
-| `--output` | No | Output JSON file path |
-| `--verbose` | No | Enable detailed logging |
-
-**Output Format:**
-```json
-{
-  "apt": ["pandoc", "tesseract-ocr"],
-  "pip": ["defusedxml", "markitdown[all]"],
-  "npm": ["docx", "pptxgenjs"]
-}
-```
-
----
-
-#### ralph-init.sh
-
-Initializes Ralph project scaffolding with directory structure, configuration files, and agent templates.
-
-**Usage:**
-```bash
-# Initialize Ralph in current project
+# Initialize Ralph scaffolding
 ralph-init.sh
 
-# Force overwrite existing files
-ralph-init.sh --force
-
-# Initialize only rules system
-ralph-init.sh --rules
-
-# Show help
-ralph-init.sh --help
+# Verify the .ralph directory structure
+ls -la .ralph/
 ```
 
-**Creates:**
-```
-.ralph/
-├── config/
-│   ├── agents.yaml
-│   └── deps-tracker.yaml
-├── tasks/
-├── templates/
-│   └── agents/
-└── rules/
-    └── RULES.md
-```
+This creates:
+- `.ralph/config/agents.yaml` - Agent model mappings
+- `.ralph/config/deps-tracker.yaml` - Task dependencies
+- `.ralph/tasks/TODO.md` - Task checklist
+- `.opencode/agents/` and `.claude/agents/` - Agent definitions
+- `RULES.md` - Project-specific rules
 
----
+## 📝 Basic Usage Example
 
-#### ralph-loop.sh
+### Building a Simple REST API
 
-Autonomous AI task execution loop for continuous task processing with Ralph agents.
+#### Step 1: Create a PRD (Product Requirements Document)
 
-**Usage:**
 ```bash
-# Run with default settings (opencode, 10 iterations)
-ralph-loop.sh
+mkdir -p .ralph/specs
+cat > .ralph/specs/PRD-simple-api.md << 'EOF'
+# PRD: Simple User API
 
-# Specify tool and max iterations
-ralph-loop.sh --tool opencode --max-iterations 20
+## Overview
+REST API for user management with CRUD operations.
 
-# Skip initial sync and run immediately
-ralph-loop.sh --skip-sync
+## Requirements
+- GET /users - List all users
+- GET /users/:id - Get single user
+- POST /users - Create user
+- PUT /users/:id - Update user
+- DELETE /users/:id - Delete user
 
-# Disable delay between iterations
-ralph-loop.sh --no-delay
+## Technical Specs
+- Node.js with Express
+- PostgreSQL database
+- Jest for testing
 
-# Dry run (preview without execution)
-ralph-loop.sh --dry-run
+## Success Criteria
+- All endpoints functional
+- Test coverage >80%
+- Response time <200ms
+EOF
+```
+
+#### Step 2: Decompose the PRD
+
+```bash
+# Invoke the decomposer agent (in OpenCode or Claude Code)
+# @decomposer
+```
+
+The decomposer will:
+- Break down requirements into atomic tasks (<2 hours each)
+- Analyze dependencies between tasks
+- Generate TODO.md with task checklist
+- Create task folders in `.ralph/tasks/XXXX/`
+- Generate deps-tracker.yaml
+
+#### Step 3: Start the Ralph Loop
+
+```bash
+# Start the autonomous task execution loop
+ralph-loop.sh --max-iterations 50
+
+# Or use Claude Code instead of OpenCode
+ralph-loop.sh --tool claude --max-iterations 50
+```
+
+#### Step 4: Monitor Progress
+
+```bash
+# Check task status
+cat .ralph/tasks/TODO.md
+
+# View detailed activity for a task
+cat .ralph/tasks/0001/activity.md
+
+# Check loop status in real-time
+watch -n 5 cat .ralph/tasks/TODO.md
+```
+
+## 🎯 Ralph Loop Commands
+
+### ralph-init.sh
+Initialize Ralph scaffolding in your project.
+
+```bash
+ralph-init.sh [OPTIONS]
 ```
 
 **Options:**
-| Option | Default | Description |
-|--------|---------|-------------|
-| `--tool` | opencode | AI tool to use (opencode/claude) |
-| `--max-iterations` | 10 | Maximum loop iterations |
-| `--skip-sync` | false | Skip initial agent sync |
-| `--no-delay` | false | Disable backoff delay |
-| `--dry-run` | false | Preview without execution |
+- `--help`, `-h`: Show help message
+- `--force`, `-f`: Skip overwrite prompts
+- `--rules`: Force RULES.md creation
 
-**Environment Variables:**
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `RALPH_TOOL` | opencode | Default AI tool |
-| `RALPH_MAX_ITERATIONS` | 10 | Max iterations |
-| `RALPH_BACKOFF_BASE` | 5 | Base backoff seconds |
-| `RALPH_BACKOFF_MAX` | 60 | Max backoff seconds |
-| `RALPH_MANAGER_MODEL` | - | Manager model override |
+### ralph-loop.sh
+Main loop orchestration script.
 
----
-
-#### sync-agents.sh
-
-Synchronizes agent model configurations from `agents.yaml` to individual agent files.
-
-**Usage:**
 ```bash
-# Sync all agents using default config
-sync-agents.sh
-
-# Specify tool platform
-sync-agents.sh --tool opencode
-
-# Show what would change without modifying
-sync-agents.sh --dry-run
-
-# Show current configuration
-sync-agents.sh --show
-
-# Specify custom config file
-sync-agents.sh --config /path/to/agents.yaml
+ralph-loop.sh [OPTIONS]
 ```
 
 **Options:**
-| Option | Description |
-|--------|-------------|
-| `-t, --tool TOOL` | Target platform (opencode/claude) |
-| `-c, --config FILE` | Custom agents.yaml path |
-| `-s, --show` | Display current configuration |
-| `-d, --dry-run` | Preview without changes |
-| `-h, --help` | Show help message |
+- `--tool {opencode|claude}`: Select AI tool (default: opencode)
+- `--max-iterations N`: Maximum iterations (default: 100)
+- `--skip-sync`: Skip pre-loop agent synchronization
+- `--no-delay`: Disable exponential backoff delays
+- `--dry-run`: Print commands without executing
+- `--help`, `-h`: Show help message
 
-**Environment Variables:**
-- `RALPH_TOOL` - Default tool platform
-- `AGENTS_YAML` - Default config file path
+### sync-agents
+Synchronize agent model configurations from agents.yaml to agent files.
 
----
-
-#### apply-rules.sh
-
-Applies rules from RULES.md files to guide AI behavior.
-
-**Usage:**
 ```bash
-# Apply single rules file
-apply-rules.sh /path/to/RULES.md
-
-# Apply multiple rules files
-apply-rules.sh rules/RULES.md tasks/RULES.md
+sync-agents [OPTIONS]
 ```
 
----
+**Options:**
+- `--help`, `-h`: Show help message
+- `--tool TOOL`, `-t`: Specify tool (opencode|claude)
+- `--config FILE`, `-c`: Custom agents.yaml path
+- `--show`, `-s`: Show parsed agents (don't sync)
+- `--dry-run`, `-d`: Show what would be updated
 
-### Library Scripts
+## 🏗️ Core Components
 
-These scripts are sourced by other scripts and provide utility functions. They are not intended to be run directly.
+### The Three Phases of Ralph
 
-#### ralph-paths.sh
+#### Phase 1: PRD Generation (User-Driven)
+- Define project scope and objectives
+- Specify technical requirements
+- Document success criteria
+- Create `.ralph/specs/PRD-*.md`
 
-Path detection utilities for finding project roots, Ralph directories, and agent files.
+#### Phase 2: Decomposition (Agent-Assisted)
+- Invoke `@decomposer` agent
+- Review generated task breakdown
+- Refine task granularity (each <2 hours)
+- Validate dependencies
+- Confirm task count (<9999 tasks)
 
-**Functions:**
-| Function | Description |
-|----------|-------------|
-| `find_project_root` | Locate project root directory |
-| `find_ralph_dir` | Find .ralph directory |
-| `find_task_dir` | Find tasks directory |
-| `find_agent_file` | Locate agent file by name |
-| `expand_path` | Expand relative paths to absolute |
+#### Phase 3: Execution (Autonomous Loop)
+- Run `ralph-loop.sh`
+- Manager selects unblocked tasks
+- Workers execute with fresh context
+- State updates after each iteration
+- Exponential backoff between iterations
 
----
+### Skills System
 
-#### ralph-validate.sh
+Ralph includes specialized skills for task execution:
 
-Validation utilities for ensuring data integrity and file existence.
+#### Dependency Tracking
+- Scripts: `deps-parse.sh`, `deps-cycle.sh`, `deps-select.sh`, `deps-update.sh`, `deps-closure.sh`
+- Purpose: Manage task dependencies and detect cycles
+- Usage: Analyze and update dependency relationships
 
-**Functions:**
-| Function | Description |
-|----------|-------------|
-| `validate_task_id` | Validate task ID format |
-| `validate_yaml` | Validate YAML file syntax |
-| `validate_file_exists` | Check file exists |
-| `validate_dir_exists` | Check directory exists |
-| `validate_git_repo` | Verify git repository |
+#### Git Automation
+- Scripts: `git-context.sh`, `git-commit-msg.sh`, `task-branch-create.sh`, `squash-merge.sh`, etc.
+- Purpose: Integrate with Git workflows
+- Usage: Branch management, commit messages, conflict resolution
 
----
+#### System Prompt Compliance
+- Purpose: Ensure compliance with system prompts and guidelines
+- Usage: Safety and compliance checks
 
-#### find-rules-files.sh
+### Agent Templates
 
-Utility for finding RULES.md files in directory tree.
+Ralph provides pre-configured agent templates for:
+- **Manager**: Task orchestration
+- **Architect**: System design
+- **Developer**: Implementation
+- **Tester**: QA and testing
+- **UI Designer**: Interface design
+- **Researcher**: Investigation
+- **Writer**: Documentation
+- **Decomposer**: Task breakdown
+- **PRD Creator**: Requirements creation
+- **Deepest-Thinking**: Research
 
-**Functions:**
-| Function | Description |
-|----------|-------------|
-| `find_rules_files` | Find all RULES.md files in tree |
+## 📚 Documentation
 
----
+### Core Documentation
+- [README-Ralph.md](jeeves/Ralph/README-Ralph.md) - Detailed Ralph Loop documentation
+- [Ralph Directory Structure](jeeves/Ralph/docs/directory-structure.md) - Directory organization
+- [Rules System](jeeves/Ralph/docs/rules-system.md) - RULES.md hierarchical learning system
+- [Agent Templates](jeeves/Ralph/templates/README.md) - Agent template documentation
+- [Skills Overview](jeeves/Ralph/skills/README.md) - Skills system overview
 
-### Common Workflows
+### Project Documentation
+- [Command Reference](docs/commands.md) - Complete command documentation
+- [Configuration Guide](docs/configuration.md) - Configuration options
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+- [How-to Guide](docs/how-to-guide.md) - Step-by-step tutorials
+- [AGENTS.md](AGENTS.md) - Agent development guidelines
 
-**Initial Setup Inside Container:**
-```bash
-# Install MCP servers globally
-install-mcp-servers.sh --global
-
-# Install AI agents globally
-install-agents.sh --global
-
-# Initialize Ralph project (if using Ralph)
-ralph-init.sh
-```
-
-**Skill Development:**
-```bash
-# Check skill dependencies
-install-skill-deps.sh --dry-run --verbose
-
-# Parse specific skill dependencies
-python3 /proj/jeeves/bin/parse_skill_deps.py \
-  --skill-path /proj/jeeves/Ralph/skills/git-automation/SKILL.md
-```
-
-**Ralph Automation:**
-```bash
-# Initialize and run autonomous loop
-ralph-init.sh
-sync-agents.sh --show
-ralph-loop.sh --max-iterations 5
-```
-
-### MCP Server Configuration
-
-#### Adding New MCP Servers
-```bash
-# Inside the container
-install-mcp-servers.sh --global --dry-run
-```
-
-#### Manual Configuration
-
-**OpenCode** - Edit `opencode.json`:
-```json
-{
-  "mcp": {
-    "sequentialthinking": {
-      "type": "local",
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequentialthinking"]
-    }
-  }
-}
-```
-
-**Claude Code** - Edit `.mcp.json` (project) or `~/.claude.json` (global):
-```json
-{
-  "mcpServers": {
-    "sequentialthinking": {
-      "command": ["npx", "-y", "@modelcontextprotocol/server-sequentialthinking"]
-    }
-  }
-}
-```
-
-## 🔧 Advanced Topics
-
-### Development & Debugging
-
-#### Building from Source
-```bash
-# Rebuild with no cache
-./jeeves.ps1 clean
-./jeeves.ps1 build --no-cache
-
-# Build with desktop applications
-./jeeves.ps1 build --desktop
-
-# Build with Claude Code installed (disabled by default)
-./jeeves.ps1 build --install-claude-code
-
-# Full build with all options
-./jeeves.ps1 build --no-cache --desktop --install-claude-code
-```
-
-#### Build Options
-
-| Flag | Description |
-|------|-------------|
-| `--no-cache` | Build without Docker layer cache (clean build) |
-| `--clean` | Stop and remove existing container before building |
-| `--desktop` | Include desktop binaries (Linux/Windows apps) |
-| `--install-claude-code` | Install Claude Code in the container |
-
-**Note:** Claude Code installation is disabled by default. Use `--install-claude-code` to include it.
-
-#### Performance Optimization
-- **Docker Memory**: Allocate 4GB+ in Docker Desktop settings
-- **Storage**: Use SSD for better I/O performance
-- **CPU**: Allocate 2+ cores for compilation tasks
-
-#### Security Considerations
-- Container runs as non-root user
-- File permissions properly mapped via UID/GID
-- Network isolation via Docker bridge
-- No sensitive data in container image
-
-### Integration & Automation
-
-#### CI/CD Integration
-```bash
-# Example GitHub Actions workflow
-- name: Test with Jeeves
-  run: |
-    ./jeeves.ps1 start
-    docker exec jeeves bash -c "opencode run 'run tests'"
-    ./jeeves.ps1 stop
-```
-
-#### Scripting Examples
-```powershell
-# Automated development workflow
-./jeeves.ps1 start
-docker exec jeeves bash -c "cd /proj && npm install && npm test"
-./jeeves.ps1 stop
-```
+### Jeeves System Documentation
+- [Jeeves Commands](jeeves/docs/commands.md) - Jeeves container commands
+- [Jeeves Configuration](jeeves/docs/configuration.md) - Container configuration
+- [Troubleshooting](jeeves/docs/troubleshooting.md) - Jeeves-specific issues
+- [Agent Selection Guide](jeeves/docs/agent-selection-guide.md) - Agent choice recommendations
 
 ## 🤝 Contributing
 
-We welcome contributions! Please see [CONTRIBUTING.md](https://github.com/SamAcctX/jeeves/blob/main/CONTRIBUTING.md) for guidelines.
+We welcome contributions! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for detailed guidelines.
 
 ### Development Setup
+
 ```bash
 # Clone repository
 git clone https://github.com/SamAcctX/jeeves.git
@@ -878,13 +367,7 @@ git commit -m "Add your feature"
 git push origin feature/your-feature-name
 ```
 
-## 📚 Reference Documentation
-
-- [Command Reference](docs/commands.md)
-- [Configuration Reference](docs/configuration.md)
-- [Troubleshooting](docs/troubleshooting.md)
-
-## 🆘 Community & Support
+## 🆘 Support & Community
 
 - **Issues**: [GitHub Issues](https://github.com/SamAcctX/jeeves/issues)
 - **Discussions**: [GitHub Discussions](https://github.com/SamAcctX/jeeves/discussions)
@@ -892,7 +375,7 @@ git push origin feature/your-feature-name
 
 ## 📄 License & Legal
 
-This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE](https://github.com/SamAcctX/jeeves/blob/main/LICENSE) file for details.
+This project is licensed under the GNU Affero General Public License v3.0 - see the [LICENSE](LICENSE) file for details.
 
 ### Third-Party Licenses
 - **OpenCode**: MIT License
@@ -901,6 +384,6 @@ This project is licensed under the GNU Affero General Public License v3.0 - see 
 
 ---
 
-**Built with ❤️ by the Jeeves team**
+**Built with ❤️ by the Ralph team**
 
-*Get productive instantly with AI-powered development in a container*
+*Iteration beats perfection.*

@@ -1,8 +1,8 @@
 # Command Reference
 
-This document provides a comprehensive reference for all Jeeves commands and their options.
+This document provides a comprehensive reference for all Jeeves and Ralph commands and their options.
 
-## PowerShell Management Script (`jeeves.ps1`)
+## Jeeves PowerShell Management Script (`jeeves.ps1`)
 
 The main script for managing the Jeeves Docker container and development environment.
 
@@ -12,12 +12,13 @@ The main script for managing the Jeeves Docker container and development environ
 Build Docker image with optional customizations.
 
 ```powershell
-./jeeves.ps1 build [--no-cache] [--desktop]
+./jeeves.ps1 build [--no-cache] [--desktop] [--install-claude-code]
 ```
 
 **Options:**
 - `--no-cache`: Build without using cache layers
 - `--desktop`: Include desktop application builds
+- `--install-claude-code`: Install Claude Code in the container
 
 **Examples:**
 ```powershell
@@ -29,17 +30,21 @@ Build Docker image with optional customizations.
 
 # Build with desktop applications
 ./jeeves.ps1 build --desktop
+
+# Build with Claude Code
+./jeeves.ps1 build --install-claude-code
 ```
 
 #### `start`
 Launch the Jeeves container with volume mounting and networking.
 
 ```powershell
-./jeeves.ps1 start [--clean]
+./jeeves.ps1 start [--clean] [--dind]
 ```
 
 **Options:**
 - `--clean`: Rebuild image before starting
+- `--dind`: Enable Docker-in-Docker (DinD) support
 
 **Examples:**
 ```powershell
@@ -48,6 +53,9 @@ Launch the Jeeves container with volume mounting and networking.
 
 # Rebuild and start
 ./jeeves.ps1 start --clean
+
+# Start with Docker-in-Docker support
+./jeeves.ps1 start --dind
 ```
 
 #### `stop`
@@ -77,15 +85,24 @@ Stop the running Jeeves container.
 Restart the Jeeves container.
 
 ```powershell
-./jeeves.ps1 restart
+./jeeves.ps1 restart [--no-cache] [--desktop] [--install-claude-code] [--dind]
 ```
+
+**Options:**
+- `--no-cache`: Build without using cache layers (when rebuilding)
+- `--desktop`: Include desktop application builds (when rebuilding)
+- `--install-claude-code`: Install Claude Code in the container (when rebuilding)
+- `--dind`: Enable Docker-in-Docker (DinD) support
 
 #### `shell`
 Get interactive bash access to the container.
 
 ```powershell
-./jeeves.ps1 shell
+./jeeves.ps1 shell [--new]
 ```
+
+**Options:**
+- `--new`: Stop and remove existing container before entering
 
 #### `logs`
 View real-time container logs.
@@ -108,6 +125,13 @@ Remove all Jeeves containers and images.
 ./jeeves.ps1 clean
 ```
 
+#### `rm`
+Remove the Jeeves container (stops if running).
+
+```powershell
+./jeeves.ps1 rm
+```
+
 ### Interactive Mode
 
 Running the script without arguments displays an interactive menu:
@@ -116,93 +140,125 @@ Running the script without arguments displays an interactive menu:
 ./jeeves.ps1
 ```
 
-## Container Commands
+## Ralph Loop Commands
 
-### OpenCode Commands
+### `ralph-init.sh`
+Initialize Ralph project scaffolding.
 
-#### CLI Usage
 ```bash
-# Start TUI (default)
-opencode
-
-# Run single command
-opencode run "explain how closures work in JavaScript"
-
-# Use specific model
-opencode --model anthropic/claude-3-5-sonnet
-
-# Start web server
-opencode web --port 3333 --hostname 0.0.0.0
+ralph-init.sh [OPTIONS]
 ```
 
-#### Agent Management
-```bash
-# List available agents
-opencode agent list
+**Options:**
+- `--help`, `-h`: Show help message
+- `--force`, `-f`: Skip overwrite prompts
+- `--rules`: Force RULES.md creation
 
-# Use specific agent
-@prd-creator
-@deepest-thinking
+**Examples:**
+```bash
+# Interactive setup
+ralph-init.sh
+
+# Force overwrite existing files
+ralph-init.sh --force
+
+# Force RULES.md creation
+ralph-init.sh --rules
 ```
 
-#### Session Management
+**What it does:**
+- Validates required tools (yq, jq, git)
+- Creates Ralph directory structure
+- Copies configuration templates
+- Sets up agent and skill directories
+- Configures git integration
+- Runs installation scripts
+
+### `ralph-loop.sh`
+Main loop orchestration script for autonomous task execution.
+
 ```bash
-# Continue last session
-opencode --continue
-
-# Start specific session
-opencode --session session-id-here
-
-# List sessions
-opencode session list
+ralph-loop.sh [OPTIONS]
 ```
 
-#### TUI Commands
+**Options:**
+- `-t, --tool {opencode|claude}`: Select AI tool (default: opencode)
+- `-m, --max-iterations N`: Maximum iterations (default: 100, 0=unlimited)
+- `-s, --skip-sync`: Skip pre-loop agent synchronization
+- `-n, --no-delay`: Disable backoff delays
+- `-d, --dry-run`: Print commands without executing
+- `-v, --verbose`: Enable JSON format output in OpenCode
+- `-h, --help`: Show this help message
+
+**Examples:**
 ```bash
-# Navigate in TUI
-? - Show help
-q - Quit
-/ - Search
-: - Command mode
+# Default execution with OpenCode
+ralph-loop.sh
+
+# Use Claude Code instead of OpenCode
+ralph-loop.sh --tool claude
+
+# Limit to 50 iterations
+ralph-loop.sh --max-iterations 50
+
+# Skip agent synchronization
+ralph-loop.sh --skip-sync
+
+# Disable backoff delays
+ralph-loop.sh --no-delay
+
+# Dry run mode
+ralph-loop.sh --dry-run
 ```
 
-### Claude Code Commands
+**Environment Variables:**
+- `RALPH_TOOL`: Default tool selection
+- `RALPH_MAX_ITERATIONS`: Maximum loop iterations
+- `RALPH_BACKOFF_BASE`: Backoff base delay (default: 2)
+- `RALPH_BACKOFF_MAX`: Backoff max delay (default: 60)
+- `RALPH_MANAGER_MODEL`: Override Manager model
 
-#### Basic Usage
+**Logging:**
+A log file with timestamps is automatically created at:
+`.ralph/logs/ralph-loop-YYYYMMDD-HHMMSS.log`
+
+### `sync-agents.sh`
+Synchronize agent model configurations from agents.yaml to agent files.
+
 ```bash
-# Start interactive session
-claude
-
-# Ask question
-claude "how do I implement authentication?"
-
-# Edit file
-claude --edit filename.js
-
-# Show context
-claude show-context
+sync-agents.sh [OPTIONS]
 ```
 
-#### Project Management
+**Options:**
+- `--help`, `-h`: Show help message
+- `--tool TOOL`, `-t`: Specify tool (opencode|claude)
+- `--config FILE`, `-c`: Custom agents.yaml path
+- `--show`, `-s`: Show parsed agents (don't sync)
+- `--dry-run`, `-d`: Show what would be updated
+
+**Examples:**
 ```bash
-# Initialize project
-claude init
+# Sync agents for default tool (OpenCode)
+sync-agents.sh
 
-# Add files to context
-claude add-context README.md src/
+# Sync agents for Claude Code
+sync-agents.sh --tool claude
 
-# Remove from context
-claude remove-context README.md
+# Show what would be updated (dry run)
+sync-agents.sh --dry-run
 
-# Show context
-claude show-context
+# Show parsed agents without syncing
+sync-agents.sh --show
 ```
 
-## Installation Scripts
+## Container Installation Scripts
 
 ### MCP Server Installation (`install-mcp-servers.sh`)
 
 ```bash
+# Install all MCP servers in project scope
+./install-mcp-servers.sh
+
 # Install all MCP servers globally
 ./install-mcp-servers.sh --global
 
@@ -219,6 +275,9 @@ claude show-context
 ### Agent Installation (`install-agents.sh`)
 
 ```bash
+# Install all agents (PRD Creator and Deepest-Thinking) in project scope
+install-agents.sh
+
 # Install all agents globally
 install-agents.sh --global
 
@@ -232,6 +291,101 @@ install-agents.sh --help
 **Available Agents:**
 - `prd-creator`: Product Requirements Document creator
 - `deepest-thinking`: Research and investigation agent
+
+### Skill Dependency Installation (`install-skill-deps.sh`)
+
+Installs dependencies for Ralph skills.
+
+```bash
+./install-skill-deps.sh
+```
+
+## OpenCode Commands
+
+### CLI Usage
+
+```bash
+# Start TUI (default)
+opencode
+
+# Run single command
+opencode run "explain how closures work in JavaScript"
+
+# Use specific model
+opencode --model anthropic/claude-3-5-sonnet
+
+# Start web server
+opencode web --port 3333 --hostname 0.0.0.0
+```
+
+### Agent Management
+
+```bash
+# List available agents
+opencode agent list
+
+# Use specific agent
+@prd-creator
+@deepest-thinking
+@manager
+```
+
+### Session Management
+
+```bash
+# Continue last session
+opencode --continue
+
+# Start specific session
+opencode --session session-id-here
+
+# List sessions
+opencode session list
+```
+
+### TUI Commands
+
+```bash
+# Navigate in TUI
+? - Show help
+q - Quit
+/ - Search
+: - Command mode
+```
+
+## Claude Code Commands
+
+### Basic Usage
+
+```bash
+# Start interactive session
+claude
+
+# Ask question
+claude "how do I implement authentication?"
+
+# Edit file
+claude --edit filename.js
+
+# Show context
+claude show-context
+```
+
+### Project Management
+
+```bash
+# Initialize project
+claude init
+
+# Add files to context
+claude add-context README.md src/
+
+# Remove from context
+claude remove-context README.md
+
+# Show context
+claude show-context
+```
 
 ## Docker Commands
 
@@ -266,6 +420,41 @@ docker rmi jeeves:latest
 ```
 
 ### Docker Compose
+
+Generated dynamically in `.tmp/docker-compose.yml`:
+
+```yaml
+services:
+  jeeves:
+    build:
+      context: ..
+      dockerfile: Dockerfile.jeeves
+    image: jeeves:latest
+    runtime: nvidia
+    shm_size: "2gb"
+    gpus: all
+    environment:
+      - NVIDIA_DRIVER_CAPABILITIES=all
+      - CUDA_VISIBLE_DEVICES=all
+      - PLAYWRIGHT_MCP_HEADLESS=1
+      - PLAYWRIGHT_MCP_BROWSER=chromium
+      - PLAYWRIGHT_MCP_NO_SANDBOX=1
+      - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
+      - OPENCODE_ENABLE_EXA=false
+    volumes:
+      - $(pwd):/proj:rw
+      - ~/.claude:/home/jeeves/.claude:rw
+      - ~/.config/opencode:/home/jeeves/.config/opencode:rw
+      - ~/.opencode:/home/jeeves/.opencode:rw
+    ports:
+      - "3333:3333"
+    networks:
+      - jeeves-network
+
+networks:
+  jeeves-network:
+    driver: bridge
+```
 
 ```bash
 # Start services
@@ -390,9 +579,9 @@ sudo chown -R $USER:$USER /proj
 ## Help and Support
 
 For additional help:
-- Check the [troubleshooting guide](https://github.com/SamAcctX/jeeves/blob/main/docs/troubleshooting.md)
+- Check the [troubleshooting guide](troubleshooting.md)
 - Open an issue on [GitHub Issues](https://github.com/SamAcctX/jeeves/issues)
-- Review the [main documentation](../README.md)
+- Review the [main documentation](README.md)
 
 ### Quick Reference
 
@@ -405,3 +594,6 @@ For additional help:
 | Stop container | `./jeeves.ps1 stop` |
 | Rebuild image | `./jeeves.ps1 build --no-cache` |
 | Clean up | `./jeeves.ps1 clean` |
+| Initialize Ralph project | `ralph-init.sh` |
+| Start Ralph Loop | `ralph-loop.sh` |
+| Sync agents | `sync-agents.sh` |

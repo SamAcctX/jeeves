@@ -7,6 +7,8 @@ Ralph Loop is an intelligent, iterative approach to autonomous software developm
 ## Table of Contents
 
 - [What is Ralph?](#what-is-ralph)
+- [Architecture](#architecture)
+- [Core Components](#core-components)
 - [Installation](#installation)
 - [Quick Start](#quick-start)
 - [The Three Phases](#the-three-phases)
@@ -18,7 +20,9 @@ Ralph Loop is an intelligent, iterative approach to autonomous software developm
 
 ## What is Ralph?
 
-### Core Philosophy: Iteration Beats Perfection
+Ralph Loop is an autonomous AI task execution framework designed for software development. It prioritizes fresh context over accumulated state, embodying the philosophy that **iteration beats perfection**.
+
+### Core Philosophy
 
 Traditional AI coding sessions accumulate context until the model degrades. Ralph Loop takes a different approach:
 
@@ -26,14 +30,6 @@ Traditional AI coding sessions accumulate context until the model degrades. Ralp
 - **Zero Context Accumulation**: No conversation history between iterations
 - **Eventual Consistency**: Failures become data for the next attempt
 - **Smart Zone Preservation**: Each task gets the full benefit of the model's optimal context window
-
-### Manager-Worker Architecture
-
-Ralph uses a lightweight bash wrapper with intelligent orchestration:
-
-- **Manager Agent**: Spawned fresh each iteration, reads TODO.md and deps-tracker.yaml, selects unblocked tasks, invokes Worker subagents
-- **Worker Agents**: Task-specific specialists (developer, tester, architect, etc.) that execute work with clean context
-- **Bash Wrapper**: Simple loop that spawns fresh Manager instances, handles backoff timing, and monitors for completion
 
 ### Key Features
 
@@ -43,6 +39,74 @@ Ralph uses a lightweight bash wrapper with intelligent orchestration:
 - **TDD Compliance**: Test-Driven Development built into the workflow
 - **Git Integration**: Branch-per-task workflow with squash merges
 - **Safety Limits**: Configurable iteration caps and automatic loop detection
+
+## Architecture
+
+Ralph Loop follows a modular, agent-based architecture:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Ralph Loop Framework                    │
+├─────────────────────────────────────────────────────────────┤
+│                                                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Manager Agent│  │Worker Agents │  │ Bash Wrapper │      │
+│  │(Orchestrator)│  │(Specialists) │  │(Loop Control)│      │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                 │                  │              │
+│         ▼                 ▼                  ▼              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │ Task Selection│  │Task Execution│  │State Management│    │
+│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘      │
+│         │                 │                  │              │
+│         └─────────┬───────┴──────────────────┘              │
+│                   ▼                                         │
+│            ┌──────────────┐                                 │
+│            │ .ralph/ Data │                                 │
+│            │  Repository  │                                 │
+│            └──────────────┘                                 │
+│                                                             │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Manager-Worker Architecture
+
+- **Manager Agent**: Spawned fresh each iteration, reads TODO.md and deps-tracker.yaml, selects unblocked tasks, invokes Worker subagents
+- **Worker Agents**: Task-specific specialists (developer, tester, architect, etc.) that execute work with clean context
+- **Bash Wrapper**: Simple loop that spawns fresh Manager instances, handles backoff timing, and monitors for completion
+
+## Core Components
+
+Ralph Loop is composed of several key components:
+
+### 1. Templates
+
+Located in `jeeves/Ralph/templates/`, these provide:
+- Agent definitions for OpenCode and Claude Code platforms
+- Configuration file templates (agents.yaml, deps-tracker.yaml, TODO.md)
+- Task-related file templates (TASK.md, activity.md, attempts.md)
+- Prompt templates and optimizers
+- Project rules template (RULES.md)
+
+### 2. Skills
+
+Located in `jeeves/Ralph/skills/`, these are modular, reusable components:
+- **dependency-tracking**: Comprehensive dependency management (graph parsing, circular dependency detection, unblocked task selection)
+- **git-automation**: Git workflow automation (branch management, commit message generation, squash merges)
+- **system-prompt-compliance**: System prompt compliance verification
+
+### 3. Documentation
+
+Located in `jeeves/Ralph/docs/`:
+- **directory-structure.md**: Detailed description of Ralph's file organization
+- **rules-system.md**: Comprehensive guide to the RULES.md hierarchical learning system
+
+### 4. Configuration
+
+Generated in `.ralph/config/` when initializing a project:
+- `agents.yaml`: Maps agent types to specific LLM models
+- `deps-tracker.yaml`: Tracks task dependencies
+- `TODO.md`: Master task checklist
 
 ## Installation
 
@@ -919,16 +983,21 @@ ralph-loop.sh
 
 1. Check task activity logs: `.ralph/tasks/XXXX/activity.md`
 2. Review attempts history: `.ralph/tasks/XXXX/attempts.md`
-3. Read Ralph implementation guide: `/proj/Ralph.md`
+3. Read Ralph documentation: 
+   - `/proj/jeeves/Ralph/README-Ralph.md` - Main overview
+   - `/proj/jeeves/Ralph/docs/directory-structure.md` - Directory organization
+   - `/proj/jeeves/Ralph/docs/rules-system.md` - Rules system
 4. Check RULES.md for project-specific guidance
 
 ## Next Steps
 
 ### Documentation
 
-- **[Ralph.md](/proj/Ralph.md)** - Complete implementation guide
-- **[rules-system.md](/proj/jeeves/Ralph/docs/rules-system.md)** - RULES.md hierarchical learning system
-- **[directory-structure.md](/proj/jeeves/Ralph/docs/directory-structure.md)** - Directory organization
+- **[Ralph Loop Documentation](docs/README.md)** - Overview of all Ralph documentation
+- **[Directory Structure](docs/directory-structure.md)** - Detailed description of Ralph's file organization
+- **[Rules System](docs/rules-system.md)** - Comprehensive guide to the RULES.md hierarchical learning system
+- **[Templates](templates/README.md)** - Information about agent, configuration, and task templates
+- **[Skills](skills/README.md)** - Documentation for reusable Ralph skills
 
 ### Advanced Topics
 

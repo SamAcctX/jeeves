@@ -11,11 +11,31 @@ jeeves/
 │   ├── prd-creator-claude-template.md
 │   ├── prd-creator-prompt.md
 │   └── README-PRD.md
-└── Deepest-Thinking/       # Research agent
-    ├── deepest-thinking-opencode-template.md
-    ├── deepest-thinking-claude-template.md
-    ├── deepest-thinking-prompt.md
-    └── README-Deepest-Thinking.md
+├── Deepest-Thinking/       # Research agent
+│   ├── deepest-thinking-opencode-template.md
+│   ├── deepest-thinking-claude-template.md
+│   ├── deepest-thinking-prompt.md
+│   └── README-Deepest-Thinking.md
+└── Ralph/                 # Ralph Rules System
+    ├── templates/         # Agent and task templates
+    │   ├── agents/        # Ralph agent templates
+    │   │   ├── architect-*.md
+    │   │   ├── decomposer-*.md
+    │   │   ├── developer-*.md
+    │   │   ├── manager-*.md
+    │   │   ├── researcher-*.md
+    │   │   ├── tester-*.md
+    │   │   ├── ui-designer-*.md
+    │   │   ├── writer-*.md
+    │   │   └── shared/    # Shared template content
+    │   ├── prompts/       # Prompt templates
+    │   ├── config/        # Configuration templates
+    │   └── task/          # Task templates
+    ├── skills/            # Skill definitions
+    │   ├── dependency-tracking/
+    │   ├── git-automation/
+    │   └── system-prompt-compliance/
+    └── docs/              # Ralph documentation
 ```
 
 ## Agent Template Format
@@ -65,15 +85,11 @@ model: inherit
 ### Required Fields
 - **description**: Clear description of agent's purpose
 - **mode**: Always `subagent`
-- **tools**: List of available tools
-
-### Optional Fields
 - **temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
 - **permission**: Tool permission levels (ask/allow/deny)
-  - `write`: ask | allow | deny
-  - `bash`: ask | allow | deny
-  - `webfetch`: ask | allow | deny
-  - `edit`: ask | allow | deny
+- **tools**: List of available tools (key-value pairs with boolean values, not arrays)
+
+### Optional Fields
 - **name**: Agent identifier (Claude only)
 - **model**: Model to use, typically `inherit` (Claude only)
 

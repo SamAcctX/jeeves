@@ -1,6 +1,203 @@
 # Troubleshooting Guide
 
-This document provides solutions to common issues and problems when using Jeeves.
+This document provides solutions to common issues and problems when using Jeeves and the Ralph Loop.
+
+## Ralph Loop Issues
+
+### Ralph Directory Not Found
+
+#### Problem
+```bash
+ralph-loop.sh
+# Error: Ralph directory not found: .ralph/
+```
+
+#### Solutions
+
+**1. Initialize Ralph Project**
+```bash
+# Run Ralph initialization
+ralph-init.sh
+```
+
+**2. Check Current Directory**
+```bash
+# Verify you're in the right directory
+pwd
+ls -la
+```
+
+**3. Check Ralph Directory Existence**
+```bash
+# Check if .ralph directory exists
+ls -la .ralph/
+```
+
+### Ralph Loop Fails to Start
+
+#### Problem
+```bash
+ralph-loop.sh
+# Error: [ERROR] Something went wrong
+```
+
+#### Solutions
+
+**1. Check Required Tools**
+```bash
+# Verify all required tools are installed
+ralph-init.sh --help 2>/dev/null || echo "ralph-init.sh not available"
+command -v yq && echo "yq: OK" || echo "yq: missing"
+command -v jq && echo "jq: OK" || echo "jq: missing"
+command -v git && echo "git: OK" || echo "git: missing"
+```
+
+**2. Check Docker Container Status**
+```bash
+# Verify container is running
+./jeeves.ps1 status
+
+# If not running, start it
+./jeeves.ps1 start
+```
+
+**3. Check Agent Installation**
+```bash
+# Verify agents are installed
+ls -la .opencode/agents/ 2>/dev/null || echo "OpenCode agents not installed"
+ls -la .claude/agents/ 2>/dev/null || echo "Claude agents not installed"
+```
+
+**4. Re-run Initialization**
+```bash
+# Re-run Ralph initialization with force option
+ralph-init.sh --force
+```
+
+### Ralph Loop Stops Immediately
+
+#### Problem
+Ralph Loop starts but exits immediately without performing any iterations.
+
+#### Solutions
+
+**1. Check TODO.md**
+```bash
+# Look for sentinel values in TODO.md
+cat .ralph/tasks/TODO.md
+```
+
+**2. Check for ABORT Signal**
+```bash
+# Look for ABORT: HELP NEEDED in TODO.md
+grep "ABORT: HELP NEEDED" .ralph/tasks/TODO.md || echo "No ABORT signal found"
+```
+
+**3. Check for Complete Signal**
+```bash
+# Look for ALL TASKS COMPLETE sentinel
+grep "ALL TASKS COMPLETE" .ralph/tasks/TODO.md || echo "Tasks not complete"
+```
+
+**4. Check Dependencies**
+```bash
+# Verify deps-tracker.yaml exists and is valid
+cat .ralph/config/deps-tracker.yaml
+```
+
+### Git Conflicts in Ralph Loop
+
+#### Problem
+```bash
+ralph-loop.sh
+# Error: Git conflict detected: .ralph/tasks/TODO.md
+```
+
+#### Solutions
+
+**1. Check Git Status**
+```bash
+# Check git status and conflicts
+git status
+git diff
+```
+
+**2. Resolve Conflicts**
+```bash
+# Resolve conflicts manually in the problematic files
+# Then stage the changes
+git add .ralph/tasks/TODO.md .ralph/config/deps-tracker.yaml
+```
+
+**3. Continue Loop**
+```bash
+# After resolving conflicts, restart the loop
+ralph-loop.sh
+```
+
+### Agent Synchronization Issues
+
+#### Problem
+```bash
+ralph-loop.sh
+# Warning: Agent sync failed after Xs (continuing anyway)
+```
+
+#### Solutions
+
+**1. Run Sync Agents Manually**
+```bash
+# Run sync agents manually to see the error
+sync-agents.sh
+```
+
+**2. Check agents.yaml**
+```bash
+# Verify agents.yaml is valid YAML
+yq . .ralph/config/agents.yaml
+```
+
+**3. Check Agent Directories**
+```bash
+# Verify agent directories exist and are writable
+ls -la .opencode/agents/
+ls -la .claude/agents/
+```
+
+**4. Re-run Initialization**
+```bash
+# Re-initialize Ralph to ensure agents are properly set up
+ralph-init.sh --force
+```
+
+### Ralph Loop Iteration Limit Reached
+
+#### Problem
+```bash
+ralph-loop.sh
+# Warning: GLOBAL_ITERATION_LIMIT_REACHED: 100 iterations
+```
+
+#### Solutions
+
+**1. Increase Iteration Limit**
+```bash
+# Run loop with higher iteration limit
+ralph-loop.sh --max-iterations 200
+```
+
+**2. Remove Iteration Limit**
+```bash
+# Run loop with unlimited iterations
+ralph-loop.sh --max-iterations 0
+```
+
+**3. Check Task Status**
+```bash
+# Look at current task status
+cat .ralph/tasks/TODO.md
+ls -la .ralph/tasks/
+```
 
 ## Container Issues
 
@@ -46,6 +243,17 @@ sudo lsof -ti:3333 | xargs kill -9
 ./jeeves.ps1 clean
 ./jeeves.ps1 build --no-cache
 ./jeeves.ps1 start
+```
+
+**5. Docker-in-Docker Issues**
+If using `--dind` flag, ensure your user has permission to access Docker socket:
+```bash
+# Check Docker socket permissions
+ls -la /var/run/docker.sock
+
+# Add user to docker group (Linux)
+sudo usermod -aG docker $USER
+newgrp docker  # Apply changes without logout
 ```
 
 ### Container Stops Immediately
@@ -654,6 +862,9 @@ Enable verbose logging for troubleshooting:
 
 # Or capture all output from any command
 ./jeeves.ps1 start 2>&1 | tee start.log
+
+# Ralph Loop verbose mode
+ralph-loop.sh --verbose
 ```
 
 ### Log Collection
@@ -671,12 +882,18 @@ docker version > docker-version.log
 # Configuration files
 cat ~/.config/opencode/opencode.json > opencode-config.log 2>/dev/null || echo "OpenCode config not found"
 cat ~/.claude.json > claude-config.log 2>/dev/null || echo "Claude config not found"
+
+# Ralph configuration
+cat .ralph/config/agents.yaml > ralph-agents.log 2>/dev/null || echo "Ralph agents config not found"
+cat .ralph/config/deps-tracker.yaml > ralph-deps.log 2>/dev/null || echo "Ralph deps config not found"
+
+# Ralph Loop logs
+ls -la .ralph/logs/
 ```
 
 ### Report Issues
 
 When filing issues on [GitHub](https://github.com/SamAcctX/jeeves/issues), include:
-
 - Operating system and version
 - Docker version and configuration
 - PowerShell version
@@ -686,7 +903,6 @@ When filing issues on [GitHub](https://github.com/SamAcctX/jeeves/issues), inclu
 - Diagnostic logs
 
 ### Community Support
-
 - **GitHub Issues**: [Report bugs](https://github.com/SamAcctX/jeeves/issues)
 - **GitHub Discussions**: [Ask questions](https://github.com/SamAcctX/jeeves/discussions)
 - **Documentation**: [Full docs](https://github.com/SamAcctX/jeeves/tree/main/docs)
