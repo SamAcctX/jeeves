@@ -127,8 +127,9 @@ ENV BUILD_DESKTOP=$BUILD_DESKTOP
 
 
 # Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
-# As of 09 Feb 2026, opencode requires bun 1.3.8 exactly...
-RUN npm install -g bun@1.3.9 && \
+# Opencode is a bit finnicky with bun versions, so you may need to do a test build and see which bun version
+# it is expecting and pin it below for the build to work.
+RUN npm install -g bun@latest && \
     npm cache clear --force
 
 RUN git config --global http.postBuffer 524288000 \
