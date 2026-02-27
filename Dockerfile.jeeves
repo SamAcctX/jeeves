@@ -307,6 +307,14 @@ if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
   echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
   echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
   echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m--------------------------------------------- \033[0m"
+  echo -e "\033[0;37mQuick Tips:\033[0m"
+  echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
+  echo -e "\033[0;37m  • Ralph init (-f forces sync): \033[1;36mralph-init.sh -f\033[0m"
+  echo -e "\033[0;37m  • Validate Ralph agents: \033[1;36mCheck .ralph/config/agents.yaml\033[0m"
+  echo -e "\033[0;37m  • Sync Ralph agents: \033[1;36msync-agents.sh\033[0m"
+  echo -e "\033[0;37m  • Opencode sync bug: TUI/WebUI sessions not real-time synced\033[0m"
+  echo -e "\033[0;37m  • Restart container after adding agents/skills/MCP servers\033[0m"
   echo -e "\033[1;34m=============================================\033[0m"
   echo
 fi
@@ -339,6 +347,14 @@ if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
   echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
   echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
   echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m--------------------------------------------- \033[0m"
+  echo -e "\033[0;37mQuick Tips:\033[0m"
+  echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
+  echo -e "\033[0;37m  • Ralph init (-f forces sync): \033[1;36mralph-init.sh -f\033[0m"
+  echo -e "\033[0;37m  • Validate Ralph agents: \033[1;36mCheck .ralph/config/agents.yaml\033[0m"
+  echo -e "\033[0;37m  • Sync Ralph agents: \033[1;36msync-agents.sh\033[0m"
+  echo -e "\033[0;37m  • Opencode sync bug: TUI/WebUI sessions not real-time synced\033[0m"
+  echo -e "\033[0;37m  • Restart container after adding agents/skills/MCP servers\033[0m"
   echo -e "\033[1;34m=============================================\033[0m"
   echo
 fi

@@ -913,7 +913,7 @@ function Remove-Container {
     Uses `docker exec -it` for an interactive TTY session
 #>
 function Enter-Shell {
-    param([switch]$New, [switch]$Raw)
+    param([switch]$New, [switch]$Raw, [switch]$Zsh)
 
     if ($New) {
         Write-Log "--new flag set: stopping and removing existing container..." -warning
@@ -952,7 +952,12 @@ function Enter-Shell {
     }
     
     $execArgs += $containerId
-    $execArgs += "/bin/bash"
+    
+    if ($Zsh) {
+        $execArgs += "/bin/zsh"
+    } else {
+        $execArgs += "/bin/bash"
+    }
     
     # Execute the command using splatting operator
     & docker @execArgs
@@ -1130,6 +1135,7 @@ Options:
   --remove              Also remove container (stop command)
   --force               Force stop container (stop command)
   --new                 Stop and remove container before shell (shell command)
+  --zsh                 Use zsh shell instead of bash (shell command)
   --dind                Enable Docker-in-Docker (DinD) support (start command)
 
 Aliases:
@@ -1358,7 +1364,7 @@ NOTES:
 Jeeves shell - Attach to Container Shell
 
 DESCRIPTION:
-    Opens an interactive bash shell inside the running container. This allows
+    Opens an interactive shell inside the running container. This allows
     you to execute commands directly within the container environment.
 
 USAGE:
@@ -1368,15 +1374,19 @@ OPTIONS:
     --new        Stop and remove the current container before entering
                  This ensures a fresh container instance is created.
 
+    --zsh        Use zsh shell instead of bash
+
     --help       Show this help message
 
 EXAMPLES:
     jeeves shell
     jeeves shell --new
+    jeeves shell --zsh
+    jeeves shell --new --zsh
 
 NOTES:
 - Builds image and starts container if not running
-- Opens an interactive bash shell
+- Opens an interactive bash shell by default, or zsh with --zsh option
 - Your current directory is available at /proj
 - OpenCode CLI is available as 'opencode'
 - Type 'exit' to leave the shell
@@ -1695,8 +1705,10 @@ Select shell options:
 "@
 
     $shellOptions = @(
-        @{ Key = "1"; Label = "Attach to shell (tmux)"; Action = "shell" }
-        @{ Key = "2"; Label = "Attach to raw shell (no tmux)"; Action = "shell-raw" }
+        @{ Key = "1"; Label = "Attach to bash shell (tmux)"; Action = "bash-shell" }
+        @{ Key = "2"; Label = "Attach to bash shell (no tmux)"; Action = "bash-shell-raw" }
+        @{ Key = "3"; Label = "Attach to zsh shell (tmux)"; Action = "zsh-shell" }
+        @{ Key = "4"; Label = "Attach to zsh shell (no tmux)"; Action = "zsh-shell-raw" }
         @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
         @{ Key = "0"; Label = "Exit"; Action = "exit" }
     )
@@ -1768,7 +1780,10 @@ function Main {
         [switch]$New,
 
         [Parameter(Mandatory = $false)]
-        [switch]$Dind
+        [switch]$Dind,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Zsh
     )
 
     # Validate Docker is available
@@ -1813,8 +1828,10 @@ function Main {
             "^(rm)$" { Remove-Container }
             
             # Shell options - uses running container, starts non-dind if not running
-            "^(shell)$" { Enter-Shell -New:$false -Raw:$false }
-            "^(shell-raw)$" { Enter-Shell -New:$false -Raw:$true }
+            "^(bash-shell)$" { Enter-Shell -New:$false -Raw:$false -Zsh:$false }
+            "^(bash-shell-raw)$" { Enter-Shell -New:$false -Raw:$true -Zsh:$false }
+            "^(zsh-shell)$" { Enter-Shell -New:$false -Raw:$false -Zsh:$true }
+            "^(zsh-shell-raw)$" { Enter-Shell -New:$false -Raw:$true -Zsh:$true }
             
             # Logs and status
             "^(logs)$" { Show-Logs }
@@ -1848,7 +1865,7 @@ function Main {
         }
         "^(shell|attach|sh)$" {
             if ($Help) { Show-CommandHelp "shell"; exit 0 }
-            Enter-Shell -New:$New
+            Enter-Shell -New:$New -Zsh:$Zsh
         }
         "^(logs|log)$" {
             if ($Help) { Show-CommandHelp "logs"; exit 0 }
