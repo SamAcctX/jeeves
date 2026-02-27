@@ -276,16 +276,27 @@ invoke_opencode_manager() {
     
     MANAGER_OUTPUT=$(mktemp)
     local start_time=$(date +%s)
+
+    # Start web server in background
+    opencode web --port 3334 &
+    WEB_PID=$!
+
+    # Wait for server to be ready
+    sleep 2
     
     export OPENCODE_PERMISSION='{"*":"allow","question":"deny"}'
     
-    if opencode run --agent manager --attach http://localhost:3333 $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if opencode run --agent manager --attach http://localhost:3334 $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
         log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
+        # Kill the web server
+        kill $WEB_PID
         return 0
     else
         local duration=$(($(date +%s) - start_time))
         log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
+        # Kill the web server
+        kill $WEB_PID
         return 1
     fi
 
