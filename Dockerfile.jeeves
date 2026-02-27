@@ -391,6 +391,23 @@ set -g history-limit 50000
 set -g default-terminal "screen-256color"
 EOF
 
+# Opencode pseudo-aliases to auto-attach the TUI to the auto-started web UI server
+RUN echo 'opencode() { \
+  if [[ $# -eq 0 ]]; then \
+    command opencode attach http://localhost:3333; \
+  else \
+    command opencode "$@"; \
+  fi \
+}' >> /home/jeeves/.bashrc
+
+RUN echo 'opencode() { \
+  if [[ $# -eq 0 ]]; then \
+    command opencode attach http://localhost:3333; \
+  else \
+    command opencode "$@"; \
+  fi \
+}' >> /home/jeeves/.zshrc
+
 # ============================================================================
 # Setup directories with proper permissions
 # ============================================================================
