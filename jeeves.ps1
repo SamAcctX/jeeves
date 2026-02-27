@@ -422,6 +422,7 @@ services:
     $composeContent += @"
     ports:
       - "3333:3333"
+      - "3334:3334"
     networks:
       - jeeves-network
 

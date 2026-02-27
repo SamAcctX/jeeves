@@ -286,14 +286,31 @@ if [ -n "$TMUX" ]; then
 fi
 
 # Attach to existing session or create it
+# The welcome message will be displayed by the shell's rc file
 exec tmux new-session -A -s "$SESSION_NAME"
 EOF
 
 RUN chmod +x /usr/local/bin/jeeves-shell
 
-# tmux hook for bash auto-attach
-# Can be disabled by setting the env var DISABLE_TMUX=1
+# Welcome message and tmux hook for bash
+# Can disable tmux with DISABLE_TMUX=1 and message with DISABLE_WELCOME=1
 RUN cat << 'EOF' >> /etc/bash.bashrc
+
+# --- opencode welcome message ---
+# Skip if:
+# - not an interactive TTY
+# - explicitly disabled
+if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
+  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo
+fi
+# --- end opencode welcome message ---
 
 # --- opencode tmux auto-attach ---
 # Skip if:
@@ -307,8 +324,25 @@ fi
 
 EOF
 
-# same for zsh shell
+# Welcome message and tmux hook for zsh
+# Can disable tmux with DISABLE_TMUX=1 and message with DISABLE_WELCOME=1
 RUN cat << 'EOF' >> /etc/zsh/zshrc
+
+# --- opencode welcome message ---
+# Skip if:
+# - not an interactive TTY
+# - explicitly disabled
+if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start\033[0m"
+  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo
+fi
+# --- end opencode welcome message ---
 
 # --- opencode tmux auto-attach ---
 # Skip if:

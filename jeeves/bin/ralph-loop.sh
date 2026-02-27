@@ -279,7 +279,7 @@ invoke_opencode_manager() {
     
     export OPENCODE_PERMISSION='{"*":"allow","question":"deny"}'
     
-    if opencode run --agent manager $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if opencode run --agent manager --attach http://localhost:3333 $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
         log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
