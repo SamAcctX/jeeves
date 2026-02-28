@@ -97,7 +97,8 @@ build_server_config_entry() {
     }' "$server_name" "${MCP_SERVERS[$server_name]}" "$searxng_url"
         else
             printf '    "%s": {
-        "command": ["npx", "-y", "%s"],
+        "command": "npx",
+        "args": ["-y", "%s"],
         "env": {
             "SEARXNG_URL": "%s"
         }
@@ -115,7 +116,8 @@ build_server_config_entry() {
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         else
             printf '    "%s": {
-        "command": ["npx", "-y", "%s", "--isolated", "--no-sandbox"],
+        "command": "npx",
+        "args": ["-y", "%s", "--isolated", "--no-sandbox"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
             "PLAYWRIGHT_MCP_BROWSER": "chromium"
@@ -130,7 +132,8 @@ build_server_config_entry() {
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         else
             printf '    "%s": {
-        "command": ["npx", "-y", "%s"]
+        "command": "npx",
+        "args": ["-y", "%s"]
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
         fi
     elif [ "$server_name" = "fetch" ]; then
@@ -141,7 +144,8 @@ build_server_config_entry() {
     }' "$server_name"
         else
             printf '    "%s": {
-        "command": ["python", "-m", "mcp_server_fetch"]
+        "command": "python",
+        "args": ["-m", "mcp_server_fetch"]
     }' "$server_name"
         fi
     else
@@ -160,11 +164,12 @@ build_server_config_entry() {
         else
             if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
                 printf '    "%s": {
-        "command": ["npx", "-y", "%s"]
+        "command": "npx",
+        "args": ["-y", "%s"]
     }' "$server_name" "${MCP_SERVERS[$server_name]#npx -y }"
             else
                 printf '    "%s": {
-        "command": ["%s"]
+        "command": "%s"
     }' "$server_name" "${MCP_SERVERS[$server_name]}"
             fi
         fi
@@ -555,7 +560,8 @@ process_claude_config() {
             searxng_url="$SEARXNG_URL"
             server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"],
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]#npx -y }"],
         "env": {
             "SEARXNG_URL": "$searxng_url"
         }
@@ -565,7 +571,8 @@ EOF
         elif [ "$server_name" = "playwright" ]; then
             server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}", "--isolated", "--no-sandbox"],
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}", "--isolated", "--no-sandbox"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
             "PLAYWRIGHT_MCP_BROWSER": "chromium"
@@ -577,14 +584,23 @@ EOF
             if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]#npx -y }"]
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]#npx -y }"]
+    }
+EOF
+)
+            elif [[ "${MCP_SERVERS[$server_name]}" == python* ]]; then
+                server_config=$(cat <<EOF
+    "$server_name": {
+        "command": "python",
+        "args": ["-m", "mcp_server_fetch"]
     }
 EOF
 )
             else
                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["${MCP_SERVERS[$server_name]}"]
+        "command": "${MCP_SERVERS[$server_name]}"
     }
 EOF
 )
@@ -653,7 +669,8 @@ EOF
                             if [ "$server_name" = "searxng" ]; then
                                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}"],
         "env": {
             "SEARXNG_URL": "$SEARXNG_URL"
         }
@@ -663,12 +680,11 @@ EOF
                             elif [ "$server_name" = "playwright" ]; then
 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"],
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}", "--isolated", "--no-sandbox"],
         "env": {
             "PLAYWRIGHT_MCP_HEADLESS": "true",
-            "PLAYWRIGHT_MCP_BROWSER": "chromium",
-            "PLAYWRIGHT_MCP_NO_SANDBOX": "true",
-            "PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS": "true"
+            "PLAYWRIGHT_MCP_BROWSER": "chromium"
         }
     }
 EOF
@@ -676,14 +692,16 @@ EOF
                             elif [ "$server_name" = "sequentialthinking" ]; then
                                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}"]
     }
 EOF
 )
                             elif [ "$server_name" = "fetch" ]; then
                                 server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["python", "-m", "mcp_server_fetch"]
+        "command": "python",
+        "args": ["-m", "mcp_server_fetch"]
     }
 EOF
 )
@@ -691,14 +709,16 @@ EOF
                                 if [[ "${MCP_SERVERS[$server_name]}" == python* ]]; then
                                     server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["python", "-m", "mcp_server_fetch"]
+        "command": "python",
+        "args": ["-m", "mcp_server_fetch"]
     }
 EOF
 )
                                 else
                                     server_config=$(cat <<EOF
     "$server_name": {
-        "command": ["npx", "-y", "${MCP_SERVERS[$server_name]}"]
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}"]
     }
 EOF
 )
