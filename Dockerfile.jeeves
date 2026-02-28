@@ -504,7 +504,7 @@ serverurl=unix:///var/run/supervisor.sock
 files = /etc/supervisor/conf.d/*.conf
 EOF
 
-# Opencode web service configuration
+# Opencode web service configuration (PATH will be set dynamically at runtime)
 RUN cat << 'EOF' > /etc/supervisor/conf.d/opencode-web.conf
 [program:opencode-web]
 command=/usr/local/bin/opencode web --hostname 0.0.0.0 --port 3333
@@ -518,7 +518,7 @@ stopsignal=TERM
 stopwaitsecs=30
 stdout_logfile=/var/log/supervisor/opencode-web.log
 stderr_logfile=/var/log/supervisor/opencode-web-error.log
-environment=HOME="/home/jeeves",USER="jeeves"
+environment=HOME="/home/jeeves",USER="jeeves",PATH="%(ENV_PATH)s"
 EOF
 
 # Create opencode-web helper script for service management
@@ -819,9 +819,9 @@ fi
 # If no arguments provided, start supervisord and the opencode-web service
 if [ $# -eq 0 ]; then
     echo "Starting supervisord..."
-    # Start supervisord as daemon (it will daemonize itself with nodaemon=false behavior via -n)
-    # Actually with nodaemon=true it stays in foreground, so we run it in background
-    sudo supervisord -c /etc/supervisor/supervisord.conf &
+    # Start supervisord as daemon, preserving PATH for environment variable expansion
+    # Use sudo -E to preserve environment variables so %(ENV_PATH)s works in config
+    sudo -E supervisord -c /etc/supervisor/supervisord.conf &
     SUPERVISORD_PID=$!
     
     # Wait for supervisord socket to exist
