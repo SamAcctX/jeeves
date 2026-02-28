@@ -477,6 +477,9 @@ RUN sudo chown -R jeeves:jeeves /opt/oob-config
 # Configure supervisord for service management
 # ============================================================================
 
+# Switch to root for supervisord configuration
+USER root
+
 # Create supervisord configuration directory structure
 RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor /var/run
 
@@ -572,8 +575,6 @@ RUN chown -R jeeves:jeeves /var/log/supervisor
 # ============================================================================
 # Install PRD Creator Toolkit
 # ============================================================================
-# Switch to root for installation
-USER root
 
 # Create directory for jeeves supplementary tools
 RUN mkdir -p /opt/jeeves/
@@ -592,14 +593,9 @@ COPY jeeves/Ralph /opt/jeeves/Ralph/
 RUN chmod -R +x /usr/local/bin/ && \
     chown -R jeeves:jeeves /opt/jeeves
 
-# Switch back to jeeves user
-USER jeeves
-
 # ============================================================================
 # Create embedded entrypoint script for config initialization
 # ============================================================================
-# Temp switch to root
-USER root
 
 RUN sudo cat << 'EOF' > /usr/local/bin/entrypoint.sh
 #!/bin/bash
