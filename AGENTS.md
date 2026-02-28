@@ -18,10 +18,13 @@
 ./jeeves.ps1 stop --remove      # Stop and remove container
 ./jeeves.ps1 stop --force       # Force stop (SIGKILL)
 ./jeeves.ps1 restart            # Restart container
+./jeeves.ps1 rm                 # Remove container (stops if running)
 ./jeeves.ps1 shell              # Attach to container shell
+./jeeves.ps1 shell --zsh        # Attach with zsh instead of bash
 ./jeeves.ps1 logs               # View container logs
 ./jeeves.ps1 status             # Check container status
 ./jeeves.ps1 clean              # Remove container and image
+./jeeves.ps1 help               # Show help (aliases: h, ?)
 ```
 
 ### Installation Scripts (Inside Container)
@@ -72,7 +75,6 @@ function Write-Log {
     )
     $timestamp = ((Get-Date -Format "MM/dd/yyyy HH:mm:ss.fff").toString() + ": ")
     
-    # Determine colors based on switches
     $foregroundColor = $null
     if ($error) {
         $foregroundColor = "Red"
@@ -137,7 +139,7 @@ install_package() {
 ```
 
 ### Dockerfile
-- **Base Image**: Prefer specific tags (though `latest` is currently used)
+- **Base Image**: `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04` (pinned CUDA tag)
 - **Multi-stage**: Use separate base, builder, runtime stages
 - **Layer Optimization**: Combine related RUN commands
 - **Cleanup**: Always clean apt cache and temp files in same layer
@@ -147,7 +149,7 @@ install_package() {
 
 Example:
 ```dockerfile
-FROM ubuntu:22.04 AS base
+FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 AS base
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         package1 \
@@ -157,47 +159,23 @@ RUN apt-get update && \
 ```
 
 ### Agent Templates (Markdown with YAML frontmatter)
-- **Frontmatter**: Required fields: `description`, `mode`, `temperature`, `permission`, `tools`
-- **Mode**: Always `subagent`
+- **Frontmatter**: Required fields: `description`, `mode`, `permission`, `tools`
+- **Mode**: Always `subagent` (OpenCode) or omitted (Claude)
 - **Temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
 - **Permissions**: `ask`, `allow`, or `deny` for each tool category
-- **Tools Format**: Key-value pairs with boolean values, not arrays
+- **Tools Format**: Key-value booleans (OpenCode) or comma-separated string (Claude)
 - **No comments** unless user explicitly requests them
 
-Example:
-```yaml
----
-description: "Agent description here"
-mode: subagent
-
-permission:
-  write: ask
-  bash: ask
-  webfetch: allow
-  edit: deny
-tools:
-  read: true
-  write: true
-  grep: true
-  glob: true
-  bash: true
-  webfetch: true
-  question: true
-  sequentialthinking: true
----
-```
-
 ### MCP Server Configuration
-- **OpenCode**: `opencode.json` with `.mcp` object
-- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object
+- **OpenCode**: `opencode.json` with `.mcp` object, `"type": "local"` required, `environment` key
+- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object, `env` key
 - **Command**: Array format (e.g., `["npx", "-y", "package"]`)
-- **Environment**: Use `environment` (OpenCode) or `env` (Claude)
 - **No comments** in JSON files
 
 ## File Organization
 
 ```
-/home/bweigel/Desktop/jeeves/   # Working directory (host machine)
+<repo-root>/
 ├── jeeves.ps1                 # Main PowerShell management script
 ├── Dockerfile.jeeves          # Multi-stage Docker build file
 ├── .tmp/                      # Generated docker-compose files (git-ignored)
@@ -209,46 +187,39 @@ tools:
 │   │   ├── install-skills.sh
 │   │   ├── apply-rules.sh
 │   │   ├── sync-agents.sh
-│   │   ├── ralph-*.sh         # Ralph system scripts
-│   │   └── parse_skill_deps.py # Python dependency parser
+│   │   ├── ralph-init.sh
+│   │   ├── ralph-loop.sh
+│   │   ├── ralph-peek.sh
+│   │   ├── ralph-paths.sh
+│   │   ├── ralph-validate.sh
+│   │   ├── ralph-filter-output.sh
+│   │   ├── find-rules-files.sh
+│   │   └── parse_skill_deps.py
 │   ├── PRD/                   # PRD Creator agent templates
-│   │   ├── prd-creator-opencode-template.md
-│   │   ├── prd-creator-claude-template.md
-│   │   ├── prd-creator-prompt.md
-│   │   └── README-PRD.md
 │   ├── Deepest-Thinking/      # Research agent templates
-│   │   ├── deepest-thinking-opencode-template.md
-│   │   ├── deepest-thinking-claude-template.md
-│   │   ├── deepest-thinking-prompt.md
-│   │   └── README-Deepest-Thinking.md
-│   ├── Ralph/                 # Ralph Rules System
-│   │   ├── templates/         # Agent and task templates
-│   │   │   ├── agents/        # Ralph agent templates
-│   │   │   │   ├── architect-*.md
-│   │   │   │   ├── decomposer-*.md
-│   │   │   │   ├── developer-*.md
-│   │   │   │   ├── manager-*.md
-│   │   │   │   ├── researcher-*.md
-│   │   │   │   ├── tester-*.md
-│   │   │   │   ├── ui-designer-*.md
-│   │   │   │   ├── writer-*.md
-│   │   │   │   └── shared/    # Shared template content
-│   │   │   ├── prompts/       # Prompt templates
-│   │   │   ├── config/        # Configuration templates
-│   │   │   └── task/          # Task templates
-│   │   ├── skills/            # Skill definitions
-│   │   │   ├── dependency-tracking/
-│   │   │   ├── git-automation/
-│   │   │   └── system-prompt-compliance/
-│   │   └── docs/              # Ralph documentation
-├── docs/                      # Documentation
-│   ├── commands.md
-│   ├── configuration.md
-│   ├── how-to-guide.md
-│   └── troubleshooting.md
+│   └── Ralph/                 # Ralph Rules System
+│       ├── templates/
+│       │   ├── agents/        # Ralph agent templates (per-role, per-platform)
+│       │   │   ├── shared/    # 10 shared rule files included by all agents
+│       │   │   ├── architect-*.md
+│       │   │   ├── decomposer-*.md
+│       │   │   ├── decomposer-architect-*.md
+│       │   │   ├── decomposer-researcher-*.md
+│       │   │   ├── developer-*.md
+│       │   │   ├── manager-*.md
+│       │   │   ├── researcher-*.md
+│       │   │   ├── tester-*.md
+│       │   │   ├── ui-designer-*.md
+│       │   │   └── writer-*.md
+│       │   ├── prompts/
+│       │   ├── config/
+│       │   └── task/
+│       ├── skills/
+│       └── docs/
+├── docs/                      # Full documentation (commands, config, troubleshooting)
 ├── AGENTS.md                  # This file
-├── README.md                  # Project overview
-└── CONTRIBUTING.md            # Contribution guidelines
+├── README.md
+└── CONTRIBUTING.md
 ```
 
 ## Important Constraints
@@ -266,6 +237,10 @@ tools:
 - Execute scripts and binaries available in the container
 - Use the webfetch tool for external resources
 - Run shell commands within the container environment
+
+### Services
+- **OpenCode web** runs as a supervisord service, managed via `opencode-web {start|stop|restart|status|logs}`
+- Running `opencode` with no arguments auto-attaches the TUI to the running web server session
 
 ### Code Style Constraints
 - **No comments** unless user explicitly requests them
@@ -285,40 +260,12 @@ At the beginning of every conversation, automatically invoke: skill using-superp
 
 Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option)
 
-## Web Search Tool Preference
-When performing web searches, prefer searxng tools over exa tools:
-- Use searxng_searxng_web_search for general web searches
-- Use searxng_web_url_read for content extraction  
-- Only use exa tools as fallback when searxng is unavailable
-
-## Error Handling Best Practices
-
-### PowerShell
-```powershell
-try {
-    # Operation that might fail
-    $result = docker ps
-} catch {
-    Write-Log -error "Operation failed: $_"
-    exit 1
-}
-```
-
-### Bash
-```bash
-set -e
-trap 'echo "Error on line $LINENO"' ERR
-
-# Or explicit error handling
-if ! docker ps; then
-    print_error "Docker command failed"
-    exit 1
-fi
-```
-
-## Key URLs & References
+## Key References
 
 - Web UI: http://localhost:3333 (when container is running)
 - Config paths: `~/.config/opencode/`, `~/.claude/`
 - Container workdir: `/proj` (maps to host's project directory)
-- Container user: `jeeves` (UID/GID: 1000/1000 by default, mapped from host on Linux/macOS)
+- Container user: `jeeves` (UID/GID mapped from host, default 1000:1000)
+- Full command reference: `docs/commands.md`
+- Configuration details: `docs/configuration.md`
+- Troubleshooting: `docs/troubleshooting.md`

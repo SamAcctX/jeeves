@@ -47,6 +47,23 @@ ralph-loop.sh --help         # Show help
 - `RALPH_BACKOFF_BASE`: Backoff delay base (default: 2)
 - `RALPH_BACKOFF_MAX`: Backoff max delay (default: 60)
 
+### `ralph-peek.sh`
+**Purpose**: Monitor active AI processing sessions during Ralph Loop execution.
+**Key Features**:
+- Finds the newest OpenCode session and attaches interactively or prints its web URL
+- Two modes: TUI (interactive terminal attach) and Web (prints URL)
+- Companion tool to ralph-loop.sh for real-time monitoring
+- Validates dependencies (opencode, jq) before execution
+
+**Usage**:
+```bash
+ralph-peek.sh                # Attach to newest session via TUI (default)
+ralph-peek.sh -t             # Attach to newest session via TUI
+ralph-peek.sh --tui          # Attach to newest session via TUI
+ralph-peek.sh -w             # Print Web UI URL for newest session
+ralph-peek.sh --web          # Print Web UI URL for newest session
+```
+
 ### `ralph-validate.sh`
 **Purpose**: Sourceable validation utilities library for Ralph operations.
 **Key Functions**:
@@ -252,6 +269,12 @@ ralph-init.sh
 ralph-loop.sh --tool opencode --max-iterations 100
 ```
 
+#### Monitor Ralph Loop Sessions
+```bash
+ralph-peek.sh              # Attach to active session via TUI
+ralph-peek.sh --web        # Get Web UI URL for active session
+```
+
 #### Install Agents Globally
 ```bash
 install-agents.sh --global
@@ -273,7 +296,6 @@ install-skill-deps.sh            # Install
 ### Script Requirements
 All scripts require:
 - Bash 4.0+
-- Docker (for container management)
 - yq (YAML processing)
 - jq (JSON processing)
 - Python 3.6+ (for parse_skill_deps.py)
@@ -297,3 +319,22 @@ Scripts use standard error codes:
 - `130`: Interrupted (Ctrl+C)
 
 For debugging, use `--verbose` flag if available or set `RALPH_DEBUG=1`.
+
+## Script Inventory
+
+| # | Script | Category |
+|---|--------|----------|
+| 1 | `ralph-init.sh` | Core Management |
+| 2 | `ralph-loop.sh` | Core Management |
+| 3 | `ralph-peek.sh` | Core Management |
+| 4 | `ralph-paths.sh` | Core Management |
+| 5 | `ralph-validate.sh` | Core Management |
+| 6 | `ralph-filter-output.sh` | Core Management |
+| 7 | `sync-agents.sh` | Core Management |
+| 8 | `apply-rules.sh` | Utility |
+| 9 | `find-rules-files.sh` | Utility |
+| 10 | `install-mcp-servers.sh` | Installation |
+| 11 | `install-agents.sh` | Installation |
+| 12 | `install-skills.sh` | Installation |
+| 13 | `install-skill-deps.sh` | Installation |
+| 14 | `parse_skill_deps.py` | Installation |

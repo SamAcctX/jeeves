@@ -1,908 +1,551 @@
 # Troubleshooting Guide
 
-This document provides solutions to common issues and problems when using Jeeves and the Ralph Loop.
+Solutions to common issues with the Jeeves container and the Ralph Loop system.
 
-## Ralph Loop Issues
+For command usage, see [commands.md](commands.md). For configuration details and environment variables, see [configuration.md](configuration.md).
 
-### Ralph Directory Not Found
+---
 
-#### Problem
+## Quick Diagnostics
+
+Run these checks first when something goes wrong.
+
+**Inside the container:**
 ```bash
-ralph-loop.sh
-# Error: Ralph directory not found: .ralph/
+ls -la .ralph/                          # Ralph directory exists?
+cat .ralph/tasks/TODO.md                # Current task state
+cat .ralph/tasks/deps-tracker.yaml      # Dependency graph
+git status                              # Uncommitted changes or conflicts?
+grep "ABORT" .ralph/tasks/TODO.md       # Blocked task?
+tail -n 30 .ralph/tasks/*/activity.md   # Recent agent activity
 ```
 
-#### Solutions
-
-**1. Initialize Ralph Project**
+**On the host:**
 ```bash
-# Run Ralph initialization
-ralph-init.sh
+./jeeves.ps1 status                     # Container running?
+./jeeves.ps1 logs                       # Container output
 ```
 
-**2. Check Current Directory**
-```bash
-# Verify you're in the right directory
-pwd
-ls -la
-```
+---
 
-**3. Check Ralph Directory Existence**
-```bash
-# Check if .ralph directory exists
-ls -la .ralph/
-```
-
-### Ralph Loop Fails to Start
-
-#### Problem
-```bash
-ralph-loop.sh
-# Error: [ERROR] Something went wrong
-```
-
-#### Solutions
-
-**1. Check Required Tools**
-```bash
-# Verify all required tools are installed
-ralph-init.sh --help 2>/dev/null || echo "ralph-init.sh not available"
-command -v yq && echo "yq: OK" || echo "yq: missing"
-command -v jq && echo "jq: OK" || echo "jq: missing"
-command -v git && echo "git: OK" || echo "git: missing"
-```
-
-**2. Check Docker Container Status**
-```bash
-# Verify container is running
-./jeeves.ps1 status
-
-# If not running, start it
-./jeeves.ps1 start
-```
-
-**3. Check Agent Installation**
-```bash
-# Verify agents are installed
-ls -la .opencode/agents/ 2>/dev/null || echo "OpenCode agents not installed"
-ls -la .claude/agents/ 2>/dev/null || echo "Claude agents not installed"
-```
-
-**4. Re-run Initialization**
-```bash
-# Re-run Ralph initialization with force option
-ralph-init.sh --force
-```
-
-### Ralph Loop Stops Immediately
-
-#### Problem
-Ralph Loop starts but exits immediately without performing any iterations.
-
-#### Solutions
-
-**1. Check TODO.md**
-```bash
-# Look for sentinel values in TODO.md
-cat .ralph/tasks/TODO.md
-```
-
-**2. Check for ABORT Signal**
-```bash
-# Look for ABORT: HELP NEEDED in TODO.md
-grep "ABORT: HELP NEEDED" .ralph/tasks/TODO.md || echo "No ABORT signal found"
-```
-
-**3. Check for Complete Signal**
-```bash
-# Look for ALL TASKS COMPLETE sentinel
-grep "ALL TASKS COMPLETE" .ralph/tasks/TODO.md || echo "Tasks not complete"
-```
-
-**4. Check Dependencies**
-```bash
-# Verify deps-tracker.yaml exists and is valid
-cat .ralph/config/deps-tracker.yaml
-```
-
-### Git Conflicts in Ralph Loop
-
-#### Problem
-```bash
-ralph-loop.sh
-# Error: Git conflict detected: .ralph/tasks/TODO.md
-```
-
-#### Solutions
-
-**1. Check Git Status**
-```bash
-# Check git status and conflicts
-git status
-git diff
-```
-
-**2. Resolve Conflicts**
-```bash
-# Resolve conflicts manually in the problematic files
-# Then stage the changes
-git add .ralph/tasks/TODO.md .ralph/config/deps-tracker.yaml
-```
-
-**3. Continue Loop**
-```bash
-# After resolving conflicts, restart the loop
-ralph-loop.sh
-```
-
-### Agent Synchronization Issues
-
-#### Problem
-```bash
-ralph-loop.sh
-# Warning: Agent sync failed after Xs (continuing anyway)
-```
-
-#### Solutions
-
-**1. Run Sync Agents Manually**
-```bash
-# Run sync agents manually to see the error
-sync-agents.sh
-```
-
-**2. Check agents.yaml**
-```bash
-# Verify agents.yaml is valid YAML
-yq . .ralph/config/agents.yaml
-```
-
-**3. Check Agent Directories**
-```bash
-# Verify agent directories exist and are writable
-ls -la .opencode/agents/
-ls -la .claude/agents/
-```
-
-**4. Re-run Initialization**
-```bash
-# Re-initialize Ralph to ensure agents are properly set up
-ralph-init.sh --force
-```
-
-### Ralph Loop Iteration Limit Reached
-
-#### Problem
-```bash
-ralph-loop.sh
-# Warning: GLOBAL_ITERATION_LIMIT_REACHED: 100 iterations
-```
-
-#### Solutions
-
-**1. Increase Iteration Limit**
-```bash
-# Run loop with higher iteration limit
-ralph-loop.sh --max-iterations 200
-```
-
-**2. Remove Iteration Limit**
-```bash
-# Run loop with unlimited iterations
-ralph-loop.sh --max-iterations 0
-```
-
-**3. Check Task Status**
-```bash
-# Look at current task status
-cat .ralph/tasks/TODO.md
-ls -la .ralph/tasks/
-```
-
-## Container Issues
+## 1. Container Issues
 
 ### Container Won't Start
 
-#### Problem
-```bash
-./jeeves.ps1 start
-# Error: container creation failed
-```
+**Problem:** `./jeeves.ps1 start` fails with a container creation error.
 
-#### Solutions
+**Solutions:**
 
-**1. Check Docker Status**
-```bash
-# Verify Docker is running
-docker --version
-docker info
-
-# Check if Docker daemon is active
-sudo systemctl status docker
-```
-
-**2. Check for Port Conflicts**
-```bash
-# Check if port 3333 is already in use
-netstat -tlnp | grep 3333
-# or
-lsof -i :3333
-```
-
-**3. Free Up Port**
-```bash
-# Find and kill process using port
-sudo fuser -k 3333/tcp
-# or
-sudo lsof -ti:3333 | xargs kill -9
-```
-
-**4. Rebuild Container**
-```bash
-# Clean rebuild
-./jeeves.ps1 clean
-./jeeves.ps1 build --no-cache
-./jeeves.ps1 start
-```
-
-**5. Docker-in-Docker Issues**
-If using `--dind` flag, ensure your user has permission to access Docker socket:
-```bash
-# Check Docker socket permissions
-ls -la /var/run/docker.sock
-
-# Add user to docker group (Linux)
-sudo usermod -aG docker $USER
-newgrp docker  # Apply changes without logout
-```
+1. Verify Docker is running: `docker info`
+2. Check for port 3333 conflicts: `lsof -i :3333` (free with `sudo fuser -k 3333/tcp`)
+3. Clean rebuild: `./jeeves.ps1 clean && ./jeeves.ps1 build --no-cache && ./jeeves.ps1 start`
+4. Docker socket permissions (Linux, `--dind` mode): `sudo usermod -aG docker $USER && newgrp docker`
 
 ### Container Stops Immediately
 
-#### Problem
-Container starts but exits immediately without staying running.
+**Problem:** Container starts but exits without staying running.
 
-#### Solutions
+**Solutions:**
 
-**1. Check Container Logs**
-```bash
-./jeeves.ps1 logs
-# Or view last 50 lines with docker
-docker logs --tail 50 jeeves
-```
-
-**2. Inspect Container**
-```bash
-docker inspect jeeves
-```
-
-**3. Run Interactively for Debugging**
-```bash
-docker run -it --rm jeeves:latest /bin/bash
-```
-
-**4. Check Entry Point**
-```bash
-# Verify entry script exists
-docker run -it --entrypoint /bin/bash jeeves:latest ls -la /
-```
+1. Check logs: `./jeeves.ps1 logs`
+2. Debug interactively: `docker run -it --rm --entrypoint /bin/bash jeeves:latest`
+3. Inspect configuration: `docker inspect jeeves`
 
 ### Permission Issues
 
-#### File Permission Denied
-```bash
-# Error: permission denied when accessing files
+**Problem:** `permission denied` errors accessing files inside the container.
+
+The container runs as user `jeeves` (UID/GID 1000). If your host user has a different UID/GID, ownership mismatches occur.
+
+**Solutions:**
+
+1. Check alignment: run `id` on both host and container.
+2. Rebuild (auto-maps UID/GID on Linux/macOS): `./jeeves.ps1 build --no-cache`
+3. Fix host permissions: `sudo chown -R $(id -u):$(id -g) ~/.opencode ~/.claude`
+
+### GPU/CUDA Issues
+
+**Problem:** GPU not detected or CUDA errors inside the container.
+
+The base image is `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04`. GPU passthrough requires the NVIDIA Container Toolkit on the host.
+
+**Solutions:**
+
+1. Verify host drivers: `nvidia-smi`
+2. Test toolkit: `docker run --rm --gpus all nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 nvidia-smi`
+3. Confirm GPU access was passed to the container: `docker inspect jeeves | grep -A5 DeviceRequests`
+4. Inside the container, verify CUDA: `nvcc --version`
+5. If `nvidia-smi` works on the host but not in the container, the Docker daemon may need NVIDIA runtime configuration. See the [NVIDIA Container Toolkit docs](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html).
+
+---
+
+## 2. Ralph Loop Issues
+
+### Ralph Directory Not Found
+
+**Problem:** `Ralph directory not found: .ralph/`
+
+**Solution:** Run `ralph-init.sh` to initialize, or verify you are in the correct working directory with `pwd`.
+
+### Ralph Loop Fails to Start
+
+**Problem:** `ralph-loop.sh` exits with an error immediately.
+
+**Solutions:**
+
+1. Check required tools:
+   ```bash
+   command -v yq && echo "OK" || echo "missing"
+   command -v jq && echo "OK" || echo "missing"
+   command -v git && echo "OK" || echo "missing"
+   ```
+2. Check agent installation: `ls .opencode/agents/ .claude/agents/ 2>/dev/null`
+3. Re-initialize: `ralph-init.sh --force`
+
+### Ralph Loop Stops Immediately (Zero Iterations)
+
+**Problem:** Loop starts but exits without performing any work.
+
+Check these in order:
+
+1. **ABORT sentinel:** `grep "ABORT: HELP NEEDED" .ralph/tasks/TODO.md` -- If found, a task previously signaled TASK_BLOCKED. Fix the issue, then remove the line: `sed -i '/^ABORT:/d' .ralph/tasks/TODO.md`
+2. **Completion sentinel:** `grep "ALL TASKS COMPLETE" .ralph/tasks/TODO.md`
+3. **Invalid deps file:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
+
+### Loop Appears Stuck
+
+**Problem:** No output for an extended period.
+
+**Solutions:**
+
+1. Check the process: `ps aux | grep -E "opencode|claude"`
+2. Monitor activity: `tail -f .ralph/tasks/*/activity.md`
+3. Use `ralph-peek.sh` to attach to the active session (see [Debugging Tools](#10-debugging-tools--techniques)).
+4. Interrupt with Ctrl+C and restart if needed. The loop is safe to restart.
+
+### Iteration Limit Reached
+
+**Problem:** `GLOBAL_ITERATION_LIMIT_REACHED: 100 iterations`
+
+**Solutions:**
+
+1. Review progress: `cat .ralph/tasks/TODO.md`
+2. Increase the limit: `ralph-loop.sh --max-iterations 200` (or `0` for unlimited)
+3. Check for stuck tasks: `grep -c "^## Attempt" .ralph/tasks/*/attempts.md`
+
+### Git Conflicts in Ralph State Files
+
+**Problem:** `Git conflict detected: .ralph/tasks/TODO.md`
+
+**Cause:** Manual edits while the loop was running, or concurrent modifications.
+
+**Solution:** Stop the loop (Ctrl+C), resolve conflicts manually, then `git add` and `git commit` the affected files. Restart the loop.
+
+**Prevention:** Never edit TODO.md or deps-tracker.yaml while the loop is running.
+
+---
+
+## 3. Agent Issues
+
+### Agent Not Found
+
+**Problem:** `Agent 'developer' not found` during sync or loop execution.
+
+**Solutions:**
+
+1. Verify agent files: `ls .opencode/agents/ .claude/agents/`
+2. Run sync: `sync-agents.sh`
+3. Re-initialize: `ralph-init.sh --force`
+
+All 10 agent types should be present: manager, architect, developer, ui-designer, tester, researcher, writer, decomposer, decomposer-architect, decomposer-researcher.
+
+### Agent Sync Failed
+
+**Problem:** `Agent sync failed after Xs (continuing anyway)`
+
+This is a non-critical warning. The loop continues regardless.
+
+**Solutions:**
+
+1. Validate agents.yaml: `yq eval '.' .ralph/config/agents.yaml`
+2. Common issues: tabs instead of spaces, missing colons, incorrect indentation.
+3. For OpenCode agents, model values should be `""` (empty string), not `"inherit"`.
+
+### Wrong Agent or Model Selected
+
+**Problem:** The loop dispatches the wrong agent type or uses an unexpected model.
+
+**Solutions:**
+
+1. Inspect configurations: `sync-agents.sh --show`
+2. Verify agents.yaml maps the correct models (see [configuration.md](configuration.md)).
+3. Re-sync after editing: `sync-agents.sh`
+
+### Tool Command Not Found
+
+**Problem:** `opencode: command not found` or `claude: command not found`
+
+- OpenCode: verify with `which opencode`
+- Claude Code: only available if built with `--install-claude-code`. Check with `which claude`.
+
+---
+
+## 4. Signal System Issues
+
+### Signal Not Detected
+
+**Problem:** Task finished but the loop continues iterating on the same task.
+
+**Cause:** The agent did not emit a properly formatted signal.
+
+**Rules for valid signals:**
+- Must be the first token on its own line
+- No prefix text before the signal
+- Exactly one signal per execution
+- Task ID must be exactly 4 digits with leading zeros
+
+**Valid examples:**
+```
+TASK_COMPLETE_0042
+TASK_INCOMPLETE_0042
+TASK_FAILED_0042: syntax error in module
+TASK_BLOCKED_0042: needs human input
 ```
 
-#### Solutions
-
-**1. Check User ID Mapping**
-```bash
-# Host user ID
-id -u
-id -g
-
-# Container user ID  
-docker exec jeeves id
-
-# Fix mapping
-export UID=$(id -u)
-export GID=$(id -g)
-./jeeves.ps1 stop
-./jeeves.ps1 start
+**Invalid examples:**
+```
+Result: TASK_COMPLETE_0042     # Not first token
+task_complete_0042             # Wrong case
+TASK_COMPLETE_42               # Must be 4 digits
 ```
 
-**2. Fix Volume Permissions**
-```bash
-# Check current permissions
-ls -la ~/.opencode ~/.claude
+**Diagnosis:** `tail -20 .ralph/tasks/XXXX/activity.md`
 
-# Fix ownership (Linux)
-sudo chown -R $USER:$USER ~/.opencode ~/.claude
+### Malformed Signal
 
-# Fix permissions
-chmod 755 ~/.opencode ~/.claude
-chmod 600 ~/.config/opencode/opencode.json ~/.claude.json
+**Problem:** Manager does not recognize the worker response.
+
+- TASK_FAILED and TASK_BLOCKED require a colon and message: `TASK_FAILED_0042: error description`
+- TASK_COMPLETE and TASK_INCOMPLETE take no message: `TASK_COMPLETE_0042`
+- Task ID must be 4 digits with leading zeros (`0042`, not `42`)
+
+### Multiple Signals Detected
+
+**Problem:** `Multiple signals detected (3) - using first valid signal`
+
+Only the first valid signal is used. This is usually caused by copy-paste artifacts in agent responses.
+
+### Unexpected TASK_BLOCKED
+
+**Problem:** A task signals TASK_BLOCKED, the Manager writes `ABORT: HELP NEEDED` to TODO.md, and the loop stops.
+
+**Recovery:**
+
+1. Read the blockage reason: `cat .ralph/tasks/XXXX/activity.md`
+2. Fix the underlying issue manually.
+3. Remove the ABORT line: `sed -i '/^ABORT:/d' .ralph/tasks/TODO.md`
+4. Restart the loop.
+
+---
+
+## 5. Dependency Tracking Issues
+
+### Circular Dependency Detected
+
+**Problem:** Tasks cannot proceed because of a dependency cycle.
+
+**Diagnosis:** `cat .ralph/tasks/deps-tracker.yaml`
+
+**Solution:** Break the cycle by removing one dependency edge:
+```yaml
+tasks:
+  "0001":
+    depends_on: ["0002"]
+  "0002":
+    depends_on: ["0003"]
+  "0003":
+    depends_on: []           # Was ["0001"] -- cycle broken
 ```
 
-**3. Windows-Specific Issues**
-```powershell
-# Check file permissions on Windows
-icacls ~/.opencode
+### Task Not Selected Despite Being in TODO
 
-# Fix Docker Desktop shared drives permissions
-# In Docker Desktop settings, ensure file sharing is enabled
+**Problem:** A task is incomplete in TODO.md but the loop never picks it up.
+
+**Cause:** Unmet dependencies in deps-tracker.yaml.
+
+**Diagnosis:** `yq eval '.tasks."XXXX".depends_on' .ralph/tasks/deps-tracker.yaml`
+
+**Solutions:** Complete the blocking tasks, remove the dependency if no longer needed, or check for circular dependencies.
+
+### Invalid deps-tracker.yaml Format
+
+The expected format uses a `tasks` root with `depends_on` and `blocks` arrays:
+```yaml
+tasks:
+  "0001":
+    depends_on: []
+    blocks: ["0002"]
+  "0002":
+    depends_on: ["0001"]
+    blocks: []
 ```
 
-## OpenCode Issues
+**Validate:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
 
-### OpenCode Not Found
+Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets.
 
-#### Problem
-```bash
-opencode --version
-# Error: command not found
-```
+---
 
-#### Solutions
-
-**1. Verify Installation**
-```bash
-# Check if OpenCode is installed
-docker exec jeeves which opencode
-
-# Check installation directory
-docker exec jeeves ls -la /usr/local/bin/ | grep opencode
-
-# Reinstall OpenCode (requires container rebuild)
-./jeeves.ps1 clean
-./jeeves.ps1 build --no-cache
-./jeeves.ps1 start
-```
-
-**2. Check PATH**
-```bash
-# Verify OpenCode is in PATH
-docker exec jeeves echo $PATH
-
-# Update PATH temporarily
-export PATH="/usr/local/bin:$PATH"
-opencode --version
-```
-
-### API Connection Issues
-
-#### Problem
-```bash
-opencode run "test message"
-# Error: API connection failed, authentication error
-```
-
-#### Solutions
-
-**1. Check API Key**
-```bash
-# Verify API key is set
-opencode config show
-
-# Set API key
-opencode config set anthropic.api_key your-api-key-here
-
-# Set via environment
-export ANTHROPIC_API_KEY=your-api-key-here
-```
-
-**2. Test Network Connectivity**
-```bash
-# Test from container
-docker exec jeeves curl -I https://api.anthropic.com
-
-# Test DNS resolution
-docker exec jeeves nslookup api.anthropic.com
-
-# Check firewall
-docker exec jeeves ping -c 3 api.anthropic.com
-```
-
-**3. Check API Status**
-```bash
-# Check Anthropic status page
-curl -s https://status.anthropic.com
-
-# Check rate limits
-# Review API dashboard for usage
-```
-
-### Web UI Not Accessible
-
-#### Problem
-Cannot access http://localhost:3333
-
-#### Solutions
-
-**1. Check Container Status**
-```bash
-./jeeves.ps1 status
-docker ps | grep jeeves
-```
-
-**2. Verify Port Binding**
-```bash
-docker port jeeves
-# Should show: 3333/tcp -> 0.0.0.0:3333
-```
-
-**3. Check from Inside Container**
-```bash
-./jeeves.ps1 shell
-netstat -tlnp | grep 3333
-curl -I http://localhost:3333
-```
-
-**4. Check Firewall**
-```bash
-# Linux
-sudo ufw status
-sudo iptables -L
-
-# Windows
-# Check Windows Defender Firewall
-# Check corporate firewall
-```
-
-## Claude Code Issues
-
-### Claude Code Not Found
-
-#### Problem
-```bash
-claude --version
-# Error: command not found
-```
-
-#### Solutions
-
-**1. Verify Installation**
-```bash
-# Check Claude installation
-docker exec jeeves which claude
-
-# Reinstall Claude Code
-docker exec jeeves curl -fsSL https://claude.ai/install.sh | bash
-```
-
-**2. Alternative Installation Methods**
-```bash
-# Note: Claude Code is installed via the official install script during container build
-# For host installation, see: https://claude.ai/install
-```
-
-### Authentication Issues
-
-#### Problem
-```bash
-claude
-# Error: authentication failed, invalid API key
-```
-
-#### Solutions
-
-**1. Set API Key**
-```bash
-claude config set anthropic.api_key your-api-key-here
-```
-
-**2. Check Configuration**
-```bash
-claude config show
-cat ~/.claude.json
-```
-
-## MCP Server Issues
+## 6. MCP Server Issues
 
 ### MCP Servers Not Working
 
-#### Problem
-```bash
-opencode agent list
-# No MCP servers shown
-```
+**Problem:** No MCP servers available in OpenCode or Claude Code.
 
-#### Solutions
+**Solutions:**
 
-**1. Check Installation**
-```bash
-# Test manual server installation
-docker exec jeeves npx -y @modelcontextprotocol/server-sequential-thinking --help
+1. Preview and install: `install-mcp-servers.sh --dry-run && install-mcp-servers.sh --global`
+2. Verify configuration:
+   ```bash
+   cat ~/.config/opencode/opencode.json | jq .mcp
+   cat ~/.claude.json | jq .mcpServers
+   ```
 
-# Check installation script
-install-mcp-servers.sh --dry-run
-install-mcp-servers.sh --global
-```
+### SearXNG Connection Issues
 
-**2. Verify Configuration**
-```bash
-# OpenCode configuration
-cat ~/.config/opencode/opencode.json | jq .mcp
+**Problem:** SearXNG MCP server cannot connect to the search service.
 
-# Claude configuration
-cat ~/.claude.json | jq .mcpServers
-```
+1. Verify the URL: `echo $SEARXNG_URL`
+2. Test connectivity: `curl -I "$SEARXNG_URL"`
+3. Find a public instance at [https://searx.space/](https://searx.space/) if needed.
 
-**3. Test Individual Servers**
-```bash
-# Test sequential thinking
-npx -y @modelcontextprotocol/server-sequential-thinking
+### Playwright Browser Issues
 
-# Test fetch server
-mcp-server-fetch --help
-```
+**Problem:** Playwright MCP server fails or browser automation does not work.
 
-### SearxNG Connection Issues
+1. Install browsers: `npx playwright install`
+2. Verify installation: `ls ~/ms-playwright/ && npx playwright --version`
+3. Enable headless mode (required in containers): `export PLAYWRIGHT_MCP_HEADLESS=1`
 
-#### Problem
-SearxNG MCP server cannot connect to search service.
+---
 
-#### Solutions
-
-**1. Set SearxNG URL**
-```bash
-# Set environment variable
-export SEARXNG_URL=https://search.example.com
-
-# Set in configuration
-opencode config set mcp.servers.searxng.environment.SEARXNG_URL https://search.example.com
-```
-
-**2. Use Public Instance**
-```bash
-# Set to a public SearxNG instance
-# Find public instances at: https://searx.space/
-export SEARXNG_URL=https://search.example.com
-```
-
-**3. Test Connection**
-```bash
-# Test SearxNG service
-curl -I $SEARXNG_URL
-```
-
-### Playwright Issues
-
-#### Problem
-Playwright MCP server fails to start or browser automation doesn't work.
-
-#### Solutions
-
-**1. Install Browsers**
-```bash
-# Install Playwright browsers
-docker exec jeeves npx playwright install
-
-# With environment variables
-PLAYWRIGHT_MCP_HEADLESS=1 npx playwright install
-```
-
-**2. Check Browser Path**
-```bash
-# Verify browser installation
-docker exec jeeves ls -la ~/ms-playwright/
-
-# Check Playwright version
-docker exec jeeves npx playwright --version
-```
-
-**3. Display Issues**
-```bash
-# If running in headless environment
-export DISPLAY=:99
-```
-
-## Performance Issues
-
-### Container is Slow
-
-#### Problem
-Container operations are sluggish, responses are delayed.
-
-#### Solutions
-
-**1. Check Resource Usage**
-```bash
-# Monitor container resources
-docker stats jeeves
-
-# Check system resources
-htop
-free -h
-df -h
-```
-
-**2. Optimize Docker**
-```bash
-# Increase memory allocation
-# In Docker Desktop settings: 4GB+ RAM
-
-# Use SSD storage
-# Ensure Docker uses SSD for better I/O
-
-# Optimize Docker daemon
-{
-  "storage-driver": "overlay2",
-  "log-driver": "json-file",
-  "max-concurrent-downloads": 10
-}
-```
-
-**3. Clean Up Docker**
-```bash
-# Remove unused images
-docker image prune -f
-
-# Clean up volumes
-docker volume prune -f
-
-# System cleanup
-docker system prune -f
-```
-
-### High Memory Usage
-
-#### Problem
-Container consumes excessive memory.
-
-#### Solutions
-
-**1. Monitor Memory**
-```bash
-# Real-time monitoring
-docker stats --format "table {{.Container}}\t{{.MemUsage}}"
-
-# Check container limits
-docker inspect jeeves | jq .HostConfig.Memory
-```
-
-**2. Reduce Memory Usage**
-```bash
-# Limit Node.js memory
-export NODE_OPTIONS="--max-old-space-size=2048"
-
-# Clean npm cache
-docker exec jeeves npm cache clean --force
-
-# Limit concurrent operations
-opencode config set performance.max_concurrent_requests 5
-```
-
-## Network Issues
+## 7. Network Issues
 
 ### Cannot Connect to Internet
 
-#### Problem
-Container cannot access external services.
+**Problem:** Container cannot reach external services.
 
-#### Solutions
+1. Test DNS: `nslookup api.anthropic.com`
+2. Test connectivity: `curl -I https://api.anthropic.com`
+3. Check proxy: `env | grep -i proxy`
+4. If DNS fails, configure custom DNS in Docker compose. See [configuration.md](configuration.md).
 
-**1. Check DNS Configuration**
-```bash
-# Test DNS resolution
-docker exec jeeves nslookup google.com
+### Web UI Not Accessible
 
-# Check resolv.conf
-docker exec jeeves cat /etc/resolv.conf
+**Problem:** Cannot reach `http://localhost:3333` from the host.
 
-# Set custom DNS
-# docker-compose.yml
-services:
-  jeeves:
-    dns:
-      - 8.8.8.8
-      - 1.1.1.1
-```
+1. Verify container is running: `./jeeves.ps1 status`
+2. Check port binding: `docker port jeeves` (expect `3333/tcp -> 0.0.0.0:3333`)
+3. Test from inside: `curl -I http://localhost:3333`
+4. Check host firewall (Linux: `sudo ufw status`)
 
-**2. Check Network Connectivity**
-```bash
-# Test external connectivity
-docker exec jeeves ping -c 3 8.8.8.8
+### API Authentication Errors
 
-# Check proxy settings
-docker exec jeeves env | grep -i proxy
-```
+**Problem:** `API connection failed` or `authentication error` when running agents.
 
-**3. Check Firewall**
-```bash
-# Check firewall status
-sudo ufw status
+1. Verify the key is set: `echo $ANTHROPIC_API_KEY | head -c 10`
+2. Test the endpoint: `curl -I https://api.anthropic.com`
+3. Check the [Anthropic status page](https://status.anthropic.com) for outages.
 
-# Check Docker network
-docker network ls
-docker network inspect jeeves_jeeves-network
-```
+---
 
-### Port Forwarding Issues
+## 8. Shell and Terminal Issues
 
-#### Problem
-Cannot access services from host machine.
+### Welcome Message Displays Twice
 
-#### Solutions
+**Problem:** The Jeeves welcome banner appears twice when attaching.
 
-**1. Check Port Binding**
-```bash
-docker port jeeves
-```
+**Explanation:** This is expected behavior. The message runs once before tmux starts and once inside the tmux session.
 
-**2. Verify Network Access**
-```bash
-# Test from host
-curl -I http://localhost:3333
+**Suppress:** `DISABLE_WELCOME=1 ./jeeves.ps1 shell`
 
-# Test from other machines
-curl -I http://your-host-ip:3333
-```
+### tmux Issues
 
-## File System Issues
+**Problem:** tmux fails to start or causes display problems.
 
-### Volume Mount Problems
+- Skip tmux: `./jeeves.ps1 shell --raw` (sets `DISABLE_TMUX=1` internally)
+- Inside the container: `export DISABLE_TMUX=1`
 
-#### Problem
-Changes in container don't persist to host.
+### Shell Selection
 
-#### Solutions
+The container supports both bash and zsh. See [configuration.md](configuration.md) for `DISABLE_WELCOME` and `DISABLE_TMUX` details.
 
-**1. Check Volume Mounts**
-```bash
-docker inspect jeeves | jq .Mounts
-```
+---
 
-**2. Verify Host Directory**
-```bash
-# Check if directory exists
-ls -la /path/to/project
+## 9. Initialization Issues
 
-# Check permissions
-ls -la /path/to/project
-```
+### Template Source Not Found
 
-**3. Fix Permissions**
-```bash
-# Ensure ownership matches
-sudo chown -R $USER:$USER /path/to/project
+**Problem:** `Template source directory not found: /opt/jeeves/Ralph/templates`
 
-# Fix directory permissions
-chmod 755 /path/to/project
-```
+**Solutions:**
 
-### Disk Space Issues
+1. Verify: `ls /opt/jeeves/Ralph/templates/`
+2. Rebuild: `./jeeves.ps1 build --no-cache`
 
-#### Problem
-Out of disk space preventing container operation.
+### Ralph Already Initialized
 
-#### Solutions
+**Problem:** `Existing Ralph installation detected at .ralph/`
 
-**1. Check Disk Usage**
-```bash
-df -h
+- Use `--force` to overwrite: `ralph-init.sh --force`
+- Or back up first: `mv .ralph .ralph.backup.$(date +%Y%m%d) && ralph-init.sh`
 
-# Check Docker space
-docker system df
-```
+### Invalid Task ID Format
 
-**2. Clean Up**
-```bash
-# Remove unused images
-docker image prune -a
+**Problem:** `Task ID must be 4 digits` or `Task ID must be numeric`
 
-# Remove unused containers
-docker container prune -f
+Task IDs must be exactly 4 digits (0001-9999). Rename folders: `mv .ralph/tasks/42 .ralph/tasks/0042`
 
-# Clean up build cache
-docker builder prune -f
-```
+---
 
-## Platform-Specific Issues
+## 10. Debugging Tools and Techniques
 
-### Windows PowerShell Issues
+### ralph-validate.sh
 
-#### Problem
-```powershell
-./jeeves.ps1
-# Error: The term './jeeves.ps1' is not recognized as a cmdlet, function, operable program...
-```
-
-#### Solutions
-
-**1. Use PowerShell Properly**
-```powershell
-# Use pwsh command if available
-pwsh ./jeeves.ps1
-
-# Or use full path
-powershell -ExecutionPolicy Bypass -File ./jeeves.ps1
-```
-
-**2. Check Execution Policy**
-```powershell
-# Check current policy
-Get-ExecutionPolicy
-
-# Set for current session
-Set-ExecutionPolicy -Scope Process -Bypass
-```
-
-### Linux/macOS Issues
-
-#### Problem
-PowerShell not available on Linux/macOS.
-
-#### Solutions
-
-**1. Install PowerShell Core**
-```bash
-# Ubuntu/Debian
-sudo apt-get update && sudo apt-get install -y powershell
-
-# macOS
-brew install powershell
-```
-
-**2. Use Alternative Shell**
-```bash
-# Convert to bash script
-# Or use provided shell scripts directly
-```
-
-## Getting Help
-
-### Debug Mode
-
-Enable verbose logging for troubleshooting:
+A sourceable library of validation functions:
 
 ```bash
-# Build with verbose output and save to log
-./jeeves.ps1 build --no-cache 2>&1 | tee build.log
-
-# Or capture all output from any command
-./jeeves.ps1 start 2>&1 | tee start.log
-
-# Ralph Loop verbose mode
-ralph-loop.sh --verbose
+source ralph-validate.sh
+validate_task_id "0042"                         # Task ID format
+validate_yaml ".ralph/tasks/deps-tracker.yaml"  # YAML syntax
+validate_file_exists ".ralph/tasks/TODO.md"     # File existence
+validate_dir_exists ".ralph/tasks/0042"         # Directory existence
+validate_git_repo                               # Git repository check
 ```
 
-### Log Collection
+### ralph-peek.sh
 
-Collect diagnostic information:
+Attach to the most recent OpenCode session to observe agent activity in real time:
 
 ```bash
-# Container logs
+ralph-peek.sh              # TUI mode (default)
+ralph-peek.sh --web        # Print web UI URL instead
+```
+
+### ralph-filter-output.sh
+
+Filter verbose OpenCode JSON output to show only essential information:
+
+```bash
+ralph-filter-output.sh output.json                    # Full output
+ralph-filter-output.sh --compact --no-text output.json # Compact, no text
+ralph-filter-output.sh --signals output.json           # Signals only
+```
+
+Run `ralph-filter-output.sh --help` for all options.
+
+### Verbose Mode
+
+```bash
+ralph-loop.sh --verbose    # or -v
+```
+
+Enables JSON format output in OpenCode for detailed agent interaction logs.
+
+### Key Log Files
+
+| File | Purpose |
+|------|---------|
+| `.ralph/tasks/TODO.md` | Task list and completion status |
+| `.ralph/tasks/deps-tracker.yaml` | Task dependency graph |
+| `.ralph/tasks/XXXX/activity.md` | Per-task execution log |
+| `.ralph/tasks/XXXX/attempts.md` | Per-task attempt history |
+| `.ralph/tasks/XXXX/TASK.md` | Task requirements and acceptance criteria |
+| `.ralph/config/agents.yaml` | Agent model configuration |
+
+### Log Aggregation
+
+```bash
+grep -r "ERROR\|FAILED\|BLOCKED" .ralph/tasks/    # Errors across all tasks
+
+for f in .ralph/tasks/*/attempts.md; do            # Find stuck tasks
+  count=$(grep -c "^## Attempt" "$f" 2>/dev/null || echo 0)
+  [ "$count" -gt 5 ] && echo "$f: $count attempts"
+done
+```
+
+### Recovery Procedures
+
+**Complete state reset** (corrupted beyond repair):
+```bash
+cp -r .ralph .ralph.backup.$(date +%Y%m%d)
+rm -rf .ralph/tasks/*
+git checkout HEAD -- .ralph/tasks/TODO.md .ralph/tasks/deps-tracker.yaml
+ralph-init.sh --force
+```
+
+**Manual task completion:**
+```bash
+sed -i 's/- \[ \] 0042/- [x] 0042/' .ralph/tasks/TODO.md
+mv .ralph/tasks/0042 .ralph/tasks/done/
+```
+
+**Clearing a stuck task:**
+```bash
+# Option 1: Reset history, keep task definition
+mv .ralph/tasks/XXXX/activity.md .ralph/tasks/XXXX/activity.md.old
+mv .ralph/tasks/XXXX/attempts.md .ralph/tasks/XXXX/attempts.md.old
+
+# Option 2: Mark done and decompose into smaller tasks
+sed -i 's/- \[ \] XXXX/- [x] XXXX/' .ralph/tasks/TODO.md
+mv .ralph/tasks/XXXX .ralph/tasks/done/
+```
+
+---
+
+## 11. Getting Help
+
+### Collecting Diagnostic Information
+
+```bash
+# Host-side
+docker version && docker info
 ./jeeves.ps1 logs > jeeves-debug.log 2>&1
 
-# System information
-docker info > docker-info.log
-docker version > docker-version.log
-
-# Configuration files
-cat ~/.config/opencode/opencode.json > opencode-config.log 2>/dev/null || echo "OpenCode config not found"
-cat ~/.claude.json > claude-config.log 2>/dev/null || echo "Claude config not found"
-
-# Ralph configuration
-cat .ralph/config/agents.yaml > ralph-agents.log 2>/dev/null || echo "Ralph agents config not found"
-cat .ralph/config/deps-tracker.yaml > ralph-deps.log 2>/dev/null || echo "Ralph deps config not found"
-
-# Ralph Loop logs
-ls -la .ralph/logs/
+# Container-side
+cat .ralph/tasks/TODO.md
+cat .ralph/tasks/deps-tracker.yaml
+cat .ralph/config/agents.yaml
 ```
 
-### Report Issues
+### Platform-Specific Notes
+
+**Windows:** If `./jeeves.ps1` is not recognized:
+```powershell
+pwsh ./jeeves.ps1
+# Or: Set-ExecutionPolicy -Scope Process -Bypass
+```
+
+**Linux/macOS:** Install PowerShell Core if not available:
+```bash
+sudo apt-get update && sudo apt-get install -y powershell   # Ubuntu/Debian
+brew install powershell                                       # macOS
+```
+
+### Reporting Issues
 
 When filing issues on [GitHub](https://github.com/SamAcctX/jeeves/issues), include:
+
 - Operating system and version
-- Docker version and configuration
-- PowerShell version
+- Docker and PowerShell versions
 - Complete error messages
 - Steps to reproduce
-- Expected vs actual behavior
-- Diagnostic logs
+- Expected vs. actual behavior
+- Diagnostic logs from the steps above
 
-### Community Support
-- **GitHub Issues**: [Report bugs](https://github.com/SamAcctX/jeeves/issues)
-- **GitHub Discussions**: [Ask questions](https://github.com/SamAcctX/jeeves/discussions)
-- **Documentation**: [Full docs](https://github.com/SamAcctX/jeeves/tree/main/docs)
+### Resources
+
+- [GitHub Issues](https://github.com/SamAcctX/jeeves/issues) -- Report bugs
+- [GitHub Discussions](https://github.com/SamAcctX/jeeves/discussions) -- Ask questions
+- [Command Reference](commands.md)
+- [Configuration Reference](configuration.md)

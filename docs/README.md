@@ -1,140 +1,36 @@
-# Ralph Toolkit Documentation
+# Jeeves / Ralph Toolkit Documentation
 
-This directory contains comprehensive documentation for the Ralph Toolkit - an autonomous AI task execution framework that combines containerization, specialized agents, and intelligent task orchestration.
-
-## Purpose
-
-The documentation provides:
-- Usage guides for Jeeves container management and Ralph Loop workflow
-- Command references for both Jeeves and Ralph tools
-- Configuration instructions for Docker, agents, MCP servers, and development environment settings
-- Troubleshooting information for common issues
-- Best practices for using the Ralph Toolkit effectively
+All project documentation is consolidated in this folder.
 
 ## Documentation Index
 
-### Core Documentation Files
+| File | Description |
+|------|-------------|
+| [how-to-guide.md](how-to-guide.md) | Setup, configuration, and usage guide for Jeeves and Ralph |
+| [commands.md](commands.md) | Command reference for jeeves.ps1 and all Ralph scripts |
+| [configuration.md](configuration.md) | Docker, agents.yaml, deps-tracker, templates, environment variables |
+| [troubleshooting.md](troubleshooting.md) | Problem/solution guide for container, Ralph loop, and agent issues |
+| [agent-selection-guide.md](agent-selection-guide.md) | When to use each Ralph agent type, selection logic, TDD workflow |
+| [phase2-decomposition-guide.md](phase2-decomposition-guide.md) | Phase 2 decomposition patterns, task granularity, dependency analysis |
+| [example-walkthrough.md](example-walkthrough.md) | End-to-end walkthrough building a project with Ralph |
 
-| File | Purpose |
-|------|---------|
-| `README.md` | This file - Documentation index and overview |
-| `commands.md` | Detailed reference for all Jeeves and Ralph commands |
-| `configuration.md` | Configuration options for Docker, agents, MCP servers, and Ralph Loop |
-| `troubleshooting.md` | Common issues and solutions for both Jeeves and Ralph |
-| `how-to-guide.md` | Step-by-step tutorials for various use cases |
+## Getting Started
 
-### Getting Started
+1. [Root README](../README.md) for project overview
+2. [how-to-guide.md](how-to-guide.md) for setup and first use
+3. [commands.md](commands.md) for command reference
+4. [configuration.md](configuration.md) when customizing
+5. [troubleshooting.md](troubleshooting.md) when things go wrong
 
-For new users, start with:
-1. **README.md (root)** - Project overview and basic introduction
-2. `commands.md` - Command reference for Jeeves and Ralph
-3. `how-to-guide.md` - Step-by-step tutorials
-4. `configuration.md` - Configuration options
+## Related Documentation
 
-For troubleshooting, check:
-- `troubleshooting.md` - Common issues and solutions
-
-## Documentation Structure
-
-The documentation is organized into two main sections:
-
-### Jeeves Container Management
-- Container lifecycle commands (build, start, stop, etc.)
-- Docker configuration and customization
-- Container shell access and log viewing
-- Environment variables and volume mounts
-
-### Ralph Loop Workflow
-- Ralph initialization and project scaffolding
-- The three phases of Ralph: PRD Generation → Decomposition → Execution
-- Ralph Loop orchestration and management
-- Task dependency tracking
-- Git integration and branch management
-- Specialized AI agents and skills
-
-## Ralph-Specific Documentation
-
-Located in `/proj/jeeves/Ralph/`:
-
-| File | Purpose |
-|------|---------|
-| `README-Ralph.md` | Comprehensive Ralph Loop documentation |
-| `docs/directory-structure.md` | Ralph directory organization |
-| `docs/rules-system.md` | RULES.md hierarchical learning system |
-| `skills/README.md` | Skills system overview |
-| `templates/README.md` | Agent template documentation |
-
-## Agent & PRD Documentation
-
-### PRD Creator
-Located in `/proj/jeeves/PRD/`:
-- `README-PRD.md` - PRD creation process documentation
-- `prd-creator-prompt.md` - PRD creator prompt engineering
-
-### Deepest-Thinking
-Located in `/proj/jeeves/Deepest-Thinking/`:
-- `README-Deepest-Thinking.md` - Research agent documentation
-- `deepest-thinking-prompt.md` - Deepest-Thinking prompt engineering
-
-### Ralph Templates
-Located in `/proj/jeeves/Ralph/templates/`:
-- Agent templates for various roles (architect, decomposer, developer, manager, researcher, tester, UI designer, writer)
-- Task templates for activity tracking and task management
-- Configuration templates for Ralph setup
-
-## Skills Documentation
-
-Located in `/proj/jeeves/Ralph/skills/`:
-
-### Dependency Tracking
-- `README.md` - Dependency tracking system overview
-- `SKILL.md` - Skill implementation details
-- `activity.md` - Activity tracking for dependency management
-- Scripts for dependency closure, cycle detection, parsing, selection, and update
-- Tests for dependency tracking functionality
-
-### Git Automation
-- `README.md` - Git automation system overview
-- `SKILL.md` - Git automation implementation details
-- References for conventional commits, git commands, git workflow, and troubleshooting
-- Scripts for branch cleanup, gitignore configuration, commit message handling, conflict resolution, and task branch creation
-
-### System Prompt Compliance
-- `README.md` - System prompt compliance system overview
-- `SKILL.md` - System prompt compliance implementation details
-
-## Installation & Setup Documentation
-
-Located in `/proj/jeeves/bin/`:
-- `README.md` - Binary scripts overview
-- `install-agents.sh` - Agent installation instructions
-- `install-mcp-servers.sh` - MCP server installation instructions
-- `install-skills.sh` - Skills installation instructions
-- `ralph-init.sh` - Ralph initialization script
-- `ralph-loop.sh` - Ralph Loop orchestration script
-
-## Additional Resources
-
-- [AGENTS.md](../AGENTS.md) - Agent development guidelines
-- [CONTRIBUTING.md](../CONTRIBUTING.md) - Contribution guidelines
-- [LICENSE](../LICENSE) - Project license
-
-## Usage
-
-Documentation is available in the container at:
-```
-/proj/docs/
-```
-
-You can view it directly with:
-```bash
-cat /proj/docs/commands.md
-# Or use a text editor
-vi /proj/docs/configuration.md
-```
-
-## Support & Community
-
-- **Issues**: [GitHub Issues](https://github.com/SamAcctX/jeeves/issues)
-- **Discussions**: [GitHub Discussions](https://github.com/SamAcctX/jeeves/discussions)
-- **Documentation**: [Full Docs](https://github.com/SamAcctX/jeeves/tree/main/docs)
+| Location | Content |
+|----------|---------|
+| [../README.md](../README.md) | Project overview and quick start |
+| [../AGENTS.md](../AGENTS.md) | AI agent development guidelines |
+| [../CONTRIBUTING.md](../CONTRIBUTING.md) | Contribution guidelines |
+| [../jeeves/Ralph/README-Ralph.md](../jeeves/Ralph/README-Ralph.md) | Ralph system deep-dive |
+| [../jeeves/Ralph/docs/](../jeeves/Ralph/docs/) | Ralph internals (directory structure, rules system) |
+| [../jeeves/PRD/README-PRD.md](../jeeves/PRD/README-PRD.md) | PRD Creator agent |
+| [../jeeves/Deepest-Thinking/README-Deepest-Thinking.md](../jeeves/Deepest-Thinking/README-Deepest-Thinking.md) | Deepest-Thinking research agent |
+| [../jeeves/bin/README.md](../jeeves/bin/README.md) | Shell script reference |

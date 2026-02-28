@@ -189,6 +189,14 @@ done
 - Logging with timestamps
 - Supports `--tool`, `--max-iterations`, `--skip-sync`, `--no-delay`, `--dry-run`, and `--verbose` flags
 
+### ralph-peek.sh
+- Monitors active AI processing sessions during Ralph Loop execution
+- Companion tool to ralph-loop.sh for real-time monitoring
+- Finds the newest OpenCode session and attaches interactively or prints its web URL
+- Dependencies: opencode, jq
+- Supports `-t`/`--tui` (attach via TUI, default) and `-w`/`--web` (print Web UI URL) flags
+- Testing: `ralph-peek.sh --web` (prints URL without attaching, safe for non-interactive use)
+
 ### ralph-paths.sh
 - Centralized path detection and expansion utilities
 - Key functions: find_project_root, find_ralph_dir, find_task_dir, find_agent_file, expand_path, expand_relative_path

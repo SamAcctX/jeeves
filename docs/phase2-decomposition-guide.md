@@ -1,13 +1,17 @@
 # Phase 2 Decomposition Guide
 
-This guide explains how to use the decomposer agent to transform your Product Requirements Document (PRD) into an actionable task list. Phase 2 is where your PRD transforms into an actionable task list. This guide shows you how to use the decomposer agent to decompose your PRD into atomic, well-defined tasks.
+This guide explains how to use the Decomposer agent to transform your Product Requirements Document (PRD) into an actionable task list. Phase 2 is where your PRD transforms into atomic, well-defined tasks that the Ralph Loop can execute autonomously.
+
+For command usage, see [commands.md](commands.md). For configuration details, see [configuration.md](configuration.md). For troubleshooting, see [troubleshooting.md](troubleshooting.md).
+
+---
 
 ## Three-Phase Recap
 
 Ralph Loop uses a three-phase workflow:
 
 1. **Phase 1**: Create PRD (manual user work)
-2. **Phase 2**: Decompose PRD into tasks (user invokes decomposer agent)
+2. **Phase 2**: Decompose PRD into tasks (user invokes Decomposer agent)
 3. **Phase 3**: Execute tasks autonomously (ralph-loop.sh)
 
 Phase 2 sits between requirements definition and autonomous execution. It converts high-level requirements into specific, actionable tasks that the Ralph Loop can execute.
@@ -42,13 +46,10 @@ A well-written PRD produces better task decompositions. If your PRD is vague, th
 Navigate to your project directory and verify the Ralph structure:
 
 ```bash
-# Navigate to project
 cd /proj/my-project
 
-# Ensure Ralph is initialized
 ls -la .ralph/
 
-# Verify PRD exists
 ls .ralph/specs/
 ```
 
@@ -58,12 +59,11 @@ The `.ralph/` directory should contain:
 - `specs/` - Your PRD files
 - `tasks/` - Where task folders will be created
 
-### Step 2: Invoke Project-Manager Agent
+### Step 2: Invoke the Decomposer Agent
 
-The decomposer agent reads your PRD and generates the task structure. Invoke it with your PRD content:
+The Decomposer agent reads your PRD and generates the task structure. Invoke it with your PRD content:
 
 ```bash
-# Read PRD and invoke decomposer
 cat .ralph/specs/PRD-*.md | opencode --agent decomposer --prompt \
   "Decompose this PRD into atomic tasks following Ralph conventions"
 ```
@@ -74,17 +74,36 @@ Or if using Claude Code:
 @decomposer
 ```
 
+### Specialized Decomposer Variants
+
+The Decomposer agent can invoke two specialized sub-assistants for consultation during decomposition:
+
+**Decomposer-Architect** -- Use when the PRD involves complex system architecture:
+- Microservices or distributed system design
+- Integration patterns between components
+- Technology stack decisions that affect task boundaries
+- Design pattern guidance for well-bounded tasks
+
+**Decomposer-Researcher** -- Use when the PRD references unfamiliar territory:
+- Technologies or libraries that need investigation before task planning
+- Comparing implementation approaches before committing to a structure
+- External API documentation review for accurate task definitions
+- Factual grounding needed before estimating complexity or dependencies
+
+The Decomposer decides when to consult these sub-assistants. They return structured analysis but cannot create project files or manage state directly.
+
 ### What Happens During Decomposition
 
-When you invoke the decomposer agent, these steps occur:
+When you invoke the Decomposer agent, these steps occur:
 
 1. **Agent reads the PRD content**
 2. **Analyzes requirements and features**
 3. **Identifies major work areas**
-4. **Breaks down into atomic tasks**
-5. **Creates task folders and files**
-6. **Generates TODO.md**
-7. **Analyzes and records dependencies**
+4. **Consults sub-assistants if needed** (decomposer-architect, decomposer-researcher)
+5. **Breaks down into atomic tasks**
+6. **Creates task folders and files**
+7. **Generates TODO.md**
+8. **Analyzes and records dependencies**
 
 The agent produces complete Phase 2 artifacts ready for execution.
 
@@ -115,7 +134,7 @@ Assign complexity estimates to each task:
 | L | 1-2 hours | Complex | Multi-component integrations |
 | XL | >2 hours | Too large | **Must decompose further** |
 
-The decomposer agent assigns these sizes during decomposition. Review them to ensure no XL tasks remain.
+The Decomposer agent assigns these sizes during decomposition. Review them to ensure no XL tasks remain.
 
 ### When to Decompose Further
 
@@ -209,9 +228,9 @@ Decomposed:
 
 ## The Decomposition Process
 
-### What the Project-Manager Agent Does
+### What the Decomposer Agent Does
 
-The decomposer agent follows a systematic workflow:
+The Decomposer agent follows a systematic workflow:
 
 #### 1. Requirement Analysis
 
@@ -275,15 +294,15 @@ For each task, the agent creates:
 ### Agent Process
 
 ```
-[decomposer] Reading PRD...
-[decomposer] Identifying work areas:
+[Decomposer] Reading PRD...
+[Decomposer] Identifying work areas:
   - Database schema
   - API endpoints (5 operations)
   - Data models
   - Validation
   - Error handling
 
-[decomposer] Creating tasks:
+[Decomposer] Creating tasks:
   - 0001: Set up Flask project structure
   - 0002: Create database schema
   - 0003: Implement Post model
@@ -297,10 +316,10 @@ For each task, the agent creates:
   - 0011: Write API tests
   - 0012: Create API documentation
 
-[decomposer] Analyzing dependencies...
-[decomposer] Creating task folders...
-[decomposer] Writing TODO.md...
-[decomposer] Phase 2 complete
+[Decomposer] Analyzing dependencies...
+[Decomposer] Creating task folders...
+[Decomposer] Writing TODO.md...
+[Decomposer] Phase 2 complete
 ```
 
 ### Generated Output
@@ -458,14 +477,14 @@ blocks: [0005, 0006]
 
 ### Circular Dependency Detection
 
-If the decomposer detects circular dependencies:
+If the Decomposer detects circular dependencies:
 
 ```
 [WARNING] Circular dependency detected:
-  0005 → 0006 → 0007 → 0005
+  0005 -> 0006 -> 0007 -> 0005
 
 [SUGGESTION] Break cycle by removing one edge:
-  Option 1: Remove 0007 → 0005 dependency
+  Option 1: Remove 0007 -> 0005 dependency
   Option 2: Merge 0006 and 0007 into single task
 ```
 
@@ -486,7 +505,7 @@ Consider refining if:
 
 1. Review generated TODO.md
 2. Identify issues or gaps
-3. Provide feedback to decomposer
+3. Provide feedback to the Decomposer
 
 ```bash
 cat .ralph/specs/PRD.md | opencode --agent decomposer --prompt \
@@ -621,9 +640,11 @@ Phase 2 is your opportunity to plan before execution. Good decomposition:
 
 **Remember:** Time spent in Phase 2 planning saves time in Phase 3 execution.
 
+---
+
 ## Related Documentation
 
-- [README-Ralph.md](../Ralph/README-Ralph.md) - Ralph Loop overview
-- [commands.md](./commands.md) - Ralph command reference
-- [troubleshooting.md](./troubleshooting.md) - Common issues and solutions
-- [configuration.md](./configuration.md) - Ralph configuration details
+- [Agent Selection Guide](agent-selection-guide.md) - Which agent handles which task type
+- [Commands Reference](commands.md) - Ralph command reference
+- [Configuration Reference](configuration.md) - Ralph configuration details
+- [Troubleshooting Guide](troubleshooting.md) - Common issues and solutions

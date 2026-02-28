@@ -2,6 +2,8 @@
 
 This walkthrough demonstrates using Ralph Loop to build a complete project from start to finish. We will create a **Task Management CLI** - a simple Python command-line tool for managing todo lists - using all three phases of the Ralph workflow.
 
+For command details, see [commands.md](commands.md). For configuration, see [configuration.md](configuration.md). For troubleshooting, see [troubleshooting.md](troubleshooting.md).
+
 ## Table of Contents
 
 1. [Introduction](#introduction)
@@ -52,7 +54,6 @@ Before starting, ensure you have:
 
 Verify your environment:
 ```bash
-# Check required tools
 command -v yq && echo "yq: OK"
 command -v jq && echo "jq: OK"
 command -v git && echo "git: OK"
@@ -141,20 +142,19 @@ EOF
 
 ### Step 3: Run Decomposition
 
-Invoke the decomposer agent to decompose the PRD into tasks:
+Invoke the Decomposer agent to decompose the PRD into tasks:
 
 ```bash
-# Read the PRD and pipe to the decomposer agent
 cat .ralph/specs/PRD-task-cli.md | opencode --agent decomposer --prompt "Decompose this PRD into atomic tasks"
 ```
 
-The decomposer agent will:
+The Decomposer agent will:
 1. Read the PRD document
 2. Break down requirements into atomic tasks (<2 hours each)
 3. Analyze dependencies between tasks
 4. Generate TODO.md with task checklist
 5. Create task folders in `.ralph/tasks/XXXX/`
-6. Generate deps-tracker.yaml
+6. Generate `.ralph/config/deps-tracker.yaml`
 
 ### Step 4: Generated Tasks
 
@@ -201,7 +201,7 @@ The generated `.ralph/tasks/TODO.md`:
 
 ### Step 6: Dependency Analysis
 
-The generated `.ralph/tasks/deps-tracker.yaml`:
+The generated `.ralph/config/deps-tracker.yaml`:
 
 ```yaml
 tasks:
@@ -271,13 +271,24 @@ The loop proceeds through iterations, selecting and executing tasks:
 [Manager] Reading TODO.md...
 [Manager] Selecting unblocked task...
 [Manager] Selected: 0001 (Set up project structure)
+[Manager] Creating branch task/0001-setup-project-structure...
 [Manager] Invoking @developer agent...
 
 [Worker 0001] Creating project structure...
 [Worker 0001] Writing setup.py...
 [Worker 0001] Writing requirements.txt...
 [Worker 0001] Creating task_cli/ directory...
-[Worker 0001] TASK_COMPLETE_0001
+[Worker 0001] HANDOFF_READY_FOR_TEST
+
+[Manager] TDD handoff: Developer -> Tester
+[Manager] Invoking @tester agent...
+
+[Tester 0001] Validating project structure...
+[Tester 0001] Checking setup.py exists and is valid...
+[Tester 0001] Checking requirements.txt exists...
+[Tester 0001] Checking task_cli/ directory structure...
+[Tester 0001] All acceptance criteria met
+[Tester 0001] TASK_COMPLETE_0001
 
 [Manager] Marking 0001 complete
 [Manager] Moving task 0001 to done/ folder
@@ -291,21 +302,37 @@ Tasks 0002 and 0003 execute independently (no dependencies between them):
 [INFO] === Iteration 1 ===
 [Manager] Reading TODO.md...
 [Manager] Selected: 0002 (Implement Task model)
+[Manager] Creating branch task/0002-implement-task-model...
 [Manager] Invoking @developer agent...
 
 [Worker 0002] Creating Task class...
 [Worker 0002] Implementing JSON serialization...
-[Worker 0002] TASK_COMPLETE_0002
+[Worker 0002] HANDOFF_READY_FOR_TEST
+
+[Manager] TDD handoff: Developer -> Tester
+[Manager] Invoking @tester agent...
+
+[Tester 0002] Writing unit tests for Task model...
+[Tester 0002] Running tests... PASSED
+[Tester 0002] TASK_COMPLETE_0002
 
 [SUCCESS] Task 0002 completed
 
 [INFO] === Iteration 2 ===
 [Manager] Selected: 0003 (Implement storage module)
+[Manager] Creating branch task/0003-implement-storage-module...
 [Manager] Invoking @developer agent...
 
 [Worker 0003] Creating Storage class...
 [Worker 0003] Implementing read/write methods...
-[Worker 0003] TASK_COMPLETE_0003
+[Worker 0003] HANDOFF_READY_FOR_TEST
+
+[Manager] TDD handoff: Developer -> Tester
+[Manager] Invoking @tester agent...
+
+[Tester 0003] Writing storage tests...
+[Tester 0003] Running tests... PASSED
+[Tester 0003] TASK_COMPLETE_0003
 
 [SUCCESS] Task 0003 completed
 ```
@@ -315,6 +342,7 @@ Tasks 0002 and 0003 execute independently (no dependencies between them):
 ```
 [INFO] === Iteration 3 ===
 [Manager] Selected: 0004 (Implement 'add' command)
+[Manager] Creating branch task/0004-implement-add-command...
 [Manager] Invoking @developer agent...
 
 [Worker 0004] Starting implementation...
@@ -339,8 +367,14 @@ Tasks 0002 and 0003 execute independently (no dependencies between them):
 
 [Worker 0003] Reading activity.md for context...
 [Worker 0003] Adding update_task() method to Storage class...
-[Worker 0003] Adding tests for update functionality...
-[Worker 0003] TASK_COMPLETE_0003
+[Worker 0003] HANDOFF_READY_FOR_TEST
+
+[Manager] TDD handoff: Developer -> Tester
+[Manager] Invoking @tester agent...
+
+[Tester 0003] Adding tests for update functionality...
+[Tester 0003] Running tests... PASSED
+[Tester 0003] TASK_COMPLETE_0003
 
 [SUCCESS] Task 0003 enhancement completed
 ```
@@ -355,7 +389,14 @@ Tasks 0002 and 0003 execute independently (no dependencies between them):
 [Worker 0004] Reading attempts.md for previous context...
 [Worker 0004] Using new storage.update_task() method...
 [Worker 0004] Implementing 'add' command with argparse...
-[Worker 0004] TASK_COMPLETE_0004
+[Worker 0004] HANDOFF_READY_FOR_TEST
+
+[Manager] TDD handoff: Developer -> Tester
+[Manager] Invoking @tester agent...
+
+[Tester 0004] Writing tests for 'add' command...
+[Tester 0004] Running tests... PASSED
+[Tester 0004] TASK_COMPLETE_0004
 
 [SUCCESS] Task 0004 completed
 ```
@@ -397,10 +438,10 @@ git branch -a
 **Output:**
 ```
   main
-  task-0001
-  task-0002
-  task-0003
-  task-0004
+  task/0001-setup-project-structure
+  task/0002-implement-task-model
+  task/0003-implement-storage-module
+  task/0004-implement-add-command
 ```
 
 View commits on main:
@@ -411,48 +452,48 @@ git log --oneline main
 
 **Output:**
 ```
-a1b2c3d feat(cli): set up project structure (task-0001)
-b2c3d4e feat(model): implement Task model (task-0002)
-c3d4e5f feat(storage): implement storage module (task-0003)
-d4e5f6g feat(cmd): implement 'add' command (task-0004)
+a1b2c3d feat(cli): set up project structure (task/0001)
+b2c3d4e feat(model): implement Task model (task/0002)
+c3d4e5f feat(storage): implement storage module (task/0003)
+d4e5f6g feat(cmd): implement 'add' command (task/0004)
 ```
 
-### Step 11: Handling Failure
+### Step 11: Handling Failure and TDD Handoff
 
 **Iteration 11 - Task 0009 (Tests):**
 
 ```
 [INFO] === Iteration 11 ===
 [Manager] Selected: 0009 (Write tests)
+[Manager] Creating branch task/0009-write-tests...
 [Manager] Invoking @tester agent...
 
-[Worker 0009] Running pytest...
-[Worker 0009] FAILED: test_task_model.py::test_task_creation
-[Worker 0009] Error: AssertionError on line 15
-[Worker 0009] Expected: task.id = 1, Got: task.id = None
-[Worker 0009] TASK_FAILED_0009: Test failure - assertion error on line 15
+[Tester 0009] Writing comprehensive test suite...
+[Tester 0009] Running pytest...
+[Tester 0009] FAILED: test_task_model.py::test_task_creation
+[Tester 0009] Error: AssertionError on line 15
+[Tester 0009] Expected: task.id = 1, Got: task.id = None
+[Tester 0009] HANDOFF_DEFECT_FOUND: test_task_creation fails - Task.id not set on creation
 
-[WARNING] Task 0009 failed: Test failure - assertion error on line 15
-[WARNING] Task 0009 failed - will retry in next iteration
-```
+[Manager] TDD handoff: Tester -> Developer (DEFECT)
+[Manager] Invoking @developer agent...
 
-**Iteration 12 - Retry:**
+[Worker 0009] Reading activity.md for defect context...
+[Worker 0009] Fixing Task.__init__ to auto-assign ID on creation...
+[Worker 0009] HANDOFF_READY_FOR_TEST
 
-```
-[INFO] === Iteration 12 ===
-[Manager] Selected: 0009 (Write tests - attempt 2)
+[Manager] TDD handoff: Developer -> Tester (VALIDATE)
 [Manager] Invoking @tester agent...
 
-[Worker 0009] Reading attempts.md...
-[Worker 0009] Previous failure: assertion error on line 15
-[Worker 0009] Checking test logic...
-[Worker 0009] Fixed: corrected expected value to match actual implementation
-[Worker 0009] Running pytest... PASSED
-[Worker 0009] All tests passing
-[Worker 0009] TASK_COMPLETE_0009
+[Tester 0009] Re-running test suite...
+[Tester 0009] All 24 tests passing
+[Tester 0009] Coverage: 87%
+[Tester 0009] TASK_COMPLETE_0009
 
 [SUCCESS] Task 0009 completed
 ```
+
+Note the TDD cycle: Tester found a defect, handed off to Developer to fix, Developer handed back to Tester for validation, and only the Tester emitted `TASK_COMPLETE`.
 
 ### Step 12: Final TODO.md
 
@@ -486,7 +527,7 @@ ALL TASKS COMPLETE, EXIT LOOP
 ```
 [INFO] ALL TASKS COMPLETE, EXIT LOOP sentinel detected
 [INFO] Termination conditions met - exiting loop
-[SUCCESS] Ralph Loop finished after 12 iterations
+[SUCCESS] Ralph Loop finished after 14 iterations
 ```
 
 ## Results
@@ -531,14 +572,11 @@ task-cli/
 ### Usage Example
 
 ```bash
-# Install the package
 pip install -e .
 
-# Add tasks
 task add "Buy groceries" --priority high
 task add "Call dentist" --priority medium
 
-# List tasks
 task list
 ```
 
@@ -551,10 +589,8 @@ ID  Description       Priority  Status
 ```
 
 ```bash
-# Complete task
 task complete 1
 
-# List pending tasks only
 task list --status pending
 ```
 
@@ -571,9 +607,10 @@ ID  Description       Priority  Status
 
 1. **Fine-grained tasks** - Each task was completable in one context window (~30-60 min of human work equivalent)
 2. **Dependency tracking** - Runtime discovery handled missed dependencies gracefully
-3. **Git workflow** - Clean history with squash merges and descriptive commit messages
+3. **Git workflow** - Clean history with squash merges and descriptive commit messages using `task/NNNN-description` branches
 4. **Fresh context** - Each iteration started clean, preventing token burn and context degradation
 5. **Signal system** - Clear, machine-parseable signals enabled reliable automation
+6. **TDD handoffs** - Developer-to-Tester handoffs caught defects early (e.g., Task 0009 ID assignment bug)
 
 ### Challenges Encountered
 
@@ -582,10 +619,10 @@ ID  Description       Priority  Status
    - **Resolution:** Worker emitted `TASK_INCOMPLETE_0004: Depends on storage.update()`
    - **Outcome:** Manager added dependency, created enhancement task, retried successfully
 
-2. **Test failure** - Assertion error on first test run
-   - **What happened:** Expected value in test didn't match actual implementation
-   - **Resolution:** Worker emitted `TASK_FAILED_0009`, analyzed in retry, fixed test logic
-   - **Outcome:** Passed on second attempt with corrected expectations
+2. **Test failure caught by TDD cycle** - Defect in Task model found during testing
+   - **What happened:** Tester found `Task.id` was None on creation
+   - **Resolution:** Tester emitted `HANDOFF_DEFECT_FOUND`, Developer fixed, Tester validated
+   - **Outcome:** Passed on second validation with corrected implementation
 
 3. **Signal parsing edge case** - Initial confusion about message format
    - **Resolution:** Referenced actual ralph-loop.sh signal patterns:
@@ -598,8 +635,9 @@ ID  Description       Priority  Status
 - **Use clear acceptance criteria** - Every TASK.md had specific, testable criteria
 - **Let Manager handle orchestration** - Workers focused on implementation only
 - **Trust the loop** - Failures became data for retry, not blockers
-- **Use git branches for isolation** - Each task had its own branch, merged when complete
-- **Document runtime dependencies** - When discovered, dependencies were added to deps-tracker.yaml
+- **Use git branches for isolation** - Each task had its own `task/NNNN-description` branch, merged when complete
+- **Document runtime dependencies** - When discovered, dependencies were added to `.ralph/config/deps-tracker.yaml`
+- **Enforce TDD handoffs** - Developer never emits TASK_COMPLETE; only Tester can approve
 
 ## Next Steps
 
@@ -608,7 +646,7 @@ Now that you've seen Ralph in action, you can:
 1. **Try Ralph on your own project**
    - Run `ralph-init.sh` in your project directory
    - Create a PRD in `.ralph/specs/`
-   - Use the decomposer agent for decomposition
+   - Use the Decomposer agent for decomposition
 
 2. **Experiment with different agent types**
    - Architect for system design tasks
@@ -617,8 +655,7 @@ Now that you've seen Ralph in action, you can:
    - Researcher for investigation tasks
 
 3. **Configure custom model mappings**
-   - Edit `.ralph/config/agents.yaml` to use different models per agent type
-   - Set `RALPH_MANAGER_MODEL` environment variable for Manager agent
+   - See [configuration.md](configuration.md) for `agents.yaml` details and environment variables
 
 4. **Add RULES.md for your project patterns**
    - Document discovered patterns
@@ -633,46 +670,10 @@ Now that you've seen Ralph in action, you can:
 
 ---
 
-## Quick Reference
+## Related Documentation
 
-### Signal Formats
-
-| Signal | Format | Description |
-|--------|--------|-------------|
-| Complete | `TASK_COMPLETE_XXXX` | Task finished successfully |
-| Incomplete | `TASK_INCOMPLETE_XXXX` or `TASK_INCOMPLETE_XXXX: message` | Task needs more work (message optional) |
-| Failed | `TASK_FAILED_XXXX: message` | Error encountered, will retry |
-| Blocked | `TASK_BLOCKED_XXXX: message` | Blocked, needs human intervention |
-| All Complete | `ALL TASKS COMPLETE, EXIT LOOP` | All tasks done, exit loop |
-
-### TODO.md Grammar
-
-```markdown
-# Phase 1: Setup
-- [ ] 0001: Incomplete task
-- [x] 0002: Complete task
-
-ABORT: HELP NEEDED FOR TASK 0007: Circular dependency detected
-ALL TASKS COMPLETE, EXIT LOOP
-```
-
-### Commands
-
-```bash
-# Initialize Ralph
-ralph-init.sh
-
-# Run execution loop
-ralph-loop.sh
-
-# Run with specific options
-ralph-loop.sh --tool claude --max-iterations 50 --no-delay
-```
-
-### File Locations
-
-- Task definitions: `.ralph/tasks/XXXX/TASK.md`
-- Activity logs: `.ralph/tasks/XXXX/activity.md`
-- Attempt tracking: `.ralph/tasks/XXXX/attempts.md`
-- Task list: `.ralph/tasks/TODO.md`
-- Dependencies: `.ralph/config/deps-tracker.yaml`
+- [Agent Selection Guide](agent-selection-guide.md) - Which agent handles which task type
+- [Phase 2 Decomposition Guide](phase2-decomposition-guide.md) - Detailed decomposition patterns
+- [Commands Reference](commands.md) - Signal formats, TODO.md grammar, all Ralph commands
+- [Configuration Reference](configuration.md) - Model mappings, environment variables, file locations
+- [Troubleshooting Guide](troubleshooting.md) - Common issues and solutions
