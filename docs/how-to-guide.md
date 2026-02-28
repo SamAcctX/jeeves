@@ -1,797 +1,735 @@
-# Ralph Toolkit HOW-TO Guide
+# How-To Guide: From Zero to Autonomous AI Tasks
+
+This guide walks you through the complete Jeeves/Ralph workflow -- from building the container to watching an autonomous loop complete your project. It covers the "how" and "why" at each step, with concrete examples you can follow.
+
+For exhaustive flag listings and file formats, see [commands.md](commands.md). For all configuration options, see [configuration.md](configuration.md). For diagnosing problems, see [troubleshooting.md](troubleshooting.md).
+
+---
+
+## Table of Contents
+
+1. [Introduction](#1-introduction)
+2. [Prerequisites and Installation](#2-prerequisites-and-installation)
+3. [Container Setup](#3-container-setup)
+4. [Initializing a Ralph Project](#4-initializing-a-ralph-project)
+5. [Phase 1: Creating a PRD](#5-phase-1-creating-a-prd)
+6. [Phase 2: Decomposing into Tasks](#6-phase-2-decomposing-into-tasks)
+7. [Phase 3: Running the Ralph Loop](#7-phase-3-running-the-ralph-loop)
+8. [Agent Configuration](#8-agent-configuration)
+9. [The RULES.md Learning System](#9-the-rulesmd-learning-system)
+10. [Skills System](#10-skills-system)
+11. [Tips and Best Practices](#11-tips-and-best-practices)
+12. [Next Steps](#12-next-steps)
+
+---
 
 ## 1. Introduction
 
 ### What is Ralph?
-Ralph is an autonomous AI task execution framework that embodies the philosophy "iteration beats perfection". Named after the persistent Ralph Wiggum, it uses a manager-worker architecture with fresh context per iteration to avoid the degradation issues of traditional AI coding sessions.
+
+Ralph is an autonomous AI task execution framework built on a simple insight: **iteration beats perfection**. Instead of trying to complete an entire project in one long AI session (where context degrades and errors compound), Ralph breaks work into small tasks and tackles each one with a fresh context window.
+
+The system uses a manager-worker architecture. A Manager agent reads a task list, selects the next unblocked task, dispatches it to a specialized worker agent (developer, tester, architect, etc.), interprets the result, and loops. Each iteration starts clean -- no conversation history carries over, so every task gets the full benefit of the model's optimal context window.
 
 ### Core Philosophy
-- **Fresh Context Per Iteration**: Every task runs with a clean slate
-- **Zero Context Accumulation**: No conversation history between iterations
-- **Eventual Consistency**: Failures become data for the next attempt
-- **Smart Zone Preservation**: Each task gets the full benefit of the model's optimal context window
 
-### Key Features
-- Multi-LLM support (OpenCode default, Claude Code optional)
-- Agent specialization (manager, architect, developer, tester, UI designer, researcher, writer, decomposer)
-- Automatic task dependency management
-- Test-Driven Development (TDD) built into the workflow
-- Git integration with branch-per-task workflow
-- Configurable iteration caps and automatic loop detection
+- **Fresh context per iteration.** Every task runs with a clean slate. No accumulated confusion, no token bloat.
+- **Eventual consistency.** A failed task is not a crisis -- it becomes data for the next attempt. The loop retries with exponential backoff.
+- **Smart zone preservation.** By keeping tasks small (under 2 hours of human-equivalent work), each one fits comfortably in the model's effective context window.
+- **TDD enforcement.** Developers cannot mark their own work complete. Only the Tester agent can approve task completion, enforcing a strict RED-GREEN-VALIDATE cycle.
 
-## 2. Prerequisites and System Requirements
+### What This Guide Covers
 
-### System Requirements
-- **Operating System**: Windows 10/11, macOS 10.15+, or Linux (Ubuntu 18.04+)
-- **Docker**: Latest stable version (for containerized installation)
-- **RAM**: Minimum 8GB (16GB recommended for larger projects)
-- **Storage**: At least 10GB of free disk space
-- **Network**: Internet connection for downloading dependencies and accessing LLMs
+This guide takes you through the three-phase Ralph workflow:
 
-### Required Tools
-Ralph requires the following tools to be installed:
+1. **Phase 1: PRD** -- Define what you want to build using the `@prd-creator` agent.
+2. **Phase 2: Decomposition** -- Break the PRD into atomic tasks using the `@decomposer` agent.
+3. **Phase 3: Execution** -- Let `ralph-loop.sh` autonomously complete every task.
 
-| Tool | Version | Purpose |
-|------|---------|---------|
-| Docker | Latest | Container environment |
-| bash | 4.0+ | Script execution |
-| yq | 4.x | YAML processing |
-| jq | 1.6+ | JSON processing |
-| git | 2.x+ | Version control |
+Before that, you will set up the Jeeves container and initialize Ralph in your project.
 
-### Installing Prerequisites
+---
 
-#### Ubuntu/Debian
+## 2. Prerequisites and Installation
+
+### Host Machine Requirements
+
+You need two things on your host machine:
+
+| Tool | Version | Why |
+|------|---------|-----|
+| Docker Desktop or Engine | Latest stable | Runs the Jeeves container |
+| PowerShell | 7.0+ | Runs `jeeves.ps1` (cross-platform) |
+
+PowerShell 7+ runs on Windows, macOS, and Linux. Install it with:
+
 ```bash
-# Install yq
-sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-sudo chmod +x /usr/local/bin/yq
+# Ubuntu/Debian
+sudo apt-get update && sudo apt-get install -y powershell
 
-# Install jq
-sudo apt-get update && sudo apt-get install -y jq
-
-# Verify installations
-yq --version
-jq --version
-bash --version
-git --version
+# macOS
+brew install powershell
 ```
 
-#### macOS
-```bash
-# Using Homebrew
-brew install yq jq
+On Windows, PowerShell 7 is available from the [Microsoft Store](https://aka.ms/PSWindows) or via `winget install Microsoft.PowerShell`.
 
-# Verify installations
-yq --version
-jq --version
-```
+### Optional: NVIDIA GPU
 
-#### Windows
-For Windows, use WSL2 (Windows Subsystem for Linux) to run Ralph. Follow the [official WSL2 installation guide](https://learn.microsoft.com/en-us/windows/wsl/install) and then install the prerequisites within your WSL2 distribution.
+The container base image is `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04`. If you have an NVIDIA GPU with drivers installed and the [NVIDIA Container Toolkit](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html) configured, the container will use GPU acceleration automatically. Without a GPU, everything still works -- the CUDA libraries are simply unused.
 
-## 3. Installation and Setup Process
+### What Ships Inside the Container
 
-### Container Setup (Recommended)
-Ralph is designed to run inside a Docker container with persistent volume mounts. This ensures a consistent environment across all platforms.
+You do not need to install these yourself. The container includes:
+
+- bash 4.0+, yq 4.x, jq 1.6+, git 2.x+
+- Python 3 with a virtual environment at `/opt/venv`
+- Node.js and npm
+- OpenCode (AI coding tool)
+- All Ralph scripts in `/usr/local/bin/`
+- Ralph templates at `/opt/jeeves/Ralph/templates/`
+- Four MCP servers (sequential thinking, fetch, SearXNG search, Playwright browser automation)
+
+---
+
+## 3. Container Setup
+
+### Building the Image
+
+From your project root (where `jeeves.ps1` lives):
 
 ```powershell
-# Build the container (run from project root)
 ./jeeves.ps1 build
+```
 
-# Start the container
+This builds the Docker image using layer caching. The first build takes several minutes; subsequent builds are fast.
+
+For a clean build from scratch (no cache):
+
+```powershell
+./jeeves.ps1 build --no-cache
+```
+
+See [commands.md](commands.md) for additional build flags (`--desktop`, `--install-claude-code`, `--clean`).
+
+### Starting the Container
+
+```powershell
 ./jeeves.ps1 start
+```
 
-# Enter the container shell
+This starts the container with volume mounts, networking, and (if available) GPU passthrough. The key volume mounts are:
+
+| Host | Container | Purpose |
+|------|-----------|---------|
+| Current working directory | `/proj` | Your project workspace |
+| `~/.claude` | `/home/jeeves/.claude` | Claude Code settings |
+| `~/.config/opencode` | `/home/jeeves/.config/opencode` | OpenCode settings |
+| `~/.opencode` | `/home/jeeves/.opencode` | OpenCode agents |
+
+Port 3333 is exposed for the OpenCode Web UI.
+
+If you need a full rebuild-and-start in one command:
+
+```powershell
+./jeeves.ps1 start --clean
+```
+
+This stops any running container, removes it, rebuilds without cache, and starts fresh.
+
+### Entering the Shell
+
+```powershell
 ./jeeves.ps1 shell
 ```
 
-The container provides:
-- Pre-installed tools (yq, jq, git)
-- Ralph templates at `/opt/jeeves/Ralph/`
-- Ralph scripts in `/usr/local/bin/`
-- Project workspace at `/proj/`
+This attaches an interactive bash session inside the container. By default, it auto-attaches to a tmux session. You will see a welcome message with environment details on first entry (suppress with `DISABLE_WELCOME=1`).
 
-### Verifying Installation
-Once inside the container:
+Useful shell flags:
 
-```bash
-# Check that all required tools are available
-command -v yq && echo "yq: OK"
-command -v jq && echo "jq: OK"
-command -v ralph-init.sh && echo "ralph-init.sh: OK"
-command -v ralph-loop.sh && echo "ralph-loop.sh: OK"
-command -v sync-agents && echo "sync-agents: OK"
-
-# Verify Ralph templates exist
-ls /opt/jeeves/Ralph/templates/
+```powershell
+./jeeves.ps1 shell --raw     # Skip tmux, plain bash
+./jeeves.ps1 shell --zsh     # Use zsh instead of bash
 ```
 
-### Local Installation (Alternative)
-For advanced users who prefer not to use Docker, you can install Ralph locally:
+### Accessing the Web UI
 
-1. Clone the repository
-2. Add `jeeves/bin/` to your PATH
-3. Install the required tools (yq, jq, git)
-4. Configure your environment variables
-
-## 4. Initializing a New Ralph Project
-
-### Project Initialization
-Initialize Ralph in your project directory:
+Once the container is running, open `http://localhost:3333` in your browser to access the OpenCode Web UI. The web server runs as a supervisord service inside the container:
 
 ```bash
-cd /proj/my-project
+opencode-web status    # Check if running
+opencode-web restart   # Restart the service
+```
+
+Running `opencode` with no arguments from the container shell auto-attaches the TUI to the running web server session.
+
+### Checking Status
+
+From the host:
+
+```powershell
+./jeeves.ps1 status    # Container and image status
+./jeeves.ps1 logs      # Container logs (follow mode)
+```
+
+For the full command reference including `stop`, `restart`, `rm`, and `clean`, see [commands.md](commands.md).
+
+---
+
+## 4. Initializing a Ralph Project
+
+Once inside the container, navigate to your project directory and run:
+
+```bash
 ralph-init.sh
-
-# Or with force mode (overwrites existing files)
-ralph-init.sh --force
 ```
 
-This creates the following structure:
-- `.ralph/` - Main Ralph directory
-- `.ralph/config/agents.yaml` - Agent model mappings
-- `.ralph/config/deps-tracker.yaml` - Task dependencies
-- `.ralph/tasks/TODO.md` - Task checklist
-- `.ralph/specs/` - Specifications directory (for PRDs)
-- `.opencode/agents/` and `.claude/agents/` - Agent definitions
-- `RULES.md` - Project-specific rules
+This creates the entire Ralph scaffolding in your project. If files already exist, it prompts before overwriting. Use `--force` to skip prompts, or `--rules` to force RULES.md creation even if one exists.
 
-### ralph-init.sh Options
+### What Gets Created
+
+```
+.ralph/
+  config/
+    agents.yaml           # Maps 10 agent types to LLM models
+    deps-tracker.yaml     # Task dependency graph (empty initially)
+  prompts/
+    ralph-prompt.md       # Manager invocation instructions
+  tasks/
+    TODO.md               # Master task checklist (empty initially)
+    done/                 # Completed task folders move here
+  specs/                  # Place your PRDs here
+
+.opencode/agents/         # Agent templates for OpenCode
+.claude/agents/           # Agent templates for Claude Code
+.opencode/skills/         # Skills for OpenCode
+.claude/skills/           # Skills for Claude Code
+RULES.md                  # Project-level rules (from template)
+```
+
+The init script also runs three installation scripts automatically:
+
+- `install-agents.sh` -- Installs PRD Creator and Deepest-Thinking agent templates
+- `install-mcp-servers.sh` -- Configures the four MCP servers
+- `install-skill-deps.sh` -- Installs dependencies for any installed skills
+
+One important detail: `agents.yaml` is **never overwritten** by init, even with `--force`. This protects your model configuration from accidental resets.
+
+### Verifying Initialization
+
 ```bash
-ralph-init.sh [OPTIONS]
+ls -la .ralph/
+ls .ralph/config/
+ls .opencode/agents/
 ```
 
-**Options:**
-- `--help`, `-h`: Show help
-- `--force`, `-f`: Skip overwrite prompts
-- `--rules`: Force RULES.md creation
+You should see the directory structure above, agent template files for all 10 agent types, and a populated `agents.yaml`.
 
-## 5. Creating and Working with PRDs (Product Requirements Documents)
+For the full directory structure and file format specifications, see [configuration.md](configuration.md).
 
-### What is a PRD?
-A Product Requirements Document (PRD) is a comprehensive description of what you're building, why you're building it, and how it should behave. It serves as the foundation for task decomposition.
+---
 
-### PRD Structure
-Create a PRD in `.ralph/specs/` with the following sections:
+## 5. Phase 1: Creating a PRD
 
-```markdown
-# PRD: [Feature Name]
+A Product Requirements Document (PRD) defines what you want to build. It is the input to Phase 2 decomposition. You have two options: write one manually, or use the `@prd-creator` agent interactively.
+
+### Using the PRD Creator Agent
+
+The recommended approach is to use the `@prd-creator` agent, which guides you through a conversational process:
+
+```
+@prd-creator
+```
+
+The agent asks you questions about your project -- what it does, who it is for, what the technical constraints are. You discuss back and forth, and it generates a comprehensive PRD. The output is saved to `.ralph/specs/PRD-<name>.md`.
+
+This is an interactive, human-in-the-loop process. The agent does not generate the PRD in one shot; it asks clarifying questions and iterates with you until the document is complete.
+
+### PRD Sections
+
+A well-structured PRD includes:
+
+- **Overview** -- What you are building and why
+- **Goals** -- Measurable objectives
+- **User Stories** -- "As a [user], I can [action]" format
+- **Technical Architecture** -- Stack, patterns, constraints
+- **Data Models** -- Entities and relationships
+- **API Specifications** -- Endpoints, request/response formats
+- **UI/UX Requirements** -- Layouts, interactions, accessibility
+- **Security** -- Authentication, authorization, data protection
+- **Testing Strategy** -- What to test and how
+- **Implementation Phases** -- Logical groupings of work
+
+Not every PRD needs all sections. A simple CLI tool might only need Overview, Goals, Technical Architecture, and User Stories. The PRD Creator agent adapts to your project's complexity.
+
+### Writing a PRD Manually
+
+If you prefer to write the PRD yourself, create a markdown file in `.ralph/specs/`:
+
+```bash
+cat > .ralph/specs/PRD-my-project.md << 'EOF'
+# PRD: My Project
 
 ## Overview
-Description of what we're building and why it's valuable.
+A REST API for managing widgets.
 
-## Requirements
-- Feature must do X
-- Feature must support Y
-- Performance: <200ms response time
+## Goals
+- CRUD operations for widgets
+- Search by category
+- Pagination on list endpoints
 
-## Technical Specifications
-- Use REST API
-- PostgreSQL database
-- React frontend
-
-## Success Criteria
-- All acceptance criteria met
-- Test coverage >80%
-- No critical bugs
+## Technical Architecture
+- Python Flask
+- PostgreSQL
+- RESTful JSON API
 
 ## User Stories
-- As a user, I can...
-- As an admin, I can...
+- As a user, I can create a widget with a name and category
+- As a user, I can list widgets filtered by category
+- As a user, I can update a widget's details
+- As a user, I can delete a widget
 
-## Edge Cases
-- What happens when...
-- How does it handle...
-```
-
-### Example PRD
-```bash
-mkdir -p .ralph/specs
-cat > .ralph/specs/PRD-simple-api.md << 'EOF'
-# PRD: Simple User API
-
-## Overview
-REST API for user management with CRUD operations.
-
-## Requirements
-- GET /users - List all users
-- GET /users/:id - Get single user
-- POST /users - Create user
-- PUT /users/:id - Update user
-- DELETE /users/:id - Delete user
-
-## Technical Specs
-- Node.js with Express
-- PostgreSQL database
-- Jest for testing
-
-## Success Criteria
-- All endpoints functional
-- Test coverage >80%
-- Response time <200ms
-
-## User Stories
-- As a user, I can retrieve a list of all users
-- As a user, I can create a new user
-- As a user, I can update an existing user
-- As a user, I can delete a user
-
-## Edge Cases
-- Handling invalid user IDs
-- Duplicate user email addresses
-- Large numbers of users (pagination)
+## Acceptance Criteria
+- All endpoints return proper HTTP status codes
+- Input validation on all write endpoints
+- Test coverage above 80%
 EOF
 ```
 
-### PRD Best Practices
-- Be specific and measurable
-- Avoid technical jargon
-- Focus on user needs
-- Include success criteria
-- Document edge cases
+### PRD Quality Matters
 
-## 6. Task Decomposition Process
+The quality of your PRD directly determines the quality of the task decomposition. Vague requirements produce vague tasks. Specific, measurable requirements produce tasks with clear acceptance criteria that the AI can verify.
 
-### What is Task Decomposition?
-Task decomposition is the process of breaking down a PRD into atomic tasks that can be completed in less than 2 hours each. This makes it easier for the AI agents to work on them incrementally.
+Before moving to Phase 2, ask yourself:
 
-### Running the Decomposer Agent
-Run the decomposer agent to break down the PRD into tasks:
+- Are the requirements specific enough to test?
+- Are edge cases documented?
+- Is the technical stack defined?
+- Would a developer know what "done" looks like?
 
-```bash
-# In OpenCode
-opencode --agent decomposer
+---
 
-# In Claude Code
-claude -p --dangerously-skip-permissions --model claude-sonnet-4.5
-```
+## 6. Phase 2: Decomposing into Tasks
 
-### Decomposition Prompt
-Provide this prompt to the decomposer agent:
+Phase 2 transforms your PRD into an actionable task list. The Decomposer agent reads the PRD and generates everything the Ralph Loop needs to execute autonomously.
+
+### Running the Decomposer
+
+Invoke the `@decomposer` agent and point it at your PRD:
 
 ```
-Decompose the PRD at .ralph/specs/PRD-simple-api.md into atomic tasks (<2 hours each).
-Focus on:
-1. Project setup
-2. Database schema
-3. API endpoints (one task per endpoint)
-4. Testing
-5. Documentation
+@decomposer
 
-Generate:
-- TODO.md with task checklist
-- deps-tracker.yaml with dependencies
-- Task folders in .ralph/tasks/XXXX/
+Decompose the PRD at .ralph/specs/PRD-my-project.md into atomic tasks.
 ```
 
-### Example Decomposition
-The decomposer might generate a TODO.md like this:
+For projects with complex system architecture, use `@decomposer-architect` instead. For research-heavy projects that need investigation before task planning, use `@decomposer-researcher`. These are specialized variants that consult sub-assistants during decomposition. See [agent-selection-guide.md](agent-selection-guide.md) for when to use each.
+
+### What the Decomposer Produces
+
+The agent generates three artifacts:
+
+**1. TODO.md** (`.ralph/tasks/TODO.md`) -- The master task checklist:
 
 ```markdown
-# Phase 1: Setup
-- [ ] 0001: Initialize Node.js project with Express
+# My Project Implementation
+
+## Setup
+- [ ] 0001: Initialize Flask project structure
 - [ ] 0002: Set up PostgreSQL database connection
 
-# Phase 2: Database
-- [ ] 0003: Create users table schema
+## Models
+- [ ] 0003: Create Widget model with migrations
 
-# Phase 3: API Implementation
-- [ ] 0004: Implement GET /users endpoint
-- [ ] 0005: Implement GET /users/:id endpoint
-- [ ] 0006: Implement POST /users endpoint
-- [ ] 0007: Implement PUT /users/:id endpoint
-- [ ] 0008: Implement DELETE /users/:id endpoint
+## Endpoints
+- [ ] 0004: Implement POST /widgets endpoint
+- [ ] 0005: Implement GET /widgets endpoint with pagination
+- [ ] 0006: Implement GET /widgets/:id endpoint
+- [ ] 0007: Implement PUT /widgets/:id endpoint
+- [ ] 0008: Implement DELETE /widgets/:id endpoint
 
-# Phase 4: Testing
-- [ ] 0009: Write unit tests for all endpoints
-- [ ] 0010: Set up integration tests
+## Polish
+- [ ] 0009: Add input validation across all endpoints
+- [ ] 0010: Write test suite
+- [ ] 0011: Create API documentation
 ```
 
-### Dependency Management
-The decomposer will also create a `deps-tracker.yaml` file to track task dependencies:
+**2. deps-tracker.yaml** (`.ralph/config/deps-tracker.yaml`) -- The dependency graph:
 
 ```yaml
 tasks:
-  0001:
+  "0001":
     depends_on: []
-    blocks: [0002, 0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010]
-
-  0002:
-    depends_on: [0001]
-    blocks: [0003, 0004, 0005, 0006, 0007, 0008, 0009, 0010]
-
-  0003:
-    depends_on: [0002]
-    blocks: [0004, 0005, 0006, 0007, 0008, 0009, 0010]
-
-  0004:
-    depends_on: [0003]
-    blocks: [0009, 0010]
-
-  0005:
-    depends_on: [0003]
-    blocks: [0009, 0010]
-
-  0006:
-    depends_on: [0003]
-    blocks: [0009, 0010]
-
-  0007:
-    depends_on: [0003]
-    blocks: [0009, 0010]
-
-  0008:
-    depends_on: [0003]
-    blocks: [0009, 0010]
-
-  0009:
-    depends_on: [0004, 0005, 0006, 0007, 0008]
-    blocks: [0010]
-
-  0010:
-    depends_on: [0009]
-    blocks: []
+    blocks: ["0002", "0003"]
+  "0002":
+    depends_on: ["0001"]
+    blocks: ["0003"]
+  "0003":
+    depends_on: ["0001", "0002"]
+    blocks: ["0004", "0005", "0006", "0007", "0008"]
+  "0004":
+    depends_on: ["0003"]
+    blocks: ["0009", "0010"]
+  # ... and so on
 ```
 
-### Task Decomposition Best Practices
-- Keep tasks <2 hours in duration
-- Make tasks atomic and focused
-- Define clear dependencies
-- Include all phases (setup, implementation, testing, documentation)
-- Review and adjust the decomposition before starting the loop
+Each task has a `depends_on` list (what must finish first) and a `blocks` list (what is waiting on this task). The Manager uses this graph to select unblocked tasks at runtime.
 
-## 7. Running the Ralph Loop
+**3. Task folders** (`.ralph/tasks/XXXX/`) -- One folder per task, each containing:
 
-### What is the Ralph Loop?
-The Ralph Loop is the core execution engine that orchestrates the completion of tasks. It uses a manager agent to select tasks, assign them to specialized workers, and track progress.
+- `TASK.md` -- Description, acceptance criteria, implementation notes, complexity estimate
+- `activity.md` -- Execution log (empty initially)
+- `attempts.md` -- Attempt history (empty initially)
+
+### Task Sizing
+
+Every task must be completable in under 2 hours of human-equivalent work. The Decomposer assigns T-shirt sizes:
+
+| Size | Time | Example |
+|------|------|---------|
+| XS | 0-15 min | Config change, copy operation |
+| S | 15-30 min | Single function, simple script |
+| M | 30-60 min | Standard feature implementation |
+| L | 1-2 hours | Multi-component integration |
+
+If the Decomposer produces an XL task (over 2 hours), it must be broken down further. Review the output and ask the Decomposer to refine if needed.
+
+### Reviewing Before Phase 3
+
+Before starting the loop, review the decomposition:
+
+```bash
+cat .ralph/tasks/TODO.md                    # Task list
+cat .ralph/config/deps-tracker.yaml         # Dependencies
+cat .ralph/tasks/0001/TASK.md               # Sample task definition
+```
+
+Check that:
+
+- All PRD requirements are covered by at least one task
+- No tasks are oversized (XL)
+- Dependencies make logical sense
+- Acceptance criteria are specific and testable
+
+This is your last chance to adjust before autonomous execution begins. Edit TODO.md, deps-tracker.yaml, or individual TASK.md files as needed.
+
+For detailed decomposition patterns, refinement techniques, and common mistakes, see [phase2-decomposition-guide.md](phase2-decomposition-guide.md).
+
+---
+
+## 7. Phase 3: Running the Ralph Loop
+
+This is where Ralph takes over. The loop runs autonomously, selecting tasks, dispatching agents, and tracking progress until everything is done.
 
 ### Starting the Loop
+
 ```bash
-# Default run (OpenCode, 100 iterations max)
 ralph-loop.sh
-
-# Or with specific options
-ralph-loop.sh --tool claude --max-iterations 50
-
-# Fast mode (no delays, skip sync)
-ralph-loop.sh --no-delay --skip-sync
-
-# Unlimited iterations
-ralph-loop.sh --max-iterations 0
 ```
 
-### ralph-loop.sh Options
+By default, this uses OpenCode as the AI tool with a maximum of 100 iterations. Common variations:
+
 ```bash
-ralph-loop.sh [OPTIONS]
+ralph-loop.sh --tool claude --max-iterations 50   # Use Claude Code, cap at 50
+ralph-loop.sh --no-delay --skip-sync              # Fast mode: no backoff, skip agent sync
+ralph-loop.sh --dry-run                           # Preview commands without executing
 ```
 
-**Options:**
-- `--tool {opencode|claude}`: Select AI tool (default: opencode)
-- `--max-iterations N`: Maximum iterations (default: 100, 0=unlimited)
-- `--skip-sync`: Skip pre-loop agent synchronization
-- `--no-delay`: Disable exponential backoff delays
-- `--dry-run`: Print commands without executing
-- `--help`, `-h`: Show help
+Environment variables can also control behavior:
+
+```bash
+export RALPH_TOOL=claude
+export RALPH_MAX_ITERATIONS=200
+ralph-loop.sh
+```
+
+For the full flag and environment variable reference, see [commands.md](commands.md).
+
+### How the Loop Works
+
+Each iteration follows this sequence:
+
+1. **Sync agents** -- Propagate model configurations from `agents.yaml` to agent templates (skippable with `--skip-sync`).
+2. **Read state** -- Parse `TODO.md` and `deps-tracker.yaml` to find incomplete, unblocked tasks.
+3. **Select task** -- Pick the next unblocked task based on the dependency graph.
+4. **Invoke worker** -- The Manager dispatches the task to the appropriate agent (developer, tester, architect, etc.) based on task keywords and TDD phase signals.
+5. **Parse signal** -- The worker emits a signal indicating the result.
+6. **Update state** -- Mark tasks complete, record activity, handle failures.
+7. **Repeat** -- Loop back to step 2.
+
+### The Signal System
+
+Workers communicate results through four signals:
+
+| Signal | Format | Meaning |
+|--------|--------|---------|
+| Complete | `TASK_COMPLETE_0042` | Task finished, all criteria met |
+| Incomplete | `TASK_INCOMPLETE_0042` | Partial progress, will retry |
+| Failed | `TASK_FAILED_0042: error msg` | Error encountered, will retry |
+| Blocked | `TASK_BLOCKED_0042: reason` | Needs human intervention |
+
+The Manager also watches for two sentinels in TODO.md:
+
+- `ALL TASKS COMPLETE, EXIT LOOP` -- Written when every task is checked off. Loop exits cleanly.
+- `ABORT: HELP NEEDED FOR TASK XXXX: reason` -- Written when a task signals TASK_BLOCKED. Loop stops.
+
+### TDD Enforcement
+
+For implementation tasks, the loop enforces a strict Test-Driven Development cycle:
+
+```
+RED:          Tester writes failing tests
+GREEN:        Developer implements code to pass tests
+VALIDATE:     Tester verifies all tests pass
+REFACTOR:     Developer improves code quality (optional)
+SAFETY_CHECK: Tester confirms no regressions
+DONE:         Tester emits TASK_COMPLETE
+```
+
+The critical constraint: **Developers cannot emit TASK_COMPLETE.** If a Developer tries, the Manager rejects it and re-invokes the Tester. Only the Tester can approve completion through the verification chain.
+
+For the full TDD routing table and agent selection logic, see [agent-selection-guide.md](agent-selection-guide.md).
 
 ### Monitoring Progress
-- **Terminal Output**: Shows loop status and task completion
-- **TODO.md**: Checkboxes update as tasks complete
-- **Activity Logs**: `.ralph/tasks/XXXX/activity.md` for detailed progress
-- **Attempts Log**: `.ralph/tasks/XXXX/attempts.md` for attempt history
 
-### Stopping the Loop
-- Press `Ctrl+C` for graceful shutdown
-- Or add an ABORT line in TODO.md: `ABORT: HELP NEEDED FOR TASK XXXX: Reason`
+While the loop runs, you have several monitoring options:
 
-## 8. Understanding the Ralph Workflow Phases
+**Attach to the active session:**
 
-### Phase 1: PRD Generation
-- **Goal**: Define what to build
-- **Output**: PRD document
-- **Key Agent**: PRD Creator (optional, for automatic PRD generation)
+```bash
+ralph-peek.sh           # Attach via TUI (default)
+ralph-peek.sh --web     # Print the Web UI URL instead
+```
 
-### Phase 2: Decomposition
-- **Goal**: Break PRD into manageable tasks
-- **Output**: TODO.md, deps-tracker.yaml, task folders
-- **Key Agent**: Decomposer
+**Check task progress:**
 
-### Phase 3: Execution (Ralph Loop)
-- **Goal**: Complete all tasks
-- **Process**:
-  1. Manager agent selects an unblocked task
-  2. Worker agent executes the task
-  3. Results are evaluated
-  4. Task status is updated
-  5. Loop continues to next task
-- **Key Agents**: Manager, Architect, Developer, Tester, UI Designer, Researcher, Writer
+```bash
+cat .ralph/tasks/TODO.md                     # Overall progress
+cat .ralph/tasks/0042/activity.md            # Specific task log
+```
 
-## 9. Working with Agents and Templates
+**Filter verbose output (post-run):**
 
-### Agent Types
-Ralph supports specialized agents for different roles:
+```bash
+ralph-filter-output.sh --signals output.json   # Show only signals
+```
+
+### When the Loop Stops
+
+The loop terminates under these conditions:
+
+| Condition | What Happens |
+|-----------|--------------|
+| All tasks complete | Manager writes `ALL TASKS COMPLETE, EXIT LOOP` to TODO.md |
+| TASK_BLOCKED signal | Manager writes `ABORT: HELP NEEDED` to TODO.md |
+| Max iterations reached | Loop exits with a warning |
+| Ctrl+C | Graceful shutdown (safe to restart) |
+
+### Recovering from a Stopped Loop
+
+If the loop stopped due to a blocked task:
+
+1. Read the reason: `cat .ralph/tasks/XXXX/activity.md`
+2. Fix the underlying issue manually
+3. Remove the abort line: edit TODO.md and delete the `ABORT:` line
+4. Restart: `ralph-loop.sh`
+
+The loop is always safe to restart. It reads state from files, not memory.
+
+For more recovery procedures, see [troubleshooting.md](troubleshooting.md).
+
+---
+
+## 8. Agent Configuration
+
+Ralph uses 10 specialized agent types. Each can be mapped to a different LLM model depending on the task's complexity and your cost tolerance.
+
+### The 10 Agent Types
 
 | Agent | Role |
 |-------|------|
-| Manager | Orchestrates task execution and loop management |
-| Architect | Designs system architecture and technical decisions |
-| Developer | Implements code and fixes bugs |
-| Tester | Creates and runs tests |
-| UI Designer | Designs user interfaces and frontend components |
-| Researcher | Conducts research and gathers information |
-| Writer | Creates documentation and content |
-| Decomposer | Breaks PRDs into tasks |
+| manager | Orchestrates the loop -- selects tasks, invokes workers, manages state |
+| architect | System design, API design, technology decisions |
+| developer | Code implementation, refactoring, debugging |
+| ui-designer | UI/UX design, frontend architecture, accessibility |
+| tester | Test creation, QA validation, TDD gatekeeper |
+| researcher | Investigation, analysis, knowledge synthesis |
+| writer | Documentation, technical writing, content creation |
+| decomposer | PRD decomposition, task planning |
+| decomposer-architect | Architecture consulting during decomposition |
+| decomposer-researcher | Research consulting during decomposition |
 
-### Agent Configuration
-Located at `.ralph/config/agents.yaml`:
+For detailed descriptions of each agent's responsibilities, selection logic, and when to use which, see [agent-selection-guide.md](agent-selection-guide.md).
+
+### agents.yaml
+
+The file `.ralph/config/agents.yaml` maps each agent type to preferred and fallback models for both OpenCode and Claude Code:
 
 ```yaml
 agents:
   manager:
-    description: "Ralph Loop Manager - orchestrates task execution"
+    description: "Loop orchestrator - selects tasks, invokes workers, manages state"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
     fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   developer:
     description: "Code implementation and debugging"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
     fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
-
-  tester:
-    description: "QA - test creation and validation"
-    preferred:
-      opencode: inherit
-      claude: claude-sonnet-4.5
-    fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 ```
 
-**Notes:**
-- Use `inherit` for OpenCode to use the default model
-- Changes take effect after running `sync-agents`
+For OpenCode, `""` (empty string) means "use the default model" -- this is the recommended setting. For Claude Code, specify the model name directly.
 
-### Synchronizing Agents
+The general recommendation is to use higher-tier models (Opus) for agents that require broad reasoning (manager, architect, decomposer) and cost-effective models (Sonnet) for high-volume work (developer, tester, writer).
+
+### Syncing Configuration Changes
+
+After editing `agents.yaml`, propagate the changes to agent template files:
+
 ```bash
-sync-agents [OPTIONS]
+sync-agents.sh              # Apply changes for OpenCode (default)
+sync-agents.sh --tool claude # Apply changes for Claude Code
+sync-agents.sh --show        # Preview without changing anything
+sync-agents.sh --dry-run     # Show what would change
 ```
 
-**Options:**
-- `--help`, `-h`: Show help
-- `--tool TOOL`: Specify tool (opencode|claude)
-- `--config FILE`: Custom agents.yaml path
-- `--show`: Show parsed agents (don't sync)
-- `--dry-run`: Show what would be updated
+The sync script reads `agents.yaml`, finds the corresponding agent markdown files, and updates the `model:` field in their YAML frontmatter. It is idempotent -- running it twice with the same config makes no unnecessary changes.
 
-### Custom Agent Creation
-1. Create a new agent template:
-   ```bash
-   cat > .opencode/agents/my-specialist.md << 'EOF'
-   ---
-   description: "My specialist agent"
-   mode: subagent
-   temperature: 0.1
-   
-   permission:
-     write: ask
-     bash: ask
-     webfetch: allow
-     edit: deny
-   
-   tools:
-     read: true
-     write: true
-     grep: true
-     glob: true
-     bash: true
-     webfetch: true
-     question: true
-     sequentialthinking: true
-   ---
-   
-   # My Specialist Agent
-   
-   Describe what this agent does and how it should approach tasks...
-   EOF
-   ```
+For the complete `agents.yaml` schema, all 10 default configurations, and model recommendation rationale, see [configuration.md](configuration.md).
 
-2. Add to agents.yaml:
-   ```yaml
-   agents:
-     my-specialist:
-       description: "My specialist agent"
-       preferred:
-         opencode: inherit
-         claude: claude-sonnet-4.5
-       fallback:
-         opencode: inherit
-         claude: claude-sonnet-4.5
-   ```
+---
 
-3. Sync agents: `sync-agents`
+## 9. The RULES.md Learning System
 
-## 10. Skills and Capabilities
+RULES.md files capture project-specific patterns, conventions, and constraints that agents should follow. They serve as institutional memory across iterations -- since each iteration starts with fresh context, RULES.md is how learned patterns persist.
 
-### What are Skills?
-Skills are reusable capabilities that agents can use to perform specific tasks. They include scripts and instructions for common activities.
+### How It Works
 
-### Available Skills
+Agents walk up the directory tree from their working directory, collecting every `RULES.md` file they find. Rules are applied root-to-leaf: deeper files override shallower ones on conflict. A file containing `IGNORE_PARENT_RULES` stops inheritance from parent directories.
 
-#### Dependency Tracking Skill
-Manages task dependencies:
-- **Scripts**: `deps-parse.sh`, `deps-cycle.sh`, `deps-select.sh`, `deps-update.sh`, `deps-closure.sh`
-- **Functions**: Parse TODO.md, detect cycles, select unblocked tasks, update dependencies
+### What Goes in RULES.md
 
-#### Git Automation Skill
-Handles Git operations:
-- **Scripts**: `git-context.sh`, `git-commit-msg.sh`, `task-branch-create.sh`, `squash-merge.sh`, `branch-cleanup.sh`, `git-conflict.sh`, `state-file-conflicts.sh`, `configure-gitignore.sh`, `git-wrapper.sh`
-- **Features**: Branch per task, commit message formatting, conflict resolution
+Typical sections include:
 
-#### System Prompt Compliance Skill
-Ensures compliance with safety guidelines and restrictions.
+- **Code Patterns** -- Naming conventions, architectural patterns, style rules
+- **Common Pitfalls** -- Known issues and how to avoid them
+- **Standard Approaches** -- Preferred solutions for recurring problems
+- **Auto-Discovered Patterns** -- Patterns agents have learned during execution
 
-### Skill Architecture
-Each skill has:
-- `SKILL.md`: Skill description and usage instructions
-- `scripts/`: Shell scripts implementing the skill
-- `tests/`: Test files for verification
-- `activity.md`: Activity template for agent communication
+Agents can add to the "Auto-Discovered Patterns" section as they work, building up project knowledge over time.
 
-## 11. Configuration Options
-
-### Configuration Files
-
-#### agents.yaml
-Agent model mappings (see Section 9 for details)
-
-#### deps-tracker.yaml
-Task dependency tracking:
-
-```yaml
-tasks:
-  0001:
-    depends_on: []
-    blocks: [0003]
-
-  0002:
-    depends_on: []
-    blocks: [0003]
-
-  0003:
-    depends_on: [0001, 0002]
-    blocks: []
-```
-
-**Rules:**
-- All tasks must be listed (even with empty arrays)
-- Task IDs are 4-digit zero-padded (0001-9999)
-- A task is "unblocked" when all tasks in `depends_on` are complete
-- Circular dependencies will block the loop
-
-#### TODO.md
-Master task checklist:
-
-```markdown
-# Ralph Tasks
-
-# Phase 1: Foundation
-- [x] 0001: Set up project structure
-- [ ] 0002: Configure database
-- [ ] 0003: Create API endpoints
-
-# Phase 2: Features
-- [ ] 0004: Implement authentication
-- [ ] 0005: Add user management
-
-ABORT: HELP NEEDED FOR TASK 0004: Database connection failing
-```
-
-**Strict Grammar:**
-- Task lines: `- [ ] 0001: Task title` or `- [x] 0001: Task title`
-- Blockage lines: `ABORT: HELP NEEDED FOR TASK XXXX: Reason`
-- Completion line: `ALL TASKS COMPLETE, EXIT LOOP`
-
-#### RULES.md
-Project-specific rules and guidelines:
+### Example
 
 ```markdown
 # Project Rules
 
 ## Code Patterns
-- Use async/await instead of callbacks
-- Always handle errors with try/catch
-- Use TypeScript for type safety
+- Use async/await for all I/O operations
+- All API responses use the {data, error, meta} envelope format
+- Database queries go through the repository layer, never direct SQL
 
 ## Common Pitfalls
-- Avoid nested promises
-- Don't overuse global variables
-- Be careful with state management
+- The ORM lazy-loads relationships by default; always use eager loading for list endpoints
+- Redis connection pool must be initialized before first request
 
 ## Standard Approaches
-- API responses should be in JSON format
-- Use JWT for authentication
-- Store configuration in environment variables
+- Use Pydantic models for request/response validation
+- Environment variables for all configuration (no hardcoded values)
 ```
 
-### Environment Variables
-- `RALPH_DEBUG`: Enable verbose output (set to 1)
-- `RALPH_BACKOFF_BASE`: Base delay for exponential backoff (default: 2)
-- `RALPH_BACKOFF_MAX`: Maximum delay (default: 60)
-- `RALPH_MANAGER_MODEL`: Override manager agent model
+For the full rules system specification including inheritance mechanics and the `IGNORE_PARENT_RULES` directive, see [rules-system.md](../jeeves/Ralph/docs/rules-system.md).
 
-## 12. Troubleshooting Common Issues
+---
 
-### "yq not found" during ralph-init.sh
-**Solution:**
+## 10. Skills System
+
+Skills are reusable capabilities that agents load on demand. They provide specialized instructions, scripts, and workflows for specific domains. Ralph ships with three built-in skills.
+
+### Dependency Tracking
+
+Manages the task dependency graph. Provides scripts for parsing `deps-tracker.yaml`, detecting circular dependencies, selecting unblocked tasks, and computing transitive closures. The Manager agent uses this skill internally during task selection.
+
+### Git Automation
+
+Handles git operations during task execution. Creates `task/NNNN-description` branches, generates commit messages, detects and resolves conflicts in state files, and manages branch cleanup after task completion.
+
+### System Prompt Compliance
+
+A pre-action checklist that ensures agents follow safety guidelines, emit signals in the correct format, and read required state files before acting. This skill is invoked automatically by agents at the start of each execution.
+
+### Installing Additional Skills
+
+The container includes installation scripts for optional skill sets:
+
 ```bash
-sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
-sudo chmod +x /usr/local/bin/yq
+install-skills.sh --doc-skills    # Document creation (docx, pdf, xlsx, pptx, markitdown)
+install-skills.sh --n8n-skills    # n8n workflow automation (7 skills)
+install-skills.sh --all           # All available skills
 ```
 
-### "Ralph directory not found" when starting loop
-**Solution:**
+Skill dependencies are managed automatically:
+
 ```bash
-ralph-init.sh
-```
-
-### Git conflicts in TODO.md
-**Cause:** Editing TODO.md while loop is running
-
-**Solution:**
-1. Stop the loop (Ctrl+C)
-2. Resolve conflicts manually:
-   ```bash
-   vim .ralph/tasks/TODO.md
-   git add .ralph/tasks/TODO.md
-   ```
-3. Restart loop: `ralph-loop.sh`
-
-### Loop stuck on same task
-**Solution:**
-1. Check task activity: `cat .ralph/tasks/XXXX/activity.md`
-2. Look for patterns in attempts.md
-3. If blocked, add to TODO.md: `ABORT: HELP NEEDED FOR TASK XXXX: Description of issue`
-4. Fix manually, then restart
-
-### "Agent not found" errors
-**Solution:**
-1. Sync agents: `sync-agents`
-2. Verify agents.yaml has the agent type defined
-3. Check agent files exist in `.opencode/agents/` or `.claude/agents/`
-
-### Debug Mode
-Run with verbose output:
-```bash
-export RALPH_DEBUG=1
-ralph-loop.sh
-```
-
-### Log Files
-Ralph automatically creates log files at: `.ralph/logs/ralph-loop-YYYYMMDD-HHMMSS.log`
-
-## 13. Best Practices for Effective Use
-
-### Getting Started
-1. **Start Small**: Begin with 5-10 tasks for your first project
-2. **Review Decomposition**: Always review TODO.md before starting loop
-3. **Monitor Early**: Watch first few iterations to ensure proper behavior
-4. **Iterate on Process**: Adjust task granularity based on results
-
-### Task Management
-1. **Task Sizing**: Keep tasks <2 hours for optimal performance
-2. **Dependency Management**: Clearly define dependencies in deps-tracker.yaml
-3. **Git Discipline**: Don't edit TODO.md or deps-tracker.yaml while loop is running
-4. **Documentation**: Use RULES.md to capture project-specific patterns
-
-### Performance Optimization
-1. **Model Selection**: Use more capable models for complex tasks (e.g., Claude Opus for architecture)
-2. **Backoff Configuration**: Adjust RALPH_BACKOFF_BASE and RALPH_BACKOFF_MAX
-3. **Iteration Limits**: Set appropriate max iterations based on project size
-
-### Advanced Usage
-1. **Custom Agents**: Create specialized agents for unique tasks
-2. **Rule-Based Learning**: Capture patterns in RULES.md for future iterations
-3. **Integration**: Add Ralph to your CI/CD pipeline for automated execution
-
-## 14. Example Project Walkthrough
-
-### Building a Simple REST API with Ralph
-
-1. **Initialize Project**:
-   ```bash
-   cd /proj/my-api
-   ralph-init.sh
-   ```
-
-2. **Create PRD**:
-   (see Section 5 for PRD creation)
-
-3. **Run Decomposition**:
-   (see Section 6 for decomposition process)
-
-4. **Review TODO.md**:
-   (see Section 6 for example TODO.md)
-
-5. **Start Ralph Loop**:
-   ```bash
-   ralph-loop.sh --max-iterations 50
-   ```
-
-6. **Completion**:
-   When you see `ALL TASKS COMPLETE, EXIT LOOP`, the loop terminates automatically.
-
-## 15. Command Reference
-
-### ralph-init.sh
-Initialize Ralph scaffolding:
-```bash
-ralph-init.sh [OPTIONS]
-```
-
-**Options:**
-- `--help`, `-h`: Show help
-- `--force`, `-f`: Skip overwrite prompts
-- `--rules`: Force RULES.md creation
-
-### ralph-loop.sh
-Main loop execution:
-```bash
-ralph-loop.sh [OPTIONS]
-```
-
-**Options:**
-- `--tool {opencode|claude}`: Select AI tool (default: opencode)
-- `--max-iterations N`: Maximum iterations (default: 100, 0=unlimited)
-- `--skip-sync`: Skip pre-loop agent synchronization
-- `--no-delay`: Disable exponential backoff delays
-- `--dry-run`: Print commands without executing
-- `--help`, `-h`: Show help
-
-### sync-agents
-Synchronize agent model configurations:
-```bash
-sync-agents [OPTIONS]
-```
-
-**Options:**
-- `--help`, `-h`: Show help
-- `--tool TOOL`: Specify tool (opencode|claude)
-- `--config FILE`: Custom agents.yaml path
-- `--show`: Show parsed agents (don't sync)
-- `--dry-run`: Show what would be updated
-
-### apply-rules.sh
-Apply project rules:
-```bash
-apply-rules.sh
-```
-
-### find-rules-files.sh
-Find rules files in the project:
-```bash
-find-rules-files.sh
-```
-
-### ralph-paths.sh
-Detect Ralph paths:
-```bash
-ralph-paths.sh
-```
-
-### ralph-validate.sh
-Validate Ralph configuration:
-```bash
-ralph-validate.sh
+install-skill-deps.sh             # Discover and install skill dependencies
 ```
 
 ---
 
-**Ralph Toolkit**: *Because iteration beats perfection.*
+## 11. Tips and Best Practices
+
+### Getting Started
+
+- **Start small.** Your first Ralph project should have 5-10 tasks. This lets you observe the loop, understand the signal system, and build confidence before tackling larger projects.
+- **Review decomposition carefully.** Time spent in Phase 2 saves time in Phase 3. Check that tasks are well-sized, dependencies are correct, and acceptance criteria are testable.
+- **Watch the first few iterations.** Use `ralph-peek.sh` to observe the Manager selecting tasks and dispatching agents. This helps you understand the flow and catch issues early.
+
+### Task Design
+
+- **Keep tasks under 2 hours.** AI success rates drop significantly on longer tasks. If a task feels too big, decompose it further.
+- **Write specific acceptance criteria.** "Implement the feature" is not testable. "Endpoint returns 201 with the created resource ID" is.
+- **Do not pre-assign agents.** The Manager selects agents at runtime based on task keywords and TDD phase. Use clear action verbs in task titles (implement, design, test, document) so the Manager routes correctly.
+
+### During Execution
+
+- **Do not edit TODO.md or deps-tracker.yaml while the loop is running.** This causes git conflicts that halt the loop. Stop the loop first, make your changes, then restart.
+- **Trust the retry mechanism.** A `TASK_FAILED` signal is not a crisis. The loop retries with exponential backoff, and the next attempt has the failure context in `activity.md`.
+- **Use ABORT for genuine blockers.** If a task truly cannot proceed without human intervention, the `TASK_BLOCKED` signal stops the loop cleanly. Fix the issue, remove the ABORT line from TODO.md, and restart.
+
+### Model Selection
+
+- **Use stronger models for orchestration.** The Manager and Architect benefit from Opus-tier models that excel at reasoning and coordination.
+- **Use cost-effective models for volume work.** Developer, Tester, and Writer tasks are numerous and well-defined -- Sonnet-tier models handle them efficiently.
+- **Override per-run if needed.** Use `RALPH_MANAGER_MODEL=opus ralph-loop.sh` to temporarily upgrade the Manager model for a complex project.
+
+### Project Hygiene
+
+- **Commit Phase 2 output before starting Phase 3.** This gives you a clean baseline to diff against.
+- **Use RULES.md actively.** When you notice the AI making the same mistake twice, add a rule. The next iteration will follow it.
+- **Review completed tasks.** Check `.ralph/tasks/done/` periodically to verify quality. If tasks are passing with low-quality output, tighten the acceptance criteria.
+
+---
+
+## 12. Next Steps
+
+Now that you understand the full workflow, explore these resources:
+
+| Resource | What You Will Find |
+|----------|--------------------|
+| [example-walkthrough.md](example-walkthrough.md) | A complete end-to-end project build with realistic iteration logs, failure recovery, and TDD handoffs |
+| [phase2-decomposition-guide.md](phase2-decomposition-guide.md) | Decomposition patterns (feature, layer, workflow, testing pyramid), refinement techniques, common mistakes |
+| [agent-selection-guide.md](agent-selection-guide.md) | How the Manager selects agents, TDD phase routing, when to use each agent type |
+| [commands.md](commands.md) | Complete flag reference for `jeeves.ps1`, `ralph-loop.sh`, `sync-agents.sh`, and all utility scripts |
+| [configuration.md](configuration.md) | Full `agents.yaml` schema, `deps-tracker.yaml` format, `TODO.md` grammar, MCP server configuration, environment variables |
+| [troubleshooting.md](troubleshooting.md) | Diagnostic procedures, recovery steps, and solutions for container, loop, agent, signal, and dependency issues |
+| [rules-system.md](../jeeves/Ralph/docs/rules-system.md) | Deep dive into the hierarchical RULES.md system |
+
+---
+
+**Ralph Toolkit** -- *Because iteration beats perfection.*
