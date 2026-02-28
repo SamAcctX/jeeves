@@ -580,6 +580,14 @@ EOF
     }
 EOF
 )
+        elif [ "$server_name" = "sequentialthinking" ]; then
+            server_config=$(cat <<EOF
+    "$server_name": {
+        "command": "npx",
+        "args": ["-y", "${MCP_SERVERS[$server_name]}"]
+    }
+EOF
+)
         else
             if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
                 server_config=$(cat <<EOF
