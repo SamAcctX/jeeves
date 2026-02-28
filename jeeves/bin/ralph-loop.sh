@@ -299,6 +299,7 @@ invoke_opencode_manager() {
         kill $WEB_PID
         return 1
     fi
+}
 
 invoke_claude_manager() {
     local prompt_path="$1"
