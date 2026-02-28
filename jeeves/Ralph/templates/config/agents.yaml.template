@@ -8,25 +8,16 @@ agents:
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   architect:
     description: "System design and architecture tasks"
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   developer:
     description: "Code implementation and debugging"
     preferred:
-      opencode: ""
-      claude: claude-sonnet-4.5
-    fallback:
       opencode: ""
       claude: claude-sonnet-4.5
 
@@ -35,16 +26,10 @@ agents:
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   tester:
     description: "Testing and quality assurance"
     preferred:
-      opencode: ""
-      claude: claude-sonnet-4.5
-    fallback:
       opencode: ""
       claude: claude-sonnet-4.5
 
@@ -53,16 +38,10 @@ agents:
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   writer:
     description: "Documentation and content creation"
     preferred:
-      opencode: ""
-      claude: claude-sonnet-4.5
-    fallback:
       opencode: ""
       claude: claude-sonnet-4.5
 
@@ -71,24 +50,15 @@ agents:
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   decomposer-architect:
     description: "Specialized for system design, patterns, best practices, integration design, verification and validation for PRD decomposition"
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5
 
   decomposer-researcher:
     description: "Specialized for investigation, documentation analysis, and knowledge synthesis for PRD decomposition"
     preferred:
       opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: ""
-      claude: claude-sonnet-4.5

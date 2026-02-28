@@ -120,13 +120,7 @@ get_agent_model() {
     local tool="${2:-$TOOL}"
     local model
     
-    # Try preferred model first
     model=$(yq eval ".agents.${agent_type}.preferred.${tool}" "$AGENTS_YAML" 2>/dev/null)
-    
-    if [ "$model" = "null" ] || [ -z "$model" ]; then
-        # Try fallback model
-        model=$(yq eval ".agents.${agent_type}.fallback.${tool}" "$AGENTS_YAML" 2>/dev/null)
-    fi
     
     if [ "$model" = "null" ]; then
         return 1
