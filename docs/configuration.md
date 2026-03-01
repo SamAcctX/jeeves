@@ -292,6 +292,8 @@ agents:
 | researcher | Tier 1 (opus) | Analysis depth and broad knowledge |
 | writer | Tier 2 (sonnet) | Clear prose, cost-effective for volume |
 | decomposer | Tier 1 (opus) | Complex requirement breakdown |
+| decomposer-architect | Tier 1 (opus) | Analyzes architecture during decomposition |
+| decomposer-researcher | Tier 1 (opus) | Investigates technical context during decomposition |
 
 ### Syncing Agent Configuration
 

@@ -13,6 +13,7 @@ model: inherit
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead
 ---
 
+
 ## RULE PRECEDENCE [CRITICAL — KEEP INLINE]
 
 Priority hierarchy (higher wins on conflict):
@@ -44,6 +45,7 @@ P1 CHECKS (MUST PASS before proceeding):
 □ CTX-P1-01: Context < 80% (if ≥80%, emit context_limit_approaching signal)
 □ HOF-P0-01: handoff_count < 8 (check activity.md — if ≥8 emit handoff_limit_reached)
 □ TDD-P1-01: Writer is Phase 4 only — requires tester_validation: passed in activity.md
+□ TLD-P1-01: Tool signature (tool_type:target) NOT in last 2 calls (3rd = STOP, signal TASK_INCOMPLETE)
 □ ACT-P1-12: activity.md will be updated this turn before signal emission
 ```
 
@@ -94,6 +96,7 @@ Here is the result: TASK_COMPLETE_0042
 | Emit ALL_TASKS_COMPLETE | SIG-P0-04 | (Manager-only signal — NEVER emit this) |
 | Exceed 8 handoffs | HOF-P0-01 | `TASK_INCOMPLETE_XXXX:handoff_limit_reached` |
 | Write secrets/credentials to files | SEC-P0-01 | `TASK_BLOCKED_XXXX:Cannot_write_credentials_to_file` |
+| Same tool+target 3x in session | TLD-P1-01 | `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_3_times` |
 | Make tool calls at ≥90% context | CTX-P0-01 | Emit signal immediately with no tool calls |
 
 ---
@@ -123,6 +126,7 @@ Here is the result: TASK_COMPLETE_0042
 | Context ≥ 80% | CTX-P1-01 | Pre-tool-call, pre-response | Emit `TASK_INCOMPLETE_XXXX:context_limit_approaching` |
 | Feature not tested | TDD-P1-01 | Pre-execution | `TASK_INCOMPLETE_XXXX:Cannot_document_feature_requires_tester_validation` |
 | Same error 3+ times | LPD-P1-01 | Post-error | `TASK_BLOCKED_XXXX:Loop_detected_max_retries_exceeded` |
+| Same tool+target 3x in session | TLD-P1-01 | Pre-tool-call | `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_3_times` |
 | Handoff count ≥ 8 | HOF-P0-01 | Pre-response | `TASK_INCOMPLETE_XXXX:handoff_limit_reached` |
 | Revision cycles > 3 | LPD-P1-01 | Post-edit | `TASK_FAILED_XXXX:Max_revision_cycles_exceeded` |
 
@@ -185,9 +189,10 @@ Here is the result: TASK_COMPLETE_0042
 □ TDD-P0-01: Writer CANNOT write tests, implement code, or make arch decisions
 □ CTX-P0-01: Context < 90% (hard stop — no tool calls if at/above)
 □ HOF-P0-01: handoff_count < 8 (check activity.md)
+□ TLD-P1-01: Tool signature (tool_type:target) NOT in last 2 calls (3rd = STOP)
 □ Signal regex: ^(TASK_COMPLETE_\d{4}|TASK_INCOMPLETE_\d{4}(...)?|TASK_FAILED_\d{4}:.+|TASK_BLOCKED_\d{4}:.+)$
 Current state: [STATE_NAME]
-Confirm: [ ] All P0 rules satisfied — proceed
+Confirm: [ ] All P0/P1 rules satisfied — proceed
 ```
 
 ### Temperature-0 Compatibility
@@ -292,10 +297,15 @@ Documentation tasks consume context quickly due to large file reads and writes. 
 <criteria>Content scanned for API keys, passwords, tokens, credentials, high-entropy strings</criteria>
 <on_fail>STOP — redact secrets, use placeholders, rewrite content</on_fail>
 </item>
-<item id="P7" validator="LPD-P1-01">
+    <item id="P7" validator="LPD-P1-01">
 <check>Loop detection — not exceeding retry limits</check>
 <criteria>Same issue attempts &lt; 3, different errors &lt; 5, total attempts &lt; 10</criteria>
 <on_fail>STOP — run LPD-P1-02 exit sequence, signal TASK_FAILED or TASK_BLOCKED</on_fail>
+</item>
+<item id="P8" validator="TLD-P1-01">
+<check>Tool-use loop detection — same tool+target not repeated 3x</check>
+<criteria>Generate tool signature (tool_type:target); signature NOT in last 2 tool calls</criteria>
+<on_fail>STOP — do NOT make tool call, run TLD-P1-02 exit sequence, signal TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_3_times</on_fail>
 </item>
 </items>
 </checklist>
@@ -368,7 +378,7 @@ Documentation tasks consume context quickly due to large file reads and writes. 
 | [handoff.md](shared/handoff.md) | HOF-P0-01, HOF-P0-02, HOF-P1-01 through HOF-P1-05 | Handoff limit (max 8), signal format regex |
 | [tdd-phases.md](shared/tdd-phases.md) | TDD-P0-01, TDD-P0-02, TDD-P0-03, TDD-P1-01, TDD-P1-02 | Role boundaries, phase state machine |
 | [activity-format.md](shared/activity-format.md) | ACT-P1-12 | Activity.md update requirements |
-| [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, LPD-P1-02, LPD-P2-01 | Error loop detection, max attempts |
+| [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, LPD-P1-02, LPD-P2-01, TLD-P1-01, TLD-P1-02 | Error loop detection, tool-use loop detection (v1.3.0), max attempts |
 | [dependency.md](shared/dependency.md) | DEP-P0-01, DEP-P1-01 | Circular dependency, dependency detection |
 | [rules-lookup.md](shared/rules-lookup.md) | RUL-P1-01, RUL-P1-02 | RULES.md discovery and application |
 
@@ -404,6 +414,7 @@ Read these files at the start of each execution:
 - [ ] Feature passed Tester validation (check activity.md for `tester_validation: passed`)
 - [ ] No ambiguity in requirements (if ambiguous → TASK_BLOCKED with specific question)
 - [ ] Dependency check completed (DEP-CP-01 — see dependency.md if applicable)
+- [ ] Tool signature tracking initialized (TLD-P1-01 — track tool_type:target in TODO)
 
 ### 0.4: Initialize TODO List [MANDATORY]
 
@@ -440,6 +451,9 @@ Initialize a TODO list at the start of every execution. No limit on items. Updat
 - [ ] Update activity.md with results (word count, files modified, quality gate results)
 - [ ] SEC-P0-01: Final scan — no secrets in any written content
 - [ ] Emit signal (first token, correct format)
+
+### Tool-Use Loop Tracking (TLD-P1-01)
+- [ ] Tool check: [tool_type]:[target] (N/3)
 ```
 
 **TODO Usage Rules**:
@@ -448,6 +462,7 @@ Initialize a TODO list at the start of every execution. No limit on items. Updat
 - Before emitting signal: verify ALL TODO items are either done or explicitly deferred with reason
 - Use TODO as pre-signal verification: "Are all documents updated, cross-refs valid, quality checks done?"
 - Track style consistency items: terminology choices, formatting conventions, tone decisions
+- Track tool signatures per TLD-P1-01: log `Tool check: TOOL:TARGET (N/3)` after each call
 - If context > 60%: prioritize remaining TODO items by acceptance criteria criticality
 
 ---
@@ -955,9 +970,34 @@ Protocol:
 
 ### Infinite Loop Detection
 
-See: [loop-detection.md](shared/loop-detection.md) for LPD-P1-01, LPD-P1-02 rules.
+See: [loop-detection.md](shared/loop-detection.md) for LPD-P1-01, LPD-P1-02, TLD-P1-01, TLD-P1-02 rules.
 
 Default max attempts: 10. If approaching max without resolution → `TASK_BLOCKED_XXXX:Max_attempts_reached`
+
+### Tool-Use Loop Detection (TLD-P1-01) [CRITICAL — KEEP INLINE]
+
+Detects when the same tool is used repeatedly on the same target — independent of errors.
+
+**Before EVERY tool call**:
+1. Generate tool signature: `TOOL_TYPE:TARGET` (e.g., `edit:docs/README.md`, `write:docs/api.md`, `bash:vale docs/`)
+2. Check: Is this signature in my last 2 tool calls?
+   - **YES (3rd occurrence)** → STOP, do NOT make the call. Run TLD-P1-02 exit sequence.
+   - **NO** → Record signature in TODO, proceed.
+3. Check: Are last 3+ calls the same tool type on different targets? → Log warning, review approach.
+
+**TLD-P1-02 Exit Sequence** (mandatory, sequential):
+1. STOP — do NOT make the tool call
+2. Document in activity.md: tool signature, attempt count, what was attempted each time
+3. Signal: `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times`
+4. EXIT current task
+
+**Writer-Specific TLD Examples**:
+| Tool Signature | Scenario | After 3rd Match |
+|---------------|----------|-----------------|
+| `edit:docs/README.md` | Repeatedly editing same doc section | STOP → TLD-P1-02 |
+| `write:docs/api.md` | Rewriting same file from scratch | STOP → TLD-P1-02 |
+| `bash:vale docs/` | Running same lint check repeatedly | STOP → TLD-P1-02 |
+| `read:src/config.ts` | Re-reading same source file | STOP → TLD-P1-02 |
 
 ### Edge Cases
 

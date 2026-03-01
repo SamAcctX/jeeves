@@ -1,6 +1,6 @@
 # Infinite Loop Detection (DUP-08)
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
+<!-- version: 1.3.0 | last_updated: 2026-03-01 | canonical: YES -->
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
@@ -27,6 +27,8 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 | **iteration** | One complete handoff cycle (e.g., Developer → Tester → Developer) |
 | **attempt** | One fix attempt for a specific error or issue |
 | **error signature** | Unique identifier for an error (error type + location + message hash). Persisted in activity.md across sessions/iterations. |
+| **tool signature** | `tool_type:target` identifying a specific tool+target combination (e.g., `edit:src/config.yaml`, `bash:npm test`, `write:src/index.js`) |
+| **tool attempt** | One invocation of a tool with the same tool signature within a single session |
 
 ---
 
@@ -77,11 +79,43 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
   </enforcement>
 </rule>
 
+<rule id="TLD-P1-01" priority="P1" scope="universal" trigger="pre-tool-call">
+  <name>Tool-Use Loop Detection</name>
+  <description>Detects when the same tool is used repeatedly on the same target, independent of whether errors occur. This catches non-error loops (e.g., editing the same file repeatedly without progress, running the same command expecting different results).</description>
+  <limits>
+    <limit id="TLD-P1-01a" type="same-signature">Same tool signature (tool_type:target) 3x in one session → STOP, signal TASK_INCOMPLETE</limit>
+    <limit id="TLD-P1-01b" type="similar-pattern">3+ consecutive same-type tool calls (e.g., edit→edit→edit or write→write→write on different targets) → log warning, review approach</limit>
+  </limits>
+  <enforcement>
+    <mechanism>Agent MUST generate tool signature before EVERY tool call: TOOL_TYPE:TARGET (e.g., edit:src/foo.js, bash:npm test)</mechanism>
+    <mechanism>Agent MUST check if this signature appears in the last 2 tool calls</mechanism>
+    <mechanism>If same signature found in last 2 calls (making this the 3rd): STOP, do NOT make the tool call</mechanism>
+    <mechanism>Agent MUST track tool signatures in working memory (TODO list)</mechanism>
+  </enforcement>
+</rule>
+
+<rule id="TLD-P1-02" priority="P1" scope="universal" trigger="pre-tool-call">
+  <name>Tool Loop Response (Mandatory Exit Sequence)</name>
+  <response_sequence>
+    <step order="1">STOP immediately — do NOT make the tool call</step>
+    <step order="2">Document in activity.md: tool signature, attempt count, what was attempted each time</step>
+    <step order="3">Signal: TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times</step>
+    <step order="4">Exit current task (fresh context on next iteration may break the pattern)</step>
+  </response_sequence>
+  <enforcement>
+    <mechanism>Steps 1–4 are mandatory and sequential; skipping any step is a P1 violation</mechanism>
+    <mechanism>Signal format MUST be: TASK_INCOMPLETE_XXXX:Tool_loop_detected_&lt;description&gt; (no spaces in description, use underscores)</mechanism>
+    <mechanism>Uses TASK_INCOMPLETE (not TASK_FAILED or TASK_BLOCKED) because tool loops are often transient — fresh context on next iteration may resolve the pattern</mechanism>
+  </enforcement>
+</rule>
+
 </rules>
 
 ---
 
-## State Machine
+## State Machines
+
+### Error Loop State Machine (LPD)
 
 ```
 [ATTEMPTING] --error--> [CHECK_LIMITS]
@@ -98,6 +132,22 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 ```
 
 **Stop conditions**: Any limit breach triggers immediate transition to LPD-P1-02. No exceptions.
+
+### Tool-Use Loop State Machine (TLD)
+
+```
+[PRE_TOOL_CALL] --generate signature--> [CHECK_TOOL_HISTORY]
+                                             |
+                           +--(signature NOT in last 2 calls)--> [RECORD_SIGNATURE] --> [MAKE_TOOL_CALL]
+                           |
+                           +--(signature in last 2 calls, this = 3rd)--> [TOOL_LOOP_DETECTED]
+                           |
+                           +--(3+ consecutive same-type calls)--> [LOG_WARNING] --> [MAKE_TOOL_CALL]
+
+[TOOL_LOOP_DETECTED] --> [TLD-P1-02 Response Sequence] --> [EXIT]
+```
+
+**Stop conditions**: TLD-P1-01a breach (3x same signature) triggers immediate transition to TLD-P1-02. No exceptions.
 
 ---
 
@@ -118,6 +168,23 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 
 </checkpoint>
 
+## Compliance Checkpoint (TLD-CP-01)
+
+**Invoke at**: pre-tool-call (EVERY tool call, not just retries)
+
+<checkpoint id="TLD-CP-01" triggers="pre-tool-call">
+
+| Check | Rule | Pass? |
+|-------|------|-------|
+| Generated tool signature for this call (TOOL_TYPE:TARGET) | TLD-P1-01 | [ ] |
+| This signature NOT in last 2 tool calls | TLD-P1-01a | [ ] |
+| Not 3+ consecutive same-type tool calls | TLD-P1-01b | [ ] |
+| Tool signature recorded in working memory / TODO | TLD-P1-01 | [ ] |
+| If loop detected: documented in activity.md | TLD-P1-02 | [ ] |
+| If loop detected: signal is TASK_INCOMPLETE_XXXX:Tool_loop_detected_... | TLD-P1-02 | [ ] |
+
+</checkpoint>
+
 ---
 
 ## Using This Rule File
@@ -127,18 +194,28 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 **At start of turn:**
 - [ ] Am I retrying a previously failed task? If yes, load error history from activity.md.
 - [ ] Verify LPD-P1-01 limits are not already breached from prior turns (check activity.md).
+- [ ] Initialize tool signature tracking in working memory.
 
-**Before tool calls (when retrying):**
+**Before EVERY tool call:**
+- [ ] Generate tool signature: `TOOL_TYPE:TARGET` (e.g., `edit:src/foo.js`, `bash:npm test`)
+- [ ] Check: Is this signature in my last 2 tool calls?
+  - YES and this would be 3rd → STOP, do NOT make the call, go to TLD-P1-02
+  - NO → Record signature, proceed
+- [ ] Update tool tracking in TODO: `Tool check: TOOL:TARGET (N/3)`
+
+**Before tool calls (when retrying errors):**
 - [ ] Increment attempt counter for the current issue.
 - [ ] Compare current approach to previous attempts — is this actually different?
 - [ ] If LPD-P1-01a/b/c/d limit is reached, do NOT make the tool call; go to LPD-P1-02.
 
 **Before response:**
 - [ ] Run LPD-CP-01 compliance checkpoint table.
-- [ ] If any check fails, response MUST include the LPD-P1-02 signal.
+- [ ] Run TLD-CP-01 compliance checkpoint table.
+- [ ] If any check fails, response MUST include the appropriate signal.
 
 ### Example TODO Items
 
+**Error loop tracking:**
 ```
 - [ ] Loop check: Attempt 1/3 for issue "validation error in config.yaml"
 - [ ] Loop check: 2/5 different errors this session
@@ -146,9 +223,19 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 - [x] Loop check: No circular pattern detected
 ```
 
+**Tool-use loop tracking:**
+```
+- [ ] Tool check: edit:src/config.js (1/3)
+- [ ] Tool check: bash:npm test (1/3)
+- [ ] Tool check: read:src/utils.js (1/3)
+- [x] Tool check: No tool loop detected
+```
+
+**Pre-retry checklists:**
 ```
 - [ ] PRE-RETRY: Verify attempt count < LPD-P1-01 limits
 - [ ] PRE-RETRY: Confirm new approach differs from previous attempts
+- [ ] PRE-TOOL: Generate tool signature, check against last 2 calls (TLD-P1-01)
 - [ ] POST-ERROR: Update error signature log in activity.md
 - [ ] POST-ERROR: Check LPD-P2-01 warning indicators
 ```
@@ -163,3 +250,13 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 - **HOF-P0-01**: Handoff limit — repeated handoff cycles may indicate a loop (see: handoff.md)
 - **HOF-P0-02**: Handoff loops — self-handoff prevention (see: handoff.md)
 - **CTX-P0-01**: Context hard stop — loop may exhaust context (see: context-check.md)
+
+## Changelog
+
+### v1.3.0 (2026-03-01)
+- Added TLD-P1-01: Tool-use loop detection (same tool+target 3x = STOP)
+- Added TLD-P1-02: Tool loop response sequence (TASK_INCOMPLETE signal)
+- Added TLD-CP-01: Pre-tool-call compliance checkpoint for tool loops
+- Added tool signature and tool attempt terminology
+- Added Tool-Use Loop State Machine
+- Updated TODO integration guidance with tool tracking examples

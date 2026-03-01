@@ -230,7 +230,7 @@ sync-agents.sh [OPTIONS]
 | `--tool {opencode\|claude}` | `-t` | Tool selection (default: opencode) |
 | `--config FILE` | `-c` | Config file (default: .ralph/config/agents.yaml) |
 | `--show` | `-s` | Show parsed agents without syncing |
-| `--dry-run` | `-d` | Preview changes without modifying files |
+| `--dry-run` | `-d` | Preview changes (not yet implemented; use `--show` instead) |
 | `--help` | `-h` | Show usage |
 
 Reads agent configurations from `agents.yaml` and updates the `model` field in agent markdown files' YAML frontmatter. Searches agent directories in priority order: `.ralph/agents`, `.opencode/agents`, `.claude/agents`, `$HOME/.config/opencode/agents`, `$HOME/.claude/agents` (filtered by selected tool).
@@ -260,7 +260,7 @@ Agents emit signals to communicate task status to the Ralph loop.
 
 FAILED and BLOCKED signals require a colon and message. COMPLETE and INCOMPLETE have no message.
 
-**Signal priority** (when multiple detected): TASK_BLOCKED > TASK_COMPLETE > TASK_FAILED > TASK_INCOMPLETE.
+**Signal priority** (when multiple detected): TASK_BLOCKED > TASK_FAILED > TASK_INCOMPLETE > TASK_COMPLETE.
 
 ---
 
@@ -270,11 +270,41 @@ These scripts are sourced by other Ralph scripts and provide shared functions.
 
 | Script | Purpose |
 |--------|---------|
-| `ralph-paths.sh` | Path detection/expansion (find_project_root, find_ralph_dir, find_task_dir, expand_path) |
-| `ralph-validate.sh` | Validation utilities (validate_task_id, validate_yaml, validate_file_exists) |
-| `ralph-filter-output.sh` | Filter OpenCode JSON output (signals, tokens, tools, cost) |
+| `ralph-paths.sh` | Path detection/expansion (find_project_root, find_ralph_dir, find_task_dir, find_agent_file, expand_path, expand_path_all, expand_relative_path) |
+| `ralph-validate.sh` | Validation utilities (validate_task_id, validate_yaml, validate_file_exists, validate_dir_exists, validate_git_repo) |
 | `find-rules-files.sh` | Locate RULES.md files up the directory tree |
 | `apply-rules.sh` | Extract and merge RULES.md sections into project files |
+
+### ralph-filter-output.sh
+
+Filter and format OpenCode JSON output for human-readable display.
+
+```bash
+ralph-filter-output.sh [OPTIONS] [INPUT_FILE]
+```
+
+| Flag | Description |
+|------|-------------|
+| `--text` / `--no-text` | Show/hide text responses (default: show) |
+| `--tokens` / `--no-tokens` | Show/hide token statistics (default: show) |
+| `--tools` / `--no-tools` | Show/hide tool usage (default: show) |
+| `--cost` / `--no-cost` | Show/hide cost information (default: show) |
+| `--signals` / `--no-signals` | Show/hide task signals (default: show) |
+| `--compact` | Compact output format |
+| `--help`, `-h` | Show help |
+
+**Environment Variables:**
+
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `SHOW_TEXT` | `1` | Show text responses |
+| `SHOW_TOKENS` | `1` | Show token statistics |
+| `SHOW_TOOLS` | `1` | Show tool usage |
+| `SHOW_COST` | `1` | Show cost information |
+| `SHOW_SIGNALS` | `1` | Show task signals |
+| `COMPACT` | `0` | Compact output format |
+
+Reads from INPUT_FILE or stdin. Used by `ralph-loop.sh` to parse OpenCode output.
 
 ---
 
@@ -353,8 +383,14 @@ install-skills.sh -a                     # All skills, project scope
 Install dependencies for installed Ralph skills. Parses `SKILL.md` files for apt, pip, and npm requirements using `parse_skill_deps.py`.
 
 ```bash
-install-skill-deps.sh [--dry-run] [--verbose]
+install-skill-deps.sh [OPTIONS]
 ```
+
+| Flag | Short | Description |
+|------|-------|-------------|
+| `--dry-run` | `-d` | Preview without installing |
+| `--verbose` | `-v` | Enable verbose logging |
+| `--help` | `-h` | Show usage |
 
 ---
 

@@ -348,7 +348,7 @@ Tasks 0002 and 0003 execute independently (no dependencies between them):
 [Worker 0004] Starting implementation...
 [Worker 0004] ERROR: Storage module missing 'update' method
 [Worker 0004] Need: Task 0003 to add update method before continuing
-[Worker 0004] TASK_INCOMPLETE_0004: Depends on storage.update() method
+[Worker 0004] TASK_INCOMPLETE_0004
 
 [Manager] Discovered runtime dependency
 [Manager] Updating deps-tracker.yaml...
@@ -616,7 +616,7 @@ ID  Description       Priority  Status
 
 1. **Runtime dependency discovery** - Storage module needed enhancement mid-project
    - **What happened:** Task 0004 needed an `update()` method that wasn't in original Task 0003
-   - **Resolution:** Worker emitted `TASK_INCOMPLETE_0004: Depends on storage.update()`
+   - **Resolution:** Worker emitted `TASK_INCOMPLETE_0004` (dependency noted in activity.md)
    - **Outcome:** Manager added dependency, created enhancement task, retried successfully
 
 2. **Test failure caught by TDD cycle** - Defect in Task model found during testing
@@ -674,6 +674,6 @@ Now that you've seen Ralph in action, you can:
 
 - [Agent Selection Guide](agent-selection-guide.md) - Which agent handles which task type
 - [Phase 2 Decomposition Guide](phase2-decomposition-guide.md) - Detailed decomposition patterns
-- [Commands Reference](commands.md) - Signal formats, TODO.md grammar, all Ralph commands
-- [Configuration Reference](configuration.md) - Model mappings, environment variables, file locations
+- [Commands Reference](commands.md) - Signal formats, all Ralph commands
+- [Configuration Reference](configuration.md) - Model mappings, environment variables, file locations, TODO.md grammar
 - [Troubleshooting Guide](troubleshooting.md) - Common issues and solutions

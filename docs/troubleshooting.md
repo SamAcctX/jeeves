@@ -14,7 +14,7 @@ Run these checks first when something goes wrong.
 ```bash
 ls -la .ralph/                          # Ralph directory exists?
 cat .ralph/tasks/TODO.md                # Current task state
-cat .ralph/tasks/deps-tracker.yaml      # Dependency graph
+cat .ralph/config/deps-tracker.yaml      # Dependency graph
 git status                              # Uncommitted changes or conflicts?
 grep "ABORT" .ralph/tasks/TODO.md       # Blocked task?
 tail -n 30 .ralph/tasks/*/activity.md   # Recent agent activity
@@ -110,7 +110,7 @@ Check these in order:
 
 1. **ABORT sentinel:** `grep "ABORT: HELP NEEDED" .ralph/tasks/TODO.md` -- If found, a task previously signaled TASK_BLOCKED. Fix the issue, then remove the line: `sed -i '/^ABORT:/d' .ralph/tasks/TODO.md`
 2. **Completion sentinel:** `grep "ALL TASKS COMPLETE" .ralph/tasks/TODO.md`
-3. **Invalid deps file:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
+3. **Invalid deps file:** `yq eval '.' .ralph/config/deps-tracker.yaml`
 
 ### Loop Appears Stuck
 
@@ -254,7 +254,7 @@ Only the first valid signal is used. This is usually caused by copy-paste artifa
 
 **Problem:** Tasks cannot proceed because of a dependency cycle.
 
-**Diagnosis:** `cat .ralph/tasks/deps-tracker.yaml`
+**Diagnosis:** `cat .ralph/config/deps-tracker.yaml`
 
 **Solution:** Break the cycle by removing one dependency edge:
 ```yaml
@@ -273,7 +273,7 @@ tasks:
 
 **Cause:** Unmet dependencies in deps-tracker.yaml.
 
-**Diagnosis:** `yq eval '.tasks."XXXX".depends_on' .ralph/tasks/deps-tracker.yaml`
+**Diagnosis:** `yq eval '.tasks."XXXX".depends_on' .ralph/config/deps-tracker.yaml`
 
 **Solutions:** Complete the blocking tasks, remove the dependency if no longer needed, or check for circular dependencies.
 
@@ -290,7 +290,7 @@ tasks:
     blocks: []
 ```
 
-**Validate:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
+**Validate:** `yq eval '.' .ralph/config/deps-tracker.yaml`
 
 Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets.
 
@@ -338,7 +338,7 @@ Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets
 1. Test DNS: `nslookup api.anthropic.com`
 2. Test connectivity: `curl -I https://api.anthropic.com`
 3. Check proxy: `env | grep -i proxy`
-4. If DNS fails, configure custom DNS in Docker compose. See [configuration.md](configuration.md).
+4. If DNS fails, add `dns: ["8.8.8.8", "8.8.4.4"]` under the container service in your Docker Compose configuration.
 
 ### Web UI Not Accessible
 
@@ -417,7 +417,7 @@ A sourceable library of validation functions:
 ```bash
 source ralph-validate.sh
 validate_task_id "0042"                         # Task ID format
-validate_yaml ".ralph/tasks/deps-tracker.yaml"  # YAML syntax
+validate_yaml ".ralph/config/deps-tracker.yaml"  # YAML syntax
 validate_file_exists ".ralph/tasks/TODO.md"     # File existence
 validate_dir_exists ".ralph/tasks/0042"         # Directory existence
 validate_git_repo                               # Git repository check
@@ -457,7 +457,7 @@ Enables JSON format output in OpenCode for detailed agent interaction logs.
 | File | Purpose |
 |------|---------|
 | `.ralph/tasks/TODO.md` | Task list and completion status |
-| `.ralph/tasks/deps-tracker.yaml` | Task dependency graph |
+| `.ralph/config/deps-tracker.yaml` | Task dependency graph |
 | `.ralph/tasks/XXXX/activity.md` | Per-task execution log |
 | `.ralph/tasks/XXXX/attempts.md` | Per-task attempt history |
 | `.ralph/tasks/XXXX/TASK.md` | Task requirements and acceptance criteria |
@@ -480,7 +480,7 @@ done
 ```bash
 cp -r .ralph .ralph.backup.$(date +%Y%m%d)
 rm -rf .ralph/tasks/*
-git checkout HEAD -- .ralph/tasks/TODO.md .ralph/tasks/deps-tracker.yaml
+git checkout HEAD -- .ralph/tasks/TODO.md .ralph/config/deps-tracker.yaml
 ralph-init.sh --force
 ```
 
@@ -514,7 +514,7 @@ docker version && docker info
 
 # Container-side
 cat .ralph/tasks/TODO.md
-cat .ralph/tasks/deps-tracker.yaml
+cat .ralph/config/deps-tracker.yaml
 cat .ralph/config/agents.yaml
 ```
 

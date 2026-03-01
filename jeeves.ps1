@@ -1860,6 +1860,9 @@ function Main {
         [switch]$Dind,
 
         [Parameter(Mandatory = $false)]
+        [switch]$Raw,
+
+        [Parameter(Mandatory = $false)]
         [switch]$Zsh
     )
 
@@ -1922,7 +1925,7 @@ function Main {
     switch -Regex ($Command) {
         "^(build|b)$" {
             if ($Help) { Show-CommandHelp "build"; exit 0 }
-            Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
+            Build-Image -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode -Clean:$Clean
         }
         "^(start|up)$" {
             if ($Help) { Show-CommandHelp "start"; exit 0 }
@@ -1942,7 +1945,7 @@ function Main {
         }
         "^(shell|attach|sh)$" {
             if ($Help) { Show-CommandHelp "shell"; exit 0 }
-            Enter-Shell -New:$New -Zsh:$Zsh
+            Enter-Shell -New:$New -Raw:$Raw -Zsh:$Zsh
         }
         "^(logs|log)$" {
             if ($Help) { Show-CommandHelp "logs"; exit 0 }

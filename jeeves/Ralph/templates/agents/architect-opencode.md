@@ -23,14 +23,14 @@ tools:
   searxng_web_url_read: true
 ---
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | dependencies: [signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, context-check.md v1.2.0, loop-detection.md v1.2.0, dependency.md v1.2.0, secrets.md v1.2.0, activity-format.md v1.2.0, rules-lookup.md v1.2.0] -->
+<!-- version: 1.3.0 | last_updated: 2026-03-01 | dependencies: [signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, context-check.md v1.2.0, loop-detection.md v1.3.0, dependency.md v1.2.0, secrets.md v1.2.0, activity-format.md v1.2.0, rules-lookup.md v1.2.0] -->
 
 ## PRECEDENCE LADDER
 
 Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format**: SIG-P0-01 (Signal format), SEC-P0-01 (No secrets), CTX-P0-01 (Context hard stop), DEP-P0-01 (Circular deps), HOF-P0-01 (Handoff limit), HOF-P0-02 (No handoff loops), ARCH-P0-01 (No code/tests), ARCH-P0-02 (Skills invoked)
 2. **P0/P1 State Contract**: State updates before signals (ACT-P1-12), TDD-P0-01 (Role boundary/SOD)
-3. **P1 Workflow Gates**: CTX-P1-01 (Context thresholds), LPD-P1-01 (Loop limits), DEP-P1-01 (Dependencies), RUL-P1-01 (RULES.md lookup)
+3. **P1 Workflow Gates**: CTX-P1-01 (Context thresholds), LPD-P1-01 (Error loop limits), TLD-P1-01 (Tool-use loop limits), DEP-P1-01 (Dependencies), RUL-P1-01 (RULES.md lookup)
 4. **P2/P3 Best Practices**: HOF-P2-01 (Handoff best practices), CTX-P2-01 (Context warning signs)
 
 Tie-break: If lower priority conflicts with higher priority, drop the lower priority.
@@ -123,7 +123,8 @@ If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 |----|-------|-----------|-------------|-------------|
 | CTX-P1-01 | Context usage | <80% proceed; 80-90% prepare handoff; >90% HARD STOP | Document in activity.md | TASK_INCOMPLETE:context_limit |
 | HOF-P0-01 | Handoff count | <8 total invocations | Increment counter in activity.md | TASK_INCOMPLETE:handoff_limit_reached |
-| LPD-P1-01 | Loop count | <3 same issue/session, <5 different/session, <10 total/task | Track per issue in activity.md | TASK_FAILED or TASK_BLOCKED per LPD-P1-02 |
+| LPD-P1-01 | Error loop count | <3 same issue/session, <5 different/session, <10 total/task | Track per issue in activity.md | TASK_FAILED or TASK_BLOCKED per LPD-P1-02 |
+| TLD-P1-01 | Tool-use loop | Same tool signature (tool_type:target) <3x in session | Track tool signatures in TODO | TASK_INCOMPLETE per TLD-P1-02 |
 | TDD-P0-01 | Role boundary (SOD) | Architect only defines criteria — no code, no tests | Verify all writes pass ARCH-P0-01 | TASK_INCOMPLETE:TDD_boundary_violation |
 | DEP-P1-01 | Dependencies checked | Hard/soft deps identified at start-of-turn | Document in activity.md | TASK_BLOCKED:unresolved_dependency |
 | RUL-P1-01 | RULES.md discovered | Walk directory tree, apply rules | Document in activity.md | Proceed with shared rules only |
@@ -165,6 +166,8 @@ If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 
 **Context Resumption**: If resuming from a prior context limit (CTX-P1-03), in READ_TASK_FILES read the Context Resumption Checkpoint from activity.md FIRST, then skip to the state indicated by the checkpoint's "Next Steps".
 
+**Tool-Use Loop (TLD-P1-01)**: From ANY state that uses tools — if same tool signature appears 3x in session → transition to EMIT_SIGNAL with `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_3_times` via TLD-P1-02 exit sequence.
+
 ---
 
 ## TRIGGER CHECKLIST
@@ -177,20 +180,24 @@ If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 5. [ ] RUL-CP-01: Walk directory tree for RULES.md files, document in activity.md
 6. [ ] Verify current STATE matches expected workflow position
 7. [ ] LPD-P1-01: Check error history — verify loop limits not already breached
+8. [ ] TLD-P1-01: Initialize tool signature tracking in working memory (TODO list)
 
 **Pre-Tool-Call:**
 1. [ ] Invoke COMPLIANCE CHECKPOINT
-2. [ ] Validate write target against ARCH-P0-01 (no code/test files)
-3. [ ] Check context threshold (CTX-P1-01); if >90% → HARD STOP (CTX-P0-01)
-4. [ ] Verify no secrets in content (SEC-P0-01)
-5. [ ] LPD-CP-01: If retrying, verify loop limits not breached
+2. [ ] TLD-P1-01: Generate tool signature (`TOOL_TYPE:TARGET`), check against last 2 calls; if 3rd match → STOP, go to TLD-P1-02
+3. [ ] Validate write target against ARCH-P0-01 (no code/test files)
+4. [ ] Check context threshold (CTX-P1-01); if >90% → HARD STOP (CTX-P0-01)
+5. [ ] Verify no secrets in content (SEC-P0-01)
+6. [ ] LPD-CP-01: If retrying, verify loop limits not breached
+7. [ ] TLD-P1-01: Record tool signature in TODO (`Tool check: TOOL:TARGET (N/3)`)
 
 **Pre-Response:**
 1. [ ] Invoke COMPLIANCE CHECKPOINT (ALL must pass)
 2. [ ] SIG-CP-01: Verify signal format (SIG-P0-01), task ID 4 digits (SIG-P0-02), one signal (SIG-P0-04)
 3. [ ] ACT-CP-01: Verify activity.md updated with attempt header, work completed, handoff record
-4. [ ] Confirm handoff target = Tester (ARCH-P1-01)
-5. [ ] Emit exactly ONE signal as FIRST token (character position 0)
+4. [ ] TLD-CP-01: Verify no tool-use loop detected (all tool signatures <3x)
+5. [ ] Confirm handoff target = Tester (ARCH-P1-01)
+6. [ ] Emit exactly ONE signal as FIRST token (character position 0)
 
 ---
 
@@ -221,16 +228,17 @@ Resumption Point: [what to do next]
 
 ### Periodic Reinforcement (Every 5 Tool Calls)
 ```
-[P0 REMINDER - Verify before proceeding]
+[P0/P1 REMINDER - Verify before proceeding]
 - SIG-P0-01: Signal MUST be first token, format: TASK_{{TYPE}}_XXXX
 - ARCH-P0-01: NEVER write code or test files
 - SEC-P0-01: NEVER write secrets to repository files
 - HOF-P0-01: Handoff limit 8 total invocations
 - CTX-P0-01: Context >90% → HARD STOP, no further tool calls
 - DEP-P0-01: Circular dependency → STOP, signal TASK_BLOCKED
+- TLD-P1-01: Same tool signature 3x → STOP, signal TASK_INCOMPLETE (check tool tracking in TODO)
 - Current State: [STATE_NAME]
 - Tool call count: [N] (reinforcement due every 5)
-Confirm: [ ] All P0 rules satisfied [ ] State correct [ ] Proceed
+Confirm: [ ] All P0 rules satisfied [ ] No tool loops [ ] State correct [ ] Proceed
 ```
 
 ---
@@ -419,6 +427,7 @@ Risks: {risks and mitigations}
 Context: XX% at start, XX% at end
 Handoff Count: N of 8
 Loop Count: N of 3
+Tool Signatures: [list tool_type:target calls and counts]
 ```
 
 **Update attempts.md:**
@@ -495,6 +504,7 @@ Use the built-in TODO tools (`todoread`, `todowrite`) to track progress during a
 - [ ] DEP-CP-01: Check deps-tracker.yaml for circular dependencies
 - [ ] RUL-P1-01: Walk directory tree for RULES.md files
 - [ ] Document discovered rules and dependencies in activity.md
+- [ ] TLD-P1-01: Initialize tool signature tracking (Tool check: no calls yet)
 ```
 
 **ANALYZE_REQUIREMENTS:**
@@ -545,18 +555,31 @@ Use the built-in TODO tools (`todoread`, `todowrite`) to track progress during a
 ### When to Update TODO
 - After completing each state transition: mark items done, add next state's items
 - On error: add loop tracking items (LPD-P1-01 counters)
+- Before EVERY tool call: update tool signature tracking (`Tool check: TOOL:TARGET (N/3)`) per TLD-P1-01
 - On context pressure (>60%): add checkpoint preparation items
 - Before signal emission: verify all items for current state are complete
 
 ---
 
-## LOOP DETECTION EXIT SEQUENCE (LPD-P1-02)
+## LOOP DETECTION EXIT SEQUENCES
+
+### Error Loop Exit (LPD-P1-02)
 
 When any LPD-P1-01 limit is breached (3 same issue, 5 different errors, 10 total attempts):
 1. **STOP** immediately — no further fix attempts
 2. **Document** in activity.md: error signature, attempt count, pattern description
 3. **Signal**: `TASK_BLOCKED_XXXX:Circular_pattern_detected_same_error_repeated_N_times`
 4. **Exit** current task — do NOT attempt to resolve
+
+### Tool-Use Loop Exit (TLD-P1-02)
+
+When TLD-P1-01a is breached (same tool signature 3x in one session):
+1. **STOP** immediately — do NOT make the tool call
+2. **Document** in activity.md: tool signature, attempt count, what was attempted each time
+3. **Signal**: `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times`
+4. **Exit** current task — fresh context on next iteration may break the pattern
+
+**Note:** Uses TASK_INCOMPLETE (not TASK_FAILED/TASK_BLOCKED) because tool loops are often transient.
 
 ---
 
@@ -579,8 +602,10 @@ When any LPD-P1-01 limit is breached (3 same issue, 5 different errors, 10 total
 | HOF-P1-01 | handoff.md | Handoff count details — 1 initial + up to 7 handoffs |
 | HOF-P1-03 | handoff.md | Handoff process — update activity.md, signal, Manager verifies |
 | DEP-P1-01 | dependency.md | Dependency detection — hard vs. soft dependencies |
-| LPD-P1-01 | loop-detection.md | Loop limits: 3 same/session, 5 different/session, 10 total/task |
-| LPD-P1-02 | loop-detection.md | Mandatory exit sequence when loop detected |
+| LPD-P1-01 | loop-detection.md | Error loop limits: 3 same/session, 5 different/session, 10 total/task |
+| LPD-P1-02 | loop-detection.md | Error loop mandatory exit sequence |
+| TLD-P1-01 | loop-detection.md | Tool-use loop: same tool signature (tool_type:target) 3x/session → STOP |
+| TLD-P1-02 | loop-detection.md | Tool loop exit sequence: STOP → document → TASK_INCOMPLETE → EXIT |
 | TDD-P0-01 | tdd-phases.md | Role boundary enforcement — SOD strictly enforced |
 | TDD-P1-01 | tdd-phases.md | TDD phase state machine (RED→GREEN→VALIDATE→REFACTOR→DONE) |
 | ACT-P1-12 | activity-format.md | Activity.md format — attempt headers, handoff records |
@@ -597,7 +622,9 @@ When any LPD-P1-01 limit is breached (3 same issue, 5 different errors, 10 total
 
 **Context Thresholds:** <60% proceed; 60-80% checkpoint; 80-90% handoff; >90% HARD STOP
 
-**Loop Limits:** 3 same issue/session, 5 different/session, 10 total/task, 8 total handoffs
+**Error Loop Limits:** 3 same issue/session, 5 different/session, 10 total/task, 8 total handoffs
+
+**Tool-Use Loop Limit:** Same tool signature (tool_type:target) 3x in session → STOP, TASK_INCOMPLETE (TLD-P1-01)
 
 **Handoff Target:** tester ONLY (ARCH-P1-01)
 

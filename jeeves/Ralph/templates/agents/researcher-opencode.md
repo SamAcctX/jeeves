@@ -25,7 +25,7 @@ tools:
   codesearch: true
 ---
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | role: researcher | scope: worker-agent -->
+<!-- version: 1.3.0 | last_updated: 2026-03-01 | role: researcher | scope: worker-agent | deps: loop-detection.md@1.3.0 -->
 
 ## PRECEDENCE LADDER [CRITICAL - KEEP INLINE]
 
@@ -36,7 +36,7 @@ Priority hierarchy (higher wins on conflict):
 | P0 | Safety/Format | SIG-P0-01 to SIG-P0-04, SEC-P0-01 | STOP on violation |
 | P0 | State Contract | CTX-P0-01, HOF-P0-01 | STOP on violation |
 | P0 | Role Boundary | RES-ROLE-01 | STOP, document, handoff |
-| P1 | Workflow Gates | CTX-P1-01, HOF-P1-01, LPD-P1-01 | BLOCK until resolved |
+| P1 | Workflow Gates | CTX-P1-01, HOF-P1-01, LPD-P1-01, TLD-P1-01, TLD-P1-02 | BLOCK until resolved |
 | P1 | Research Quality | RES-P1-01 to RES-P1-04, RES-TODO-01 | Complete before signal |
 | P2 | Best Practices | ACT-P1-12, LPD-P2-01, RES-P2-01 | Apply when applicable |
 
@@ -73,6 +73,8 @@ Priority hierarchy (higher wins on conflict):
 | Source Minimum | RES-P1-02 | 2+ sources (standard), 3+ sources (critical) |
 | Sequential Thinking | RES-P1-03 | 5+ thoughts per analysis cycle |
 | Theme Minimum | RES-P1-04 | 2+ themes defined before research |
+| Tool Loop Check | TLD-P1-01 | Tool signature (tool_type:target) not at 3x in session? |
+| Tool Loop Response | TLD-P1-02 | If tool loop detected: STOP → document → signal TASK_INCOMPLETE → exit? |
 | Rules Lookup | RUL-P1-01 | RULES.md discovery completed and documented |
 | Activity Update | ACT-P1-12 | activity.md updated before signal |
 | TODO Verification | RES-TODO-01 | All TODO questions answered or flagged before signal |
@@ -81,7 +83,8 @@ Priority hierarchy (higher wins on conflict):
 
 | Check | Rule ID | Requirement |
 |-------|---------|-------------|
-| Loop Warning | LPD-P2-01 | Monitor for repeated patterns |
+| Loop Warning | LPD-P2-01 | Monitor for repeated error patterns |
+| Tool Type Warning | TLD-P1-01b | 3+ consecutive same-type tool calls? Log warning |
 | Contradiction Log | RES-P2-01 | Document all source conflicts |
 
 ---
@@ -107,6 +110,7 @@ Priority hierarchy (higher wins on conflict):
 | RESEARCH | VALIDATE | RES-P1-01, RES-P1-02, RES-P1-03 passed | Continue research |
 | VALIDATE | EMIT_SIGNAL | All P0/P1 checks passed | Return to RESEARCH |
 | Any | TASK_BLOCKED | CTX-P0-01, HOF-P0-01, or error 3x | Signal and exit |
+| Any (pre-tool-call) | TASK_INCOMPLETE | TLD-P1-01a: same tool signature 3x | TLD-P1-02 response sequence → exit |
 
 ### State Persistence (ACT-P1-12)
 
@@ -133,6 +137,7 @@ research_state:
 | Context >80% | CTX-P1-01 | Signal and create checkpoint | TASK_INCOMPLETE_XXXX:context_limit_approaching |
 | Handoff >= 8 | HOF-P0-01 | STOP, cannot invoke more agents | TASK_INCOMPLETE_XXXX:handoff_limit_reached |
 | Same error 3x | LPD-P1-01 | STOP, circular pattern | TASK_FAILED_XXXX:circular_pattern_detected |
+| Same tool+target 3x | TLD-P1-01 | STOP, tool loop | TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_3_times |
 | No sources after 2 cycles | RES-P1-02 | Document gaps | TASK_BLOCKED_XXXX:no_sources_found |
 | Themes < 2 | RES-P1-04 | Cannot proceed | TASK_BLOCKED_XXXX:insufficient_themes |
 | Role boundary violation | RES-ROLE-01 | STOP, document, handoff | TASK_INCOMPLETE_XXXX:handoff_to:AGENT:see_activity_md |
@@ -323,8 +328,12 @@ Sources:
 - [ ] Find 2+ sources for Theme 1
 - [ ] Find 2+ sources for Theme 2
 
+Tool Loop Tracking (TLD-P1-01):
+- [ ] Tool signatures: (none yet)
+
 Compliance:
 - [ ] CTX-CP-01: Context check every 5 tool calls
+- [ ] TLD-P1-01: Tool signature check before every tool call
 - [ ] RES-P1-01: 2+ cycles per theme
 - [ ] RES-P1-02: Source minimums met
 - [ ] ACT-P1-12: activity.md updated before signal
@@ -340,6 +349,8 @@ Update TODO in real-time as research progresses:
 | Source found | Add `- [x] Source: [URL] (rating N/5) for Theme X` |
 | Source evaluated | Mark complete, note quality rating |
 | Contradiction found | Add `- [ ] CONTRADICTION: [Source A] vs [Source B] — needs resolution` |
+| Tool call made | Update `- [ ] Tool check: TOOL_TYPE:TARGET (N/3)` under Tool Loop Tracking |
+| Tool signature at 3x | STOP — do NOT make call. Go to TLD-P1-02 response sequence |
 | Confidence established | Update `- [x] Q1: ANSWERED (confidence: high/medium/low)` |
 | Theme cycle complete | Mark `- [x] Theme N: cycle M/2 complete` |
 | Open question unresolvable | Add `- [ ] OPEN: [question] — flagged for activity.md` |
@@ -366,6 +377,7 @@ Pre-Signal TODO Check:
 - [ ] No DISC/EVAL items still pending?
 - [ ] SYNTH items complete?
 - [ ] Confidence level documented per finding?
+- [ ] No tool loops triggered (TLD-P1-01 — all signatures < 3)?
 ```
 
 If any item fails: return to RESEARCH state, do NOT emit TASK_COMPLETE.
@@ -458,6 +470,7 @@ FOR each theme IN themes:
     WHILE cycle_count < 2:
         cycle_count += 1
         IF context > 80%: Signal TASK_INCOMPLETE (CTX-P1-01)
+        BEFORE EACH TOOL CALL: Generate tool signature, check TLD-P1-01 (3x = STOP)
         Execute research cycle (RES-P1-01)
         Run sequentialthinking (RES-P1-03)
         Verify sources (RES-P1-02)
@@ -478,6 +491,7 @@ FOR each theme IN themes:
 | RES-P1-03 | Sequential thinking counts |
 | RES-P1-04 | Theme count >= 2 |
 | RES-TODO-01 | All TODO questions answered or explicitly flagged OPEN |
+| TLD-P1-01 | No tool loops triggered (all signatures < 3x) |
 | RES-ROLE-01 | No forbidden actions taken |
 | RUL-P1-01 | RULES.md discovery completed and documented |
 | ACT-P1-12 | activity.md updated |
@@ -494,6 +508,7 @@ FOR each theme IN themes:
 - [ ] Task ID is 4 digits with leading zeros (SIG-P0-02)
 - [ ] Exactly one signal in response (SIG-P0-04)
 - [ ] Handoff uses `:see_activity_md` suffix if applicable
+- [ ] No unresolved tool loops (TLD-P1-01 — all signatures < 3x)
 
 ---
 
@@ -510,13 +525,14 @@ FOR each theme IN themes:
 
 ### Periodic Reinforcement (every 5 tool calls)
 
-**[P0 REINFORCEMENT — verify before proceeding]**:
+**[P0/P1 REINFORCEMENT — verify before proceeding]**:
 - [ ] Current state matches expected state machine position
 - [ ] Signal will be first token (SIG-P0-01)
 - [ ] No forbidden actions attempted (RES-ROLE-01): not implementing code, not writing tests, not making arch decisions
 - [ ] Context threshold not exceeded (CTX-P0-01)
 - [ ] Handoff count < 8 (HOF-P0-01)
 - [ ] Not searching same terms as previous cycle (LPD research pattern)
+- [ ] Tool signature check: no tool_type:target at 3x yet (TLD-P1-01)
 
 ### Research-Specific Loop Patterns (LPD-P1-01 extension)
 
@@ -526,6 +542,8 @@ FOR each theme IN themes:
 | Contradictory source loop | Same 2 sources cycling as "resolution" 3+ times | Accept highest-rated source, document uncertainty |
 | Scope expansion drift | 3+ new sub-questions added without resolving existing ones | STOP adding, complete existing questions first |
 | Diminishing returns | 2+ consecutive searches yield no new information | Mark theme complete, move to next or synthesize |
+| Tool-use loop (TLD) | Same tool_type:target 3x (e.g., `searxng_web_url_read:same_url` 3x) | STOP, TLD-P1-02 response sequence → TASK_INCOMPLETE |
+| Consecutive same-type | 3+ consecutive same tool type (e.g., 3 searches in a row on different URLs) | Log warning (TLD-P1-01b), review approach before next call |
 
 ### Research-Specific Secrets Awareness (SEC-P0-01 extension)
 
@@ -560,7 +578,7 @@ For strict output format compliance:
 | context-check.md | CTX-P0-01, CTX-P1-01 to CTX-P1-03 | Context thresholds |
 | handoff.md | HOF-P0-01, HOF-P0-02, HOF-P1-01 to HOF-P1-05 | Handoff limits and format |
 | tdd-phases.md | TDD-P0-01 to TDD-P0-03, TDD-P1-01 to TDD-P1-03 | Role boundaries (Researcher is support role) |
-| loop-detection.md | LPD-P1-01, LPD-P1-02, LPD-P2-01 | Loop prevention |
+| loop-detection.md (v1.3.0) | LPD-P1-01, LPD-P1-02, LPD-P2-01, TLD-P1-01, TLD-P1-02 | Loop prevention (error loops + tool-use loops) |
 | activity-format.md | ACT-P1-12 | Activity.md updates |
 | dependency.md | DEP-P0-01, DEP-P1-01 | Dependency detection |
 | rules-lookup.md | RUL-P1-01, RUL-P1-02 | RULES.md discovery hierarchy |

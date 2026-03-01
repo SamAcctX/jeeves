@@ -98,7 +98,7 @@ The easiest way to install the Deepest-Thinking agent is by using the Jeeves man
 
 ```bash
 # Open a terminal in your Jeeves project directory
-cd /home/bweigel/Desktop/jeeves
+cd /path/to/jeeves
 
 # Install the Deepest-Thinking agent globally
 ./jeeves/bin/install-agents.sh --deepest
@@ -118,8 +118,8 @@ cd /path/to/your/ralph/project
 mkdir -p .opencode/agents .claude/agents
 
 # Copy the Deepest-Thinking agent templates
-cp /home/bweigel/Desktop/jeeves/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md .opencode/agents/deepest-thinking.md
-cp /home/bweigel/Desktop/jeeves/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md .claude/agents/deepest-thinking.md
+cp /path/to/jeeves/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md .opencode/agents/deepest-thinking.md
+cp /path/to/jeeves/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md .claude/agents/deepest-thinking.md
 ```
 
 #### Global Installation (for All Projects)
@@ -127,11 +127,11 @@ cp /home/bweigel/Desktop/jeeves/jeeves/Deepest-Thinking/deepest-thinking-claude-
 ```bash
 # Install OpenCode template
 mkdir -p ~/.config/opencode/agents
-cp /home/bweigel/Desktop/jeeves/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md ~/.config/opencode/agents/deepest-thinking.md
+cp /path/to/jeeves/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md ~/.config/opencode/agents/deepest-thinking.md
 
 # Install Claude Code template
 mkdir -p ~/.claude/agents
-cp /home/bweigel/Desktop/jeeves/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md ~/.claude/agents/deepest-thinking.md
+cp /path/to/jeeves/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md ~/.claude/agents/deepest-thinking.md
 ```
 
 ## Configuration Details
@@ -203,8 +203,8 @@ To begin a research session:
 
 ```bash
 # Within your Ralph project
-./ralph init  # Initialize project structure
-./ralph loop  # Start interactive loop
+ralph-init.sh  # Initialize project structure
+ralph-loop.sh  # Start autonomous loop
 
 # Or use directly in your IDE
 # OpenCode: Switch to Deepest-Thinking agent
@@ -366,8 +366,8 @@ your-project/
 
 ```bash
 # Within your Ralph project
-./ralph init
-# Now in interactive loop
+ralph-init.sh
+# Now start the autonomous loop
 
 You: I need to research microservices architecture patterns for our new e-commerce platform
 

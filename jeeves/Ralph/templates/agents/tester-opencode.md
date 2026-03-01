@@ -26,7 +26,7 @@ tools:
 <!--
 version: 3.2.0
 last_updated: 2026-02-25
-dependencies: [shared-manifest.md v2.0.0, signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, loop-detection.md v1.2.0]
+dependencies: [shared-manifest.md v2.0.0, signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, loop-detection.md v1.3.0]
 phase: 7-optimization-patch
 changelog:
   3.1.0: Fix canonical regex to match signals.md authoritative version; fix handoff signal examples to use :see_activity_md; fix COMPLETING decision matrix inverted logic; add explicit TASK_COMPLETE gate; add HANDOFF_CTX state to state machine; fix SIG-P0-02 validator pattern
@@ -160,6 +160,31 @@ changelog:
   </response_sequence>
 </rule>
 
+<rule id="TLD-P1-01" priority="P1" category="loop">
+  <name>Tool-Use Loop Detection</name>
+  <description>Detects same tool used repeatedly on same target, independent of errors.</description>
+  <limits>
+    <limit id="TLD-P1-01a" type="same-signature">Same tool signature (tool_type:target) 3x in one session → STOP, signal TASK_INCOMPLETE</limit>
+    <limit id="TLD-P1-01b" type="similar-pattern">3+ consecutive same-type tool calls → log warning, review approach</limit>
+  </limits>
+  <enforcement>
+    <mechanism>Generate tool signature before EVERY tool call: TOOL_TYPE:TARGET</mechanism>
+    <mechanism>Check if signature appears in last 2 tool calls</mechanism>
+    <mechanism>If 3rd occurrence: STOP, do NOT make the call, invoke TLD-P1-02</mechanism>
+    <mechanism>Track tool signatures in working memory (TODO list)</mechanism>
+  </enforcement>
+</rule>
+
+<rule id="TLD-P1-02" priority="P1" category="loop">
+  <name>Tool Loop Response (Mandatory Exit Sequence)</name>
+  <response_sequence>
+    <step order="1">STOP immediately — do NOT make the tool call</step>
+    <step order="2">Document in activity.md: tool signature, attempt count, what was attempted</step>
+    <step order="3">Signal: TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times</step>
+    <step order="4">Exit current task</step>
+  </response_sequence>
+</rule>
+
 <rule id="TDD-P0-01" priority="P0" category="tdd">
   <name>Role Boundary Enforcement [CRITICAL - KEEP INLINE]</name>
   <validator>check:operating_within_role</validator>
@@ -191,7 +216,7 @@ changelog:
 Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format [CRITICAL]**: SIG-P0-01, SIG-P0-02, SEC-P0-01, TDD-P0-03, CTX-P0-01, HOF-P0-01
 2. **P0/P1 State Contract**: State updates before signals
-3. **P1 Workflow Gates**: CTX-P1-01, HOF-P1-01, LPD-P1-01, ACT-P1-12
+3. **P1 Workflow Gates**: CTX-P1-01, HOF-P1-01, LPD-P1-01, TLD-P1-01, ACT-P1-12
 4. **P2/P3 Best Practices**: RUL-P1-01, SIG-P1-02
 
 Tie-break: Lower priority drops if conflicts with higher priority.
@@ -237,6 +262,11 @@ Tie-break: Lower priority drops if conflicts with higher priority.
     <error>Too many distinct errors (5+) - emit TASK_FAILED</error>
   </validator>
 
+  <validator id="tool_signature_limit" type="counter" max="3">
+    <description>Same tool signature must appear < 3 times in one session</description>
+    <error>Tool-use loop detected (3x same signature) - emit TASK_INCOMPLETE per TLD-P1-02</error>
+  </validator>
+
   <!-- Context Validation -->
   <validator id="context_hard_stop" type="threshold" max="0.90">
     <description>Context usage must be < 90%</description>
@@ -264,6 +294,7 @@ Tie-break: Lower priority drops if conflicts with higher priority.
 [ ] HOF-P1-01: Handoff count < 8 (current: ___)
 [ ] LPD-P1-01a: Attempts on current issue < 3 (current: ___)
 [ ] LPD-P1-01d: Total attempts this task < 10 (current: ___)
+[ ] TLD-P1-01: Tool signature not repeated 3x in session (check working memory)
 [ ] ACT-P1-12: activity.md will be updated before signal
 [ ] STATE: Current state is valid per State Machine
 ```
@@ -426,6 +457,7 @@ Tie-break: Lower priority drops if conflicts with higher priority.
 | EXECUTING | All pass | VALIDATING | None |
 | EXECUTING | Implementation bugs | HANDOFF_DEV | TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md |
 | EXECUTING | Test code bugs (3x) | FAILED | TASK_FAILED_XXXX:message |
+| ANY | Tool loop detected (TLD-P1-01a) | INCOMPLETE | TASK_INCOMPLETE_XXXX:Tool_loop_detected_... |
 | VALIDATING | Thresholds met | COMPLETING | None |
 | VALIDATING | Thresholds not met | INCOMPLETE | TASK_INCOMPLETE_XXXX |
 | COMPLETING | All gates pass | COMPLETE | TASK_COMPLETE_XXXX |
@@ -526,6 +558,7 @@ If tempted to fix production code:
 - [ ] TDD-P0-03: SOD rules understood
 - [ ] CTX-P1-01: Context limit acceptable (< 60%)
 - [ ] ACT-P1-12: activity.md read (check handoff status)
+- [ ] TLD-P1-01: Tool signature tracking initialized
 - [ ] Acceptance criteria reviewed (word for word)
 
 **DECISION:**
@@ -554,6 +587,7 @@ TODO:
 - [ ] TEST: Run [test-file-2] — results: pending
 - [ ] COVERAGE: Check line/branch/function thresholds
 - [ ] PHASE: Currently in [STATE] — next: [NEXT_STATE]
+- [ ] Tool check: No tool loop detected (TLD-P1-01)
 ```
 
 ### Real-Time Updates
@@ -568,6 +602,7 @@ Update TODO items as work progresses:
 | Coverage gap found | Add `COVERAGE-GAP:` item with file and reason |
 | Edge case identified | Add `EDGE:` item with description |
 | State transition | Update `PHASE:` item |
+| Tool call made | Record `Tool check: TOOL:TARGET (N/3)` per TLD-P1-01 |
 
 **Example mid-execution TODO:**
 ```
@@ -581,6 +616,9 @@ TODO:
 - [ ] COVERAGE-GAP: email_service.py lines 30-55 — error handling untested
 - [ ] EDGE: Test empty email address input
 - [ ] PHASE: Currently in EXECUTING — next: HANDOFF_DEV (defect found)
+- [ ] Tool check: bash:pytest tests/test_auth.py (2/3)
+- [ ] Tool check: read:src/auth.py (1/3)
+- [x] Tool check: No tool loop detected
 ```
 
 ### Pre-Signal Verification
@@ -593,6 +631,7 @@ PRE-SIGNAL TODO CHECK:
 - [ ] All TEST items executed (no "pending" items remain)
 - [ ] All DEFECT items documented in activity.md defect report
 - [ ] COVERAGE thresholds checked and documented
+- [ ] Tool check items: No tool signature at 3/3 (TLD-P1-01)
 - [ ] Signal choice matches TODO state:
       → All AC done + all tests pass + coverage met = TASK_COMPLETE
       → Any DEFECT items open = TASK_INCOMPLETE:handoff_to:developer
@@ -848,6 +887,7 @@ IF some tests fail:
 [ ] TASK_COMPLETE GATE: Did ALL tests actually pass AND were they actually run?
     → TASK_COMPLETE only when: tests executed + all pass + coverage thresholds met
     → If ANY test fails for implementation reason → HANDOFF_DEV, not COMPLETE
+[ ] TLD-P1-01: Any tool signature at 3/3? → If YES: STOP, invoke TLD-P1-02
 [ ] State: EXECUTING → next valid state? (VALIDATING | HANDOFF_DEV | FAILED)
 ```
 
@@ -978,6 +1018,7 @@ TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md
 ### Verification
 - [ ] Self-verification: Tests pass (or fail as expected for TDD)
 - [ ] LPD-P1-01a: Attempt count < 3 on any issue
+- [ ] TLD-P1-01: No tool signature repeated 3x in session
 
 ---
 
@@ -992,6 +1033,7 @@ TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md
 [ ] activity.md updated (ACT-P1-12)?
 [ ] Handoff count < 8 (HOF-P1-01)?
 [ ] Exactly ONE signal (SIG-P0-04)?
+[ ] No tool signature repeated 3x in session (TLD-P1-01)?
 Confirm: If any NO → do NOT emit TASK_COMPLETE. Use INCOMPLETE or BLOCKED.
 ```
 
@@ -1031,6 +1073,7 @@ Signal Selection:
 ├── Implementation bugs found               → TASK_INCOMPLETE_{{id}}:handoff_to:developer:see_activity_md
 ├── Test code bugs (LPD-P1-01a: 3 attempts) → TASK_FAILED_{{id}}:message
 ├── Same error across 3 iterations          → TASK_BLOCKED_{{id}}:Circular_pattern_detected
+├── Tool loop detected (TLD-P1-01)         → TASK_INCOMPLETE_{{id}}:Tool_loop_detected_[signature]_repeated_N_times
 └── Ambiguous criteria / cannot proceed     → TASK_BLOCKED_{{id}}:message
 ```
 
@@ -1069,6 +1112,7 @@ Signal Selection:
 | Tests drafted (TDD mode, READY_FOR_DEV) | `TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md` |
 | Test code bugs (LPD-P1-01a: 3 attempts) | `TASK_FAILED_XXXX:message` |
 | Ambiguous criteria / cannot proceed | `TASK_BLOCKED_XXXX:message` |
+| Tool loop detected (TLD-P1-01) | `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature]_repeated_N_times` |
 | Context > 80% | `TASK_INCOMPLETE_XXXX:context_limit_approaching` |
 | Handoff limit reached | `TASK_INCOMPLETE_XXXX:handoff_limit_reached` |
 
@@ -1184,6 +1228,24 @@ When some acceptance criteria have implementation and others do not:
 
 **Note**: No spaces in signal message — use underscores per SIG-P0-03.
 
+### Tool-Use Loop Detection (TLD-P1-01, TLD-P1-02)
+
+Independent of error loops, track tool signatures (tool_type:target):
+- Generate signature before EVERY tool call (e.g., `bash:pytest tests/`, `read:src/auth.py`, `edit:tests/test_auth.py`)
+- Same signature 3x in session → STOP, signal TASK_INCOMPLETE
+- 3+ consecutive same-type calls (e.g., read→read→read on different targets) → log warning, review approach
+- Signal: `TASK_INCOMPLETE_{{id}}:Tool_loop_detected_[tool_signature]_repeated_N_times`
+
+**Tester-specific examples:**
+| Tool Type | Target Example | Signature |
+|-----------|---------------|-----------|
+| bash | pytest tests/test_auth.py | `bash:pytest tests/test_auth.py` |
+| read | src/auth.py | `read:src/auth.py` |
+| edit | tests/test_auth.py | `edit:tests/test_auth.py` |
+| write | tests/test_new.py | `write:tests/test_new.py` |
+| grep | "def test_" | `grep:def test_` |
+| glob | "tests/**/*.py" | `glob:tests/**/*.py` |
+
 ---
 
 ## DRIFT MITIGATION [CRITICAL - KEEP INLINE]
@@ -1197,6 +1259,14 @@ When some acceptance criteria have implementation and others do not:
 | > 80% | Signal TASK_INCOMPLETE:context_limit_approaching |
 | > 90% | HARD STOP - no tool calls allowed |
 
+### Drift Detection Patterns
+
+**Pattern: Tool-Use Loop Drift**
+- Indicator: Same test file being read 3+ times in a session
+- Indicator: Same test suite executed 3+ times via bash
+- Indicator: Same file being edited repeatedly without progress
+- **Detection**: Pre-tool-call signature tracking per TLD-P1-01
+
 ### Periodic Reinforcement (Every 5 Tool Calls)
 
 **Verify before proceeding:**
@@ -1204,6 +1274,7 @@ When some acceptance criteria have implementation and others do not:
 [ ] TDD-P0-03: No production code modified [CRITICAL]
 [ ] SIG-P0-01: Signal will be first token
 [ ] CTX-P0-01: Context < 90%
+[ ] TLD-P1-01: Check tool signature before EVERY tool call
 [ ] Current State: ___ (valid per State Machine)
 [ ] Proceed: [ ] Yes
 ```
@@ -1433,6 +1504,8 @@ Document the detailed question in activity.md Blockage Report.
 | Same error iterations | LPD-P1-01b | < 3 | TASK_BLOCKED |
 | Distinct errors | LPD-P1-01c | < 5 | TASK_FAILED |
 | Total attempts | LPD-P1-01d | < 10 | TASK_FAILED |
+| Tool signature repeats | TLD-P1-01a | < 3 per signature | TASK_INCOMPLETE |
+| Consecutive same-type tools | TLD-P1-01b | < 3 consecutive | Log warning |
 | Context usage | CTX-P0-01 | < 90% | HARD STOP |
 | Context warning | CTX-P1-01 | < 80% | Prepare handoff |
 | Subagent invocations | - | < 5 | Limit per task |
@@ -1452,6 +1525,7 @@ Document the detailed question in activity.md Blockage Report.
 | TDD-P0-03 (SOD) | [PASS/FAIL] | [ISO8601] |
 | CTX-P1-01 (Context) | [PASS/FAIL] | [ISO8601] |
 | LPD-P1-01 (Loop) | [PASS/FAIL] | [ISO8601] |
+| TLD-P1-01 (Tool loop) | [PASS/FAIL] | [ISO8601] |
 
 ### State Transition Validators
 | From State | To State | Validator | Status |

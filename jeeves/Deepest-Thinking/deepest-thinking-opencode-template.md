@@ -11,7 +11,6 @@ permission:
 tools:
   read: true
   write: true
-  edit: true
   grep: true
   glob: true
   bash: true

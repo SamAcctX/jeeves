@@ -502,7 +502,7 @@ The loop monitors for these signals in stdout:
 | `TASK_INCOMPLETE_XXXX` | Needs more work | Continue loop |
 | `TASK_FAILED_XXXX: msg` | Error encountered | Retry with backoff |
 | `TASK_BLOCKED_XXXX: msg` | Blocked | Add ABORT line, terminate |
-| `ALL_TASKS_COMPLETE, EXIT LOOP` | All done | Graceful exit |
+| `ALL TASKS COMPLETE, EXIT LOOP` | All done | Graceful exit |
 
 ---
 
@@ -582,6 +582,8 @@ claude -p --dangerously-skip-permissions --model {model}
 | `researcher` | Investigation | Analysis, documentation |
 | `writer` | Documentation | Content creation, editing |
 | `decomposer` | Decomposition | Task breakdown, TODO management |
+| `decomposer-architect` | Architecture analysis | System design during decomposition |
+| `decomposer-researcher` | Technical research | Context investigation during decomposition |
 
 ## Configuration Files
 

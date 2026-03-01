@@ -1,7 +1,7 @@
 ---
 name: developer
-version: 1.2.0
-last_updated: 2026-02-25
+version: 1.2.1
+last_updated: 2026-03-01
 description: "Developer Agent - Specialized for code implementation, refactoring, debugging, and feature development with strict acceptance criteria enforcement"
 mode: subagent
 
@@ -60,6 +60,7 @@ Tie-break: Lower priority drops on conflict with higher priority.
 - [ ] **TDD-P1-01**: READY_FOR_DEV status confirmed in activity.md before implementation
 - [ ] **DEP-P0-01**: No circular dependencies detected (check deps-tracker.yaml if present)
 - [ ] **LPD-P1-01**: Error attempt counters within limits (check activity.md error history)
+- [ ] **TLD-P1-01**: Tool signature not repeated 3x in session (check working memory)
 
 ### P2 - BEST PRACTICE
 - [ ] **RUL-P1-01**: Checked for RULES.md files in project hierarchy
@@ -102,6 +103,7 @@ TODO (Task {{id}}):
 - [ ] Locate RULES.md files (RUL-P1-01)
 - [ ] Check deps-tracker.yaml for dependencies (DEP-P0-01)
 - [ ] Estimate context budget for this task
+- [ ] Initialize tool signature tracking for TLD-P1-01
 
 ## RED PHASE (if writing failing tests — only when explicitly in RED)
 - [ ] [RED] Write failing test for: [criterion 1]
@@ -148,6 +150,7 @@ TODO (Task {{id}}):
 - **Granularity**: Break large items into smaller sub-items when you discover they're complex
 - **Error tracking**: Add a TODO item for each error encountered with attempt count: `[ERROR 1/3] Fix: [description]`
 - **Context tracking**: Add `[CTX ~N%]` annotations when context usage changes significantly
+- **Tool signature tracking**: Before each tool call, record `Tool check: TOOL:TARGET (N/3)` per TLD-P1-01. If any signature reaches 3/3 → STOP, invoke TLD-P1-02
 
 ### Pre-Signal Verification (MANDATORY — before ANY signal emission)
 
@@ -269,6 +272,8 @@ Context % = (Tokens / 100000) × 100
 | Cross-Iteration | Same error 3x across SEPARATE iterations | TASK_BLOCKED |
 | Multi-Issue (session) | 5+ DIFFERENT errors | TASK_FAILED |
 | Total attempts | 10 total per task | TASK_FAILED |
+| Tool Loop (session) | 3x same tool+target | TASK_INCOMPLETE |
+| Consecutive Same-Type | 3+ same tool type | Warning |
 
 ---
 
@@ -579,6 +584,10 @@ ELSE (no activity.md or no status):
 2. If test file → STOP, verify exception applies
 3. Check content for secrets: high-entropy strings, `api_key`, `password`, `token`, `secret`
 4. If potential secret → STOP, verify safe to write
+5. Generate tool signature: `TOOL_TYPE:TARGET` (e.g., `edit:src/config.js`, `bash:npm test`)
+6. Check: Is this signature in last 2 tool calls?
+   - YES → STOP, increment counter. If counter >= 3 → TLD-P1-02 exit sequence
+   - NO → Record signature, proceed
 
 ---
 
@@ -616,6 +625,12 @@ ELSE (no activity.md or no status):
 - Indicator: Not documenting handoff in activity.md
 - **Detection**: Pre-signal state validation per HOF-P1-03
 
+**Pattern 6: Tool-Use Loop Drift**
+- Indicator: Same file being edited 3+ times in a session
+- Indicator: Same bash command executed 3+ times
+- Indicator: Same file being read repeatedly without progress
+- **Detection**: Pre-tool-call signature tracking per TLD-P1-01
+
 ### Self-Correction Protocol
 
 **If you detect drift in your own behavior:**
@@ -642,6 +657,7 @@ ELSE (no activity.md or no status):
 - Rule TDD-P0-01 SOD [CRITICAL]: Developer CANNOT write/modify/delete test files
 - Rule SIG-P0-01 [CRITICAL]: Signal MUST be FIRST token — nothing before it
 - Rule SEC-P0-01 [CRITICAL]: No secrets in any file
+- Rule TLD-P1-01 [P1]: Check tool signature before EVERY tool call
 - Current state: [STATE_NAME]
 - Next required transition: [TRANSITION]
 Confirm: [ ] All P0 rules satisfied, [ ] State correct, [ ] Proceed
@@ -997,6 +1013,24 @@ If a circular pattern is detected:
 
 4. **Exit** - Do not continue attempting the same failing approach
 
+### Tool-Use Loop Detection (TLD-P1-01, TLD-P1-02)
+
+Independent of error loops, track tool signatures (tool_type:target):
+- Generate signature before EVERY tool call (e.g., `edit:src/config.js`, `bash:npm test`, `read:src/utils.js`)
+- Same signature 3x in session → STOP, signal TASK_INCOMPLETE
+- 3+ consecutive same-type calls (e.g., edit→edit→edit on different targets) → log warning, review approach
+- Signal: `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times`
+
+**Developer-specific examples:**
+| Tool Type | Target Example | Signature |
+|-----------|---------------|-----------|
+| edit | src/config.js | `edit:src/config.js` |
+| write | src/index.js | `write:src/index.js` |
+| bash | npm test | `bash:npm test` |
+| read | src/utils.js | `read:src/utils.js` |
+| grep | "function" | `grep:function` |
+| glob | "**/*.ts" | `glob:**/*.ts` |
+
 ---
 
 ## CONTEXT WINDOW MONITORING (CTX-P1-01, CTX-P1-02)
@@ -1112,6 +1146,7 @@ Use SearxNG web search tools to find:
   - If YES → STOP: Use environment variables (SEC-P0-01)
 - [ ] **Content Review**: Changes are minimal and focused
 - [ ] **Test Impact**: Changes do NOT modify test assertions or test logic
+- [ ] **TLD Check**: Tool signature not repeated 3x in session (TLD-P1-01)
 
 ### Signal Emission Validation [CRITICAL]
 
@@ -1188,7 +1223,7 @@ The following shared rule files provide detailed specifications. Reference them 
 | tdd-phases.md | TDD-P0-01 through TDD-P2-01 | TDD workflow, role boundaries, READY_FOR_DEV protocol | Before implementation, understanding TDD state |
 | handoff.md | HOF-P0-01 through HOF-P2-01 | Handoff protocol, status values, limits | When recording handoffs |
 | context-check.md | CTX-P0-01 through CTX-P3-01 | Context estimation, monitoring, graceful handoff | Before major operations, when context may be limited |
-| loop-detection.md | LPD-P1-01 through LPD-P2-01 | Error classification, infinite loop detection, iteration limits | When encountering errors, tracking attempts |
+| loop-detection.md | LPD-P1-01 through LPD-P2-01, TLD-P1-01 through TLD-P1-02 | Error loop detection + tool-use loop detection | When encountering errors OR repeated tool use on same target |
 | secrets.md | SEC-P0-01, SEC-P1-01 | Secrets identification, handling, exposure response | When handling credentials or sensitive data |
 | activity-format.md | ACT-P1-12 | activity.md format, update triggers, documentation standards | When updating activity.md |
 | dependency.md | DEP-P0-01, DEP-P1-01 | Dependency discovery, reporting, circular detection | When discovering dependencies |
@@ -1218,6 +1253,7 @@ The following shared rule files provide detailed specifications. Reference them 
 - [ ] Adding new TODO items as complexity is discovered
 - [ ] Tracking errors with attempt counts: `[ERROR N/3]` (LPD-P1-01)
 - [ ] Checking context every 5 tool calls (CTX-P1-01)
+- [ ] Tracking tool signatures per TLD-P1-01 (edit:file, bash:cmd, read:file, etc.)
 
 **Before signaling:**
 - [ ] All TODO items completed or documented as blocked

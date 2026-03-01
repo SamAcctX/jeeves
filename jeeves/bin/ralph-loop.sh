@@ -276,27 +276,16 @@ invoke_opencode_manager() {
     
     MANAGER_OUTPUT=$(mktemp)
     local start_time=$(date +%s)
-
-    # # Start web server in background
-    # opencode web --port 3334 &
-    # WEB_PID=$!
-
-    # # Wait for server to be ready
-    # sleep 2
     
     export OPENCODE_PERMISSION='{"*":"allow","question":"deny"}'
     
-    if opencode run --agent manager --attach http://localhost:3333 $model_arg $format_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if opencode run --agent manager $model_arg $format_arg < "$prompt_path" | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
         log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
-        # Kill the web server
-        kill $WEB_PID
         return 0
     else
         local duration=$(($(date +%s) - start_time))
         log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
-        # Kill the web server
-        kill $WEB_PID
         return 1
     fi
 }
@@ -319,7 +308,7 @@ invoke_claude_manager() {
     MANAGER_OUTPUT=$(mktemp)
     local start_time=$(date +%s)
     
-    if claude -p --dangerously-skip-permissions $model_arg $verbose_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if claude -p --dangerously-skip-permissions $model_arg $verbose_arg < "$prompt_path"  | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
         log_message INFO "Claude Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
@@ -345,7 +334,7 @@ extract_signal_message() {
     local signal="$2"
     
     if echo "$output" | grep -qE "${signal}.*:"; then
-        echo "$output" | grep -oE "${signal}:.*" | head -1 | sed 's/[^:]*: //'
+        echo "$output" | grep -oE "${signal}:.*" | head -1 | sed 's/[^:]*: \?//'
     else
         echo ""
     fi
@@ -388,7 +377,7 @@ parse_todo_md() {
         return 0
     fi
     
-    if grep -qE "^ALL TASKS COMPLETE, EXIT LOOP" "$todo_file"; then
+    if grep -qE "^ALL[_ ]TASKS[_ ]COMPLETE, EXIT LOOP" "$todo_file"; then
         print_info "ALL TASKS COMPLETE, EXIT LOOP sentinel detected"
         SHOULD_TERMINATE=1
         return 0

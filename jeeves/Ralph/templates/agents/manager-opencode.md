@@ -25,7 +25,7 @@ tools:
 <!--
 version: 5.2.0
 last_updated: 2026-02-25
-dependencies: [signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, context-check.md v1.2.0, loop-detection.md v1.2.0, dependency.md v1.2.0]
+dependencies: [signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, context-check.md v1.2.0, loop-detection.md v1.3.0, dependency.md v1.2.0]
 phase: 5-optimization-final
 -->
 
@@ -210,6 +210,8 @@ CHECK selection_cycles < 10: YES/NO → (if NO: emit TASK_BLOCKED_0000:cycle_lim
 CHECK error_hash not in error_hashes[0:3]: YES/NO → (LPD-P1-01a — if NO: emit TASK_BLOCKED_0000:error_loop_same_issue)
 CHECK error_count_different < 5: YES/NO → (LPD-P1-01c — if NO: emit TASK_FAILED_XXXX:too_many_different_errors)
 CHECK total_attempts < 10: YES/NO → (LPD-P1-01d — if NO: emit TASK_FAILED_XXXX:max_attempts_exceeded)
+CHECK tool_signature not in tool_signatures[-2:]: YES/NO → (TLD-P1-01a — if NO: emit TASK_INCOMPLETE_XXXX:Tool_loop_detected_[signature])
+CHECK consecutive_same_type < 3: YES/NO → (TLD-P1-01b — if NO: LOG WARNING, review approach)
 ```
 
 ### V4: Pre-Write
@@ -321,6 +323,9 @@ total_attempts: 0           # total fix attempts across all errors this task (LP
 tdd_phase: ""               # current TDD phase (RED/GREEN/VALIDATE/REFACTOR/SAFETY_CHECK/DONE)
 tdd_validation_complete: false
 tool_call_count: 0          # for periodic reinforcement trigger (every 3)
+tool_signatures: []         # last 3 tool signatures for TLD-P1-01 tracking
+consecutive_same_type: 0    # consecutive same-type tool calls for TLD-P1-01b
+last_tool_type: ""          # last tool type used
 ```
 
 ### Error Recovery (ERROR State)
@@ -346,6 +351,7 @@ tool_call_count: 0          # for periodic reinforcement trigger (every 3)
 | 10 total attempts | `TASK_FAILED_XXXX:max_attempts_exceeded` | V3 (LPD-P1-01d) |
 | Handoff bounce-back | `TASK_INCOMPLETE_XXXX:handoff_loop_detected` | V7 (HOF-P0-02) |
 | Unparseable Worker signal | `TASK_FAILED_XXXX:unparseable_worker_response` | PARSE_SIGNAL |
+| Tool loop (3x same) | `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[sig]` | V3 (TLD-P1-01a) |
 | Compliance fail | `TASK_FAILED_0000:compliance` | Any validator |
 
 ---
@@ -462,6 +468,9 @@ total_attempts: 0
 tdd_phase: ""
 tdd_validation_complete: false
 tool_call_count: 0
+tool_signatures: []
+consecutive_same_type: 0
+last_tool_type: ""
 ```
 
 **If skills not invoked:**
@@ -670,6 +679,16 @@ Execute V4.
 | FAILED | No change | No change | "Task {id} failed: {reason}" |
 | BLOCKED | Add ABORT line | No change | "Task {id} blocked: {reason}" |
 
+**COMPLETE — Move task folder to done/ [CRITICAL]:**
+```
+1. Create done/ directory if missing:
+   mkdir -p .ralph/tasks/done
+2. Move task folder:
+   mv .ralph/tasks/{task_id} .ralph/tasks/done/{task_id}
+3. Verify move succeeded (folder exists at destination)
+4. If move fails: log error in activity, do NOT block signal emission
+```
+
 **Update manager-activity.md:**
 ```markdown
 ## Cycle {selection_cycles} [{timestamp}]
@@ -726,6 +745,7 @@ EXIT.
 
 - [ ] V2 executed (for read): not reading forbidden files (activity.md, attempts.md, TASK.md pre-selection) (MGR-P0-02)
 - [ ] V3 executed: context < 90%, handoff < 8, cycles < 10, error_count_different < 5, total_attempts < 10
+- [ ] TLD-P1-01: Tool signature not repeated 3x (check tool_signatures history)
 - [ ] V4 executed (for write): no secrets in content (SEC-P0-01)
 - [ ] V7 executed (for Worker invoke): SOD passes (MGR-P0-01), no bounce-back (HOF-P0-02)
 
@@ -804,6 +824,7 @@ Confirm: [ ] handoff < 8  [ ] context OK  [ ] orchestrating only  [ ] Proceed
 - [ ] Agent: {current_agent} for task {task_id}
 - [ ] HOF-P0-01: handoff_count = {X}/8 — limit OK
 - [ ] HOF-P0-02: No bounce-back — last_handoff_from = {agent}
+- [ ] TLD-P1-01: Tool signature check — [TOOL:TARGET] (N/3)
 - [ ] V7 SOD check passed — I am orchestrating, not implementing
 - [ ] Invoke Worker and await signal
 ```
@@ -872,7 +893,7 @@ There is no maximum on TODO items. Add as many items as needed to maintain full 
 | secrets.md | SEC-* | Secrets protection |
 | context-check.md | CTX-* | Context window management |
 | handoff.md | HOF-* | Handoff protocols |
-| loop-detection.md | LPD-* | Loop prevention |
+| loop-detection.md | LPD-P1-01 through LPD-P2-01, TLD-P1-01 through TLD-P1-02 | Loop prevention (error loops + tool-use loops) |
 | tdd-phases.md | TDD-* | TDD workflow |
 | activity-format.md | ACT-* | Activity logging |
 | dependency.md | DEP-* | Dependency tracking |
@@ -894,6 +915,8 @@ V1 → Read (V2) → Override? → Select (V3) → Agent (V7) → Invoke (V3/V4/
 | Same error (cross-iteration) | 3 iterations | LPD-P1-01b |
 | Different errors (session) | 5 max | LPD-P1-01c |
 | Total attempts (task) | 10 max | LPD-P1-01d |
+| Same tool+target (session) | 3 invocations | TLD-P1-01a |
+| Consecutive same-type tools | 3 (warning) | TLD-P1-01b |
 | Self-consults | 2 max per task | Step 4 Priority 3 |
 
 ### Valid Signals Examples

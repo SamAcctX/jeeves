@@ -403,6 +403,6 @@ For model mappings per agent, see the `agents.yaml` reference in [configuration.
 ## Related Documentation
 
 - [Configuration Reference](configuration.md) -- agent model mappings, `agents.yaml` template, environment variables
-- [Troubleshooting Guide](troubleshooting.md) -- agent selection issues, handoff problems, TDD cycle errors
+- [Troubleshooting Guide](troubleshooting.md) -- agent selection issues, signal problems, sync failures
 - [Commands Reference](commands.md) -- `install-agents.sh` usage
 - [How-To Guide](how-to-guide.md) -- end-to-end workflow examples

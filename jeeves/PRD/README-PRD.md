@@ -110,7 +110,7 @@ cp /path/to/proj/PRD/prd-creator-claude-template.md ~/.claude/agents/prd-creator
 
 The OpenCode template includes:
 - **Description**: Professional product manager assistant for PRD creation
-- **Mode**: `subagent` (specialized task)
+- **Mode**: `all` (available in all conversation types)
 - **Temperature**: `0.3` (balanced responses)
 - **Tools**: Read, write, search, and analysis tools
 - **Permissions**: Safe defaults with approval for sensitive operations
@@ -118,7 +118,7 @@ The OpenCode template includes:
 ```yaml
 ---
 description: Professional product manager assistant that helps beginner developers create comprehensive PRDs through structured questioning and planning
-mode: subagent
+mode: all
 
 permission:
   write: ask      # User approval for file operations
