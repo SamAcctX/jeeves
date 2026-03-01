@@ -548,6 +548,34 @@ Read the Product Requirements Document:
 - Understand requirements, scope, and constraints
 - Note technical specifications
 - Identify deliverables
+- **Determine project type**: Is this a net-new project or work on an existing codebase?
+- **Flag version references**: Note any specific package/framework versions mentioned in the PRD
+
+### Step 1.1: Validate Versions and Dependencies (DEC-P1-VER)
+
+**This step is MANDATORY before decomposition begins.**
+
+Determine if version validation is needed based on project type:
+
+| Project Type | How to Detect | Version Policy |
+|-------------|---------------|----------------|
+| **Net-new** | No existing codebase, PRD describes building from scratch | Use latest stable versions for ALL packages/deps. Consult decomposer-researcher to look up current stable versions via web search. |
+| **Existing project** | PRD references existing codebase, package.json/requirements.txt exist | Use versions already in the project. Only upgrade if PRD explicitly requires it. |
+
+**Validation Process:**
+1. **Identify all technologies/packages** mentioned in the PRD
+2. **For net-new projects**: Invoke **decomposer-researcher** to web-search for the current latest stable version of each major dependency. Do NOT trust version numbers in the PRD — they may be outdated from when the PRD was written.
+3. **For existing projects**: Read the project's dependency files (package.json, requirements.txt, go.mod, etc.) to confirm actual versions in use
+4. **For architecture/compatibility questions**: Invoke **decomposer-architect** to validate that the chosen versions are compatible with each other
+5. **Document findings**: Record validated versions in a version manifest note that gets referenced by implementation tasks
+
+**Include in each TASK.md where relevant:**
+```
+## Version References
+- Project type: [net-new | existing]
+- [Package]: [version or "latest stable as of decomposition"]
+- Source: [web search / existing project files / PRD]
+```
 
 ### Step 1.5: Determine Model Power Level
 
@@ -576,12 +604,28 @@ Decompose the PRD into atomic tasks:
 - Testable outcomes in isolation
 - Context estimate stays under 80% of power level max
 
-**Task Categories (Example):**
+**Task Categories (Required):**
+Every decomposition MUST include tasks from these categories where applicable:
 - Infrastructure/setup tasks
-- Core implementation tasks
-- Testing tasks
-- Documentation tasks
+- **Test foundation tasks** (test suite setup, test framework configuration)
+- **Test case development tasks** (write failing tests for acceptance criteria — TDD red phase)
+- Core implementation tasks (write code to pass tests — TDD green phase)
+- **Refactoring tasks** (where significant refactoring is anticipated)
 - Integration tasks
+- **Documentation tasks** (README, API docs, architecture notes, user guides)
+
+**Documentation Task Mandate (DEC-P1-DOC):**
+Every decomposition MUST include at minimum:
+- One task for project documentation (README, setup/installation guide)
+- Documentation acceptance criteria in any task that creates a public API, CLI, configuration, or user-facing feature
+- If the PRD specifies a documentation requirements section, create dedicated tasks for each documentation deliverable
+
+**TDD Task Structure (DEC-P1-TDD):**
+The decomposer MUST structure tasks to support test-driven development:
+1. **Test tasks come before implementation tasks** in the dependency chain
+2. For each implementation task, there should be a corresponding test task (or test acceptance criteria within the task) that defines the expected behavior
+3. Task ordering in TODO.md should reflect the TDD cycle: test setup → write failing tests → implement to pass → refactor
+4. See the **TDD Decomposition Framework** section below for detailed guidance
 
 **Simple Ambiguity Resolution Sequence:**
 Before creating tasks, follow this practical sequence to resolve unclear requirements:
@@ -746,8 +790,129 @@ When user approves final decomposition:
 3. Validate deps-tracker.yaml with all relationships
 4. Check all acceptance criteria are testable
 5. Confirm all tasks respect power level context budget (< 80% threshold)
-6. Confirm completion with user
-7. Emit `ALL_TASKS_COMPLETE, EXIT LOOP`
+6. **Verify TDD structure (DEC-P1-TDD)**: Test tasks exist before implementation tasks in dependency chain; TASK.md files include TDD Context sections
+7. **Verify documentation tasks (DEC-P1-DOC)**: At least one documentation task exists; API/CLI/user-facing tasks have doc acceptance criteria
+8. **Verify version references (DEC-P1-VER)**: All version references are validated (not blindly copied from PRD)
+9. Confirm completion with user
+10. Emit `ALL_TASKS_COMPLETE, EXIT LOOP`
+
+## TDD Decomposition Framework (DEC-P1-TDD)
+
+The decomposer MUST structure task decomposition to embed the TDD cycle into the task dependency chain. This ensures test-driven development happens structurally — not by relying on individual agents to self-detect the need for testing.
+
+### TDD Cycle Phases in Decomposition
+
+| Phase | Description | Typical Agent | Task Characteristics |
+|-------|-------------|---------------|---------------------|
+| **Red** | Write failing tests for acceptance criteria | Tester | Test files created, all tests fail (no implementation exists yet) |
+| **Green** | Write minimal code to pass all tests | Developer | Implementation code, tests now pass |
+| **Refactor** | Improve code quality while keeping tests green | Developer | Code restructuring, no new functionality |
+| **Verify** | Run full test suite + linters to confirm nothing broke | Tester | All tests pass, linting clean, no regressions |
+
+### Task Structuring Rules
+
+**Rule 1: Test Foundation First**
+- The FIRST implementation-related tasks should be test infrastructure setup:
+  - Test framework configuration
+  - Test directory structure
+  - CI/test runner configuration (if applicable)
+- These have NO dependencies on implementation tasks
+
+**Rule 2: Test-Before-Implementation Pairing**
+For each feature/module being implemented, create tasks in this order:
+```
+Task A: Write failing tests for [feature] acceptance criteria (Red)
+  → depends_on: [test foundation task]
+  → TASK.md notes: "TDD Phase: RED — Write tests that define expected behavior.
+     All tests MUST fail at this stage (no implementation exists).
+     Tests must cover all acceptance criteria from the PRD."
+
+Task B: Implement [feature] to pass tests (Green)
+  → depends_on: [Task A]
+  → TASK.md notes: "TDD Phase: GREEN — Write minimal code to make all tests
+     from Task [A] pass. Do not over-engineer. Focus on passing tests."
+
+Task C: Refactor [feature] (Refactor) — ONLY if feature warrants it
+  → depends_on: [Task B]
+  → TASK.md notes: "TDD Phase: REFACTOR — Improve code quality, apply best
+     practices, optimize. All tests from Task [A] MUST still pass after
+     refactoring. Run full test suite to verify no regressions."
+```
+
+**Rule 3: Consolidation for Small Features**
+If a feature is small enough (S/XS context size), the Red-Green-Refactor cycle MAY be consolidated into a single task with explicit TDD phase instructions in the TASK.md:
+```
+## TDD Workflow (follow in order)
+1. RED: Write failing tests for all acceptance criteria below
+2. GREEN: Write minimal implementation to pass all tests
+3. REFACTOR: Clean up code while keeping all tests passing
+4. VERIFY: Run full test suite and linters — all must pass
+```
+
+**Rule 4: Integration and Regression Testing**
+After all feature tasks are complete, include at least one integration/regression test task:
+```
+Task N: Run full test suite and integration tests (Verify)
+  → depends_on: [all implementation tasks]
+  → TASK.md notes: "TDD Phase: VERIFY — Run ALL tests (unit + integration),
+     linters, and any other quality checks. Report any regressions."
+```
+
+**Rule 5: Documentation Tasks Follow Implementation**
+Documentation tasks depend on the implementation they document, but should be explicitly included:
+```
+Task D: Document [feature] (API docs, README updates, etc.)
+  → depends_on: [Task B or Task C if refactoring exists]
+```
+
+### TDD Notes in TASK.md Files
+
+Every TASK.md for an implementation-related task MUST include a `## TDD Context` section:
+
+```markdown
+## TDD Context
+- TDD Phase: [RED | GREEN | REFACTOR | VERIFY]
+- Test Task: [Task ID of corresponding test task, or "self" if consolidated]
+- Implementation Task: [Task ID of corresponding implementation task]
+- Expected test state after this task: [All fail | All pass | All pass (refactored)]
+- Full suite regression check required: [yes/no]
+```
+
+### Example: Decomposing a "User Authentication" Feature
+
+```
+0001: Set up test framework and test infrastructure
+      → depends_on: [] | TDD Phase: FOUNDATION
+
+0002: Write failing tests for user registration
+      → depends_on: [0001] | TDD Phase: RED
+
+0003: Implement user registration to pass tests
+      → depends_on: [0002] | TDD Phase: GREEN
+
+0004: Write failing tests for user login
+      → depends_on: [0001] | TDD Phase: RED
+
+0005: Implement user login to pass tests
+      → depends_on: [0004] | TDD Phase: GREEN
+
+0006: Refactor authentication module
+      → depends_on: [0003, 0005] | TDD Phase: REFACTOR
+
+0007: Run full test suite and integration tests
+      → depends_on: [0006] | TDD Phase: VERIFY
+
+0008: Document authentication API and setup guide
+      → depends_on: [0006] | Phase: DOCUMENTATION
+```
+
+### When NOT to Apply TDD Structure
+- Pure infrastructure tasks (Docker setup, CI config with no application logic)
+- Documentation-only tasks
+- Design/architecture tasks
+- Data migration tasks where testing is handled differently
+
+---
 
 ## Robust Task Creation Framework
 
@@ -797,6 +962,22 @@ For each created task, verify:
 - [ ] Task's dependencies are on COMPLETED deliverables (not implementation steps)
 - [ ] Acceptance criteria can be verified in isolation
 - [ ] Task does not duplicate reference context from sibling tasks
+
+**TDD Structure Check (DEC-P1-TDD):**
+- [ ] Implementation task has a corresponding test task (or inline TDD instructions)
+- [ ] Test task appears BEFORE implementation task in dependency chain
+- [ ] TASK.md includes `## TDD Context` section with phase, test task ID, expected state
+- [ ] For consolidated tasks: TASK.md includes `## TDD Workflow` with Red/Green/Refactor/Verify steps
+
+**Documentation Check (DEC-P1-DOC):**
+- [ ] Tasks creating public APIs, CLIs, or user-facing features include documentation acceptance criteria
+- [ ] At least one dedicated documentation task exists in the decomposition
+- [ ] Documentation tasks have correct dependencies (depend on implementation, not the other way around)
+
+**Version Validation Check (DEC-P1-VER):**
+- [ ] Task references validated versions (not unverified PRD versions)
+- [ ] Net-new project tasks specify "latest stable" with validated version from decomposer-researcher
+- [ ] Existing project tasks reference actual project dependency versions
 
 **Anti-Pattern Detection:**
 If you create tasks like:

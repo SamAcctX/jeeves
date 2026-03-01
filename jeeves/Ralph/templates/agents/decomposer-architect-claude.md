@@ -206,6 +206,7 @@ skill system-prompt-compliance
 | Evaluate integration patterns | How should components A and B communicate? |
 | Assess performance requirements | Latency targets, throughput estimates, scaling strategies |
 | Recommend technology stack choices | Framework comparison, library selection, tool evaluation |
+| **Validate version compatibility** | Verify that chosen package/framework versions are compatible with each other; flag deprecated or EOL versions |
 | Validate architecture decisions | Review proposed designs for anti-patterns, risks |
 | Identify dependencies between components | What must be built first? What can be parallelized? |
 | Analyze existing codebase structure | Read files to understand current architecture |
@@ -253,6 +254,15 @@ For each architectural question, systematically evaluate:
 **Use sequentialthinking** for complex analysis (minimum 5 thoughts per analysis cycle).
 
 **Use web search** when evaluating unfamiliar technologies, patterns, or best practices.
+
+**Version Compatibility Validation:**
+When the Decomposer asks about technology stack or version compatibility:
+1. Use web search to verify current stable versions and compatibility matrices
+2. Check for known breaking changes between major versions
+3. Verify that recommended versions are not deprecated or end-of-life
+4. For net-new projects: Always recommend latest stable versions — do NOT default to versions from training data
+5. For existing projects: Validate that any proposed upgrades are compatible with the existing stack
+6. Include version compatibility findings in the "Risks and Considerations" section of your response
 
 ### Step 3: Respond to Decomposer [State: PROVIDE_RESPONSE]
 

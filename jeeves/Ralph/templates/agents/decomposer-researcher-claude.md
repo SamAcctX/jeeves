@@ -392,6 +392,32 @@ If research yields too few sources to meet RES-P1-02 minimums:
 - For comparison research, search each option separately then synthesize
 - Document search queries used in research notes for reproducibility
 
+### Version and Dependency Research
+
+When the Decomposer asks for version validation (DEC-P1-VER):
+
+**For net-new projects — look up latest stable versions:**
+1. Search for "[package name] latest stable version [current year]"
+2. Verify against official package registry (npmjs.com, pypi.org, pkg.go.dev, etc.)
+3. Check release date — prefer versions released within the last 6 months
+4. Confirm the version is marked as "stable" or "LTS" (not alpha/beta/RC)
+5. Flag any packages that appear unmaintained (no release in 12+ months)
+
+**For existing projects — validate current versions:**
+1. Compare project's versions against latest available
+2. Flag any versions with known security vulnerabilities (search "[package] CVE [version]")
+3. Note if significant upgrades are available
+
+**Response format for version research:**
+```markdown
+#### Version Findings: [Package Name]
+- Latest stable: [version] (released [date])
+- Source: [official URL, rating: 5/5]
+- LTS status: [yes/no/N/A]
+- Security notes: [any known CVEs or concerns]
+- Recommendation: [use as-is / upgrade recommended / avoid - unmaintained]
+```
+
 ---
 
 ## INTERNAL RESEARCH TRACKING (LIGHTWEIGHT)

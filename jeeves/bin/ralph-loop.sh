@@ -281,11 +281,14 @@ invoke_opencode_manager() {
     
     if opencode run --agent manager $model_arg $format_arg < "$prompt_path" | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
+        strip_ansi "$MANAGER_OUTPUT"
         log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
     else
+        local exit_code=$?
         local duration=$(($(date +%s) - start_time))
-        log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
+        strip_ansi "$MANAGER_OUTPUT"
+        log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $exit_code)"
         return 1
     fi
 }
@@ -323,6 +326,13 @@ SIGNAL_COMPLETE="TASK_COMPLETE_[0-9]{4}"
 SIGNAL_INCOMPLETE="TASK_INCOMPLETE_[0-9]{4}"
 SIGNAL_FAILED="TASK_FAILED_[0-9]{4}"
 SIGNAL_BLOCKED="TASK_BLOCKED_[0-9]{4}"
+
+strip_ansi() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$file"
+    fi
+}
 
 extract_task_id() {
     local signal="$1"
@@ -397,7 +407,7 @@ parse_signals() {
     log_message INFO "Parsing signals from output (iteration: $ITERATION, file: $output_file)"
     
     local all_signals
-    all_signals=$(grep -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}(:.*)?($|[[:space:]])" "$output_file" 2>/dev/null | sed 's/^[[:space:]]*//' || true)
+    all_signals=$(grep -E "^(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || true)
     
     local signal_count=0
     if [ -n "$all_signals" ]; then
@@ -405,7 +415,7 @@ parse_signals() {
     fi
     
     if [ "$signal_count" -gt 1 ]; then
-        print_warning "Multiple signals detected ($signal_count) - using first valid signal"
+        print_warning "Multiple start-of-line signals detected ($signal_count) - using first"
         print_info "Signals found:"
         echo "$all_signals" | head -5 | while read -r sig; do
             print_info "  - $sig"
@@ -419,49 +429,61 @@ parse_signals() {
     line=$(echo "$all_signals" | head -1)
     
     if [ -z "$line" ]; then
-        print_info "No signal found in output (iteration: $ITERATION)"
+        print_info "No start-of-line signal found in output (iteration: $ITERATION)"
         print_info "Output file size: $(wc -c < "$output_file" 2>/dev/null || echo 'unknown') bytes"
-        local last_lines
-        last_lines=$(tail -20 "$output_file" 2>/dev/null | grep -v '^[[:space:]]*$' | head -10)
-        if [ -n "$last_lines" ]; then
-            print_info "Last non-empty lines from output:"
-            echo "$last_lines" | while read -r l; do
-                print_info "  $l"
+        local mid_line_signals
+        mid_line_signals=$(grep -oE "(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || true)
+        if [ -n "$mid_line_signals" ]; then
+            local mid_count
+            mid_count=$(echo "$mid_line_signals" | wc -l | tr -d ' ')
+            print_warning "Found $mid_count signal(s) embedded mid-line (ignored per SIG-P0-01):"
+            echo "$mid_line_signals" | head -3 | while read -r sig; do
+                print_info "  - $sig"
             done
         else
-            print_info "Output file appears to be empty or contain only whitespace"
+            local last_lines
+            last_lines=$(tail -20 "$output_file" 2>/dev/null | grep -v '^[[:space:]]*$' | head -10)
+            if [ -n "$last_lines" ]; then
+                print_info "Last non-empty lines from output:"
+                echo "$last_lines" | while read -r l; do
+                    print_info "  $l"
+                done
+            else
+                print_info "Output file appears to be empty or contain only whitespace"
+            fi
         fi
         return 1
     fi
     
-    line=$(echo "$line" | sed 's/^[[:space:]]*//')
+    local signal_token
+    signal_token=$(echo "$line" | grep -oE "^(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}")
     
-    if echo "$line" | grep -qE "^$SIGNAL_COMPLETE($|[[:space:]]|$)"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_COMPLETE$"; then
         local task_id
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         handle_complete_signal "$task_id"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_BLOCKED"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_BLOCKED$"; then
         local task_id message
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         message=$(echo "$line" | sed 's/^[^:]*: //' | sed 's/[[:space:]]*$//')
         handle_blocked_signal "$task_id" "$message"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_FAILED"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_FAILED$"; then
         local task_id message
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         message=$(echo "$line" | sed 's/^[^:]*: //' | sed 's/[[:space:]]*$//')
         handle_failed_signal "$task_id" "$message"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_INCOMPLETE($|[[:space:]]|$)"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_INCOMPLETE$"; then
         local task_id
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         handle_incomplete_signal "$task_id"
         return 0
     fi
@@ -473,22 +495,22 @@ parse_signals() {
 parse_manager_signal() {
     local output="$1"
     
-    if echo "$output" | grep -qE "TASK_COMPLETE_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_COMPLETE_[0-9]{4}"; then
         echo "COMPLETE"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_INCOMPLETE_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_INCOMPLETE_[0-9]{4}"; then
         echo "INCOMPLETE"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_FAILED_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_FAILED_[0-9]{4}"; then
         echo "FAILED"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_BLOCKED_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_BLOCKED_[0-9]{4}"; then
         echo "BLOCKED"
         return 0
     fi

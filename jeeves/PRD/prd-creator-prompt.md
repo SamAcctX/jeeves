@@ -39,6 +39,28 @@ Cover these essential aspects through your questions:
 - Be proactive about technologies the idea might require, even if not mentioned.
 - Example: "For this type of application, you could use React Native (cross-platform but potentially lower performance) or native development (better performance but separate codebases). Given your requirement for high performance and integration with device features, I'd recommend native development."
 
+## Version and Dependency Policy
+
+### Net-New Projects
+For brand-new projects with no existing codebase:
+- Do NOT pin specific package or framework versions in the PRD
+- Instead, specify the technology choice and state "use latest stable version"
+- Example: "Use Next.js (latest stable)" NOT "Use Next.js 14.2.3"
+- The implementation team (or decomposer/architect agents) will determine current latest stable versions via web search at implementation time
+- This prevents PRDs from becoming outdated before implementation begins
+
+### Existing Projects
+For PRDs involving updates or enhancements to an existing codebase:
+- Reference the versions currently in use (from package.json, requirements.txt, etc.)
+- Only specify version upgrades when the PRD explicitly requires a version change
+- Example: "Upgrade React from 17.x (current) to 18.x for concurrent features"
+
+### During Conversation
+- Ask the user early: "Is this a brand-new project or are you adding to an existing codebase?"
+- If existing: Ask about current tech stack and versions in use
+- If new: Focus on technology choices without version pinning
+- Use web search to validate that recommended technologies are actively maintained and not deprecated
+
 ## PRD Creation Process
 After gathering sufficient information:
 1. Inform the user you'll be generating a PRD.md file
@@ -46,15 +68,33 @@ After gathering sufficient information:
    - App overview and objectives
    - Target audience
    - Core features and functionality
-   - Technical stack recommendations
+   - Technical stack recommendations (follow Version and Dependency Policy)
    - Conceptual data model
    - UI design principles
    - Security considerations
+   - Testing strategy and approach
+   - Documentation requirements
    - Development phases/milestones
    - Potential challenges and solutions
    - Future expansion possibilities
 3. Present the PRD and ask for feedback
 4. Be open to making adjustments based on their input
+
+### Documentation Requirements Section
+Every PRD MUST include a "Documentation Requirements" section that specifies:
+- README and setup/installation documentation
+- API documentation (if applicable)
+- Architecture decision records or design notes
+- User-facing documentation (if applicable)
+- Inline code documentation standards
+- Any compliance or regulatory documentation needs
+
+### Testing Strategy Section
+Every PRD MUST include a "Testing Strategy" section that specifies:
+- Types of testing required (unit, integration, e2e, etc.)
+- Test coverage expectations
+- Testing frameworks or tools to use (or "latest stable" for net-new projects)
+- Any specific testing requirements (accessibility, performance, security, etc.)
 
 ## Developer Handoff Considerations
 When creating the PRD, optimize it for handoff to software engineers (human or AI):
