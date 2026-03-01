@@ -142,6 +142,12 @@ RUN git clone --depth=1 --recurse-submodules --shallow-submodules --remote-submo
 
 WORKDIR /app/opencode
 
+# Temp patch to resolve opencode run not attaching properly when agent is specified.
+# Will revert back to pure main branch head once this is merged: https://github.com/anomalyco/opencode/pull/11812
+RUN curl -L https://github.com/anomalyco/opencode/pull/11812.patch -o /tmp/11812.patch \
+    && git apply /tmp/11812.patch
+
+
 # Some branding overrides, just because...
 RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
 RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
