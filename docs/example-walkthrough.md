@@ -85,19 +85,15 @@ ralph-init.sh
 [SUCCESS] Updated .gitignore with Ralph exclusions
 [INFO] Creating Ralph directory structure...
 [SUCCESS] Created directory: .ralph/config
-[SUCCESS] Created directory: .ralph/prompts
 [SUCCESS] Created directory: .ralph/tasks
 [SUCCESS] Created directory: .ralph/specs
 [SUCCESS] Created directory: .ralph/tasks/done
 [INFO] Copying Ralph templates...
 [SUCCESS] Template source validated: /opt/jeeves/Ralph/templates
 [SUCCESS] Created: config/agents.yaml
-[SUCCESS] Created: TODO.md
+[SUCCESS] Created: tasks/TODO.md
 [SUCCESS] Created: config/deps-tracker.yaml
-[SUCCESS] Created: TASK.md
-[SUCCESS] Created: activity.md
-[SUCCESS] Created: attempts.md
-[SUCCESS] Template copying completed: 10 files copied
+[SUCCESS] Template copying completed: 7 files copied
 [SUCCESS] Ralph initialization completed successfully!
 [INFO] Your Ralph project structure is ready for use
 ```
@@ -542,18 +538,16 @@ task-cli/
 │   │   └── deps-tracker.yaml
 │   ├── specs/
 │   │   └── PRD-task-cli.md
-│   ├── tasks/
-│   │   ├── TODO.md
-│   │   └── done/
-│   │       ├── 0001/
-│   │       │   ├── TASK.md
-│   │       │   ├── activity.md
-│   │       │   └── attempts.md
-│   │       ├── 0002/
-│   │       │   └── ...
-│   │       └── ... (0003-0010)
-│   └── prompts/
-│       └── ralph-prompt.md
+│   └── tasks/
+│       ├── TODO.md
+│       └── done/
+│           ├── 0001/
+│           │   ├── TASK.md
+│           │   ├── activity.md
+│           │   └── attempts.md
+│           ├── 0002/
+│           │   └── ...
+│           └── ... (0003-0010)
 ├── task_cli/
 │   ├── __init__.py
 │   ├── models.py

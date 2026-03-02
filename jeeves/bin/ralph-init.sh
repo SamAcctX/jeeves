@@ -72,7 +72,7 @@ detect_project_root() {
 create_ralph_structure() {
     print_info "Creating Ralph directory structure..."
     
-    local dirs=("config" "prompts" "tasks" "specs")
+    local dirs=("config" "tasks" "specs")
     
     for dir in "${dirs[@]}"; do
         local target_dir="$RALPH_DIR/$dir"
@@ -132,40 +132,6 @@ copy_config_templates() {
                     print_success "Created: $dest_file"
                     copied_count=$((copied_count + 1))
                 fi
-            else
-                cp -p "$source_path" "$dest_path"
-                print_success "Created: $dest_file"
-                copied_count=$((copied_count + 1))
-            fi
-        else
-            print_warning "Template not found: $source_path"
-        fi
-    done
-    
-    echo "$copied_count"
-    return 0
-}
-
-copy_task_templates() {
-    print_info "Copying task templates..."
-    
-    local task_templates=(
-        "task/TASK.md.template:TASK.md"
-        "task/activity.md.template:activity.md"
-        "task/attempts.md.template:attempts.md"
-    )
-    
-    local copied_count=0
-    
-    for template_mapping in "${task_templates[@]}"; do
-        local source_template="${template_mapping%:*}"
-        local dest_file="${template_mapping#*:}"
-        local source_path="$TEMPLATE_SOURCE/$source_template"
-        local dest_path="$RALPH_DIR/$dest_file"
-        
-        if [ -f "$source_path" ]; then
-            if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                print_warning "Skipping existing file: $dest_path (use --force to overwrite)"
             else
                 cp -p "$source_path" "$dest_path"
                 print_success "Created: $dest_file"
@@ -315,32 +281,6 @@ copy_skills() {
     return 0
 }
 
-copy_prompt_template() {
-    print_info "Copying Ralph prompt template..."
-    
-    local prompt_source="/opt/jeeves/Ralph/templates/prompts/ralph-prompt.md.template"
-    local prompt_dest="$RALPH_DIR/prompts/ralph-prompt.md"
-    
-    if [ ! -f "$prompt_source" ]; then
-        print_warning "Prompt template not found: $prompt_source"
-        echo "0"
-        return 0
-    fi
-    
-    mkdir -p "$RALPH_DIR/prompts"
-    
-    if [ -f "$prompt_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
-        print_warning "Skipping existing prompt file: $prompt_dest (use --force to overwrite)"
-        echo "0"
-        return 0
-    fi
-    
-    cp -p "$prompt_source" "$prompt_dest"
-    print_success "Created: $prompt_dest"
-    echo "1"
-    return 0
-}
-
 handle_rules_md() {
     print_info "Checking for RULES.md..."
     
@@ -474,16 +414,11 @@ copy_templates() {
     
     local total_copied=0
     local config_count=0
-    local task_count=0
     local agent_count=0
     local skills_count=0
-    local prompt_count=0
     
     config_count=$(copy_config_templates)
     total_copied=$((total_copied + config_count))
-    
-    task_count=$(copy_task_templates)
-    total_copied=$((total_copied + task_count))
     
     agent_count=$(copy_agent_templates)
     total_copied=$((total_copied + agent_count))
@@ -491,11 +426,8 @@ copy_templates() {
     skills_count=$(copy_skills)
     total_copied=$((total_copied + skills_count))
     
-    prompt_count=$(copy_prompt_template)
-    total_copied=$((total_copied + prompt_count))
-    
     if [ "$total_copied" -gt 0 ]; then
-        print_success "Template copying completed: $total_copied items copied (config: $config_count, task: $task_count, agents: $agent_count, skills: $skills_count, prompt: $prompt_count)"
+        print_success "Template copying completed: $total_copied items copied (config: $config_count, agents: $agent_count, skills: $skills_count)"
     else
         print_warning "No templates were copied (files may already exist)"
     fi

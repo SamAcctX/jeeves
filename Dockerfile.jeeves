@@ -145,7 +145,11 @@ WORKDIR /app/opencode
 # Temp patch to resolve opencode run not attaching properly when agent is specified.
 # Will revert back to pure main branch head once this is merged: https://github.com/anomalyco/opencode/pull/11812
 RUN curl -L https://github.com/anomalyco/opencode/pull/11812.patch -o /tmp/11812.patch \
-    && git apply /tmp/11812.patch
+    && git apply /tmp/11812.patch \
+    && sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    && sed -i "s/todowrite: { \"*\": \"deny\" }/todowrite: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    && sed -i 's/todowrite: false/todowrite: true/g' packages/opencode/src/tool/task.ts \
+    && sed -i 's/todoread: false/todoread: true/g' packages/opencode/src/tool/task.ts
 
 
 # Some branding overrides, just because...

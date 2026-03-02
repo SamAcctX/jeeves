@@ -97,17 +97,15 @@ Running `ralph-init.sh` creates the `.ralph/` directory in your project root:
 ├── config/
 │   ├── agents.yaml              # Agent-to-model mapping
 │   └── deps-tracker.yaml        # Task dependency graph
-├── prompts/
-│   └── ralph-prompt.md          # Manager invocation instructions
 ├── specs/
 │   └── PRD-*.md                 # Product Requirements Documents
 ├── tasks/
 │   ├── TODO.md                  # Master task checklist
 │   ├── done/                    # Completed task folders (preserved)
 │   └── XXXX/                    # Individual task folders
-│       ├── TASK.md              # Task definition
-│       ├── activity.md          # Execution log
-│       └── attempts.md          # Attempt history
+│       ├── TASK.md              # Task definition (created by Decomposer)
+│       ├── activity.md          # Execution log (created by Decomposer)
+│       └── attempts.md          # Attempt history (created by Decomposer)
 └── logs/
     └── ralph-loop-YYYYMMDD-HHMMSS.log
 ```
@@ -685,18 +683,18 @@ Optionally track completed tasks for project history by adding `!.ralph/tasks/do
 
 ## Template Locations
 
-All configuration templates live in `jeeves/Ralph/templates/`:
+All templates live in `jeeves/Ralph/templates/`:
 
-| Template | Path (relative to templates/) |
-|----------|-------------------------------|
-| agents.yaml | `config/agents.yaml.template` |
-| deps-tracker.yaml | `config/deps-tracker.yaml.template` |
-| TODO.md | `config/TODO.md.template` |
-| .gitignore | `config/.gitignore.template` |
-| TASK.md | `task/TASK.md.template` |
-| activity.md | `task/activity.md.template` |
-| attempts.md | `task/attempts.md.template` |
-| ralph-prompt.md | `prompts/ralph-prompt.md.template` |
+| Template | Path (relative to templates/) | Copied by init? |
+|----------|-------------------------------|-----------------|
+| agents.yaml | `config/agents.yaml.template` | Yes |
+| deps-tracker.yaml | `config/deps-tracker.yaml.template` | Yes |
+| TODO.md | `config/TODO.md.template` | Yes |
+| .gitignore | `config/.gitignore.template` | Yes |
+| TASK.md | `task/TASK.md.template` | No (Decomposer creates per-task) |
+| activity.md | `task/activity.md.template` | No (Decomposer creates per-task) |
+| attempts.md | `task/attempts.md.template` | No (Decomposer creates per-task) |
+| ralph-prompt.md | `prompts/ralph-prompt.md.template` | No (read from source at runtime) |
 
 ---
 

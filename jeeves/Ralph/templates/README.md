@@ -101,17 +101,17 @@ Key features:
 
 ## Usage in Ralph Loop
 
-Templates are used during project initialization via `ralph-init.sh` which copies them to the project directory. The initialization process:
+Templates are used during project initialization via `ralph-init.sh` which copies select templates to the project directory. The initialization process:
 
 1. Validates required tools (yq, jq, git)
-2. Creates Ralph directory structure
-3. Copies configuration templates to `.ralph/config/`
-4. Copies task templates to `.ralph/tasks/`
-5. Copies agent templates to `.opencode/agents/` and `.claude/agents/`
-6. Copies shared agent templates to both platforms
-7. Copies prompt templates to `.ralph/prompts/`
-8. Creates RULES.md from template
-9. Configures git integration
+2. Creates Ralph directory structure (`.ralph/config/`, `.ralph/tasks/`, `.ralph/specs/`)
+3. Copies configuration templates to `.ralph/config/` and `.ralph/tasks/TODO.md`
+4. Copies agent templates to `.opencode/agents/` and `.claude/agents/`
+5. Copies shared agent templates to both platforms
+6. Creates RULES.md from template
+7. Configures git integration
+
+Task templates (`TASK.md`, `activity.md`, `attempts.md`) and prompt templates (`ralph-prompt.md`) are **not** copied to the workspace. Task templates are created per-task by the Decomposer agent directly from source. The prompt template is read directly from `/opt/jeeves/Ralph/templates/prompts/` at runtime.
 
 ## Customization
 
@@ -132,18 +132,18 @@ Templates are available for:
 
 Templates are used at various stages:
 
-1. **Initialization**: `ralph-init.sh` copies templates to project
-2. **Decomposition**: Decomposer agent uses templates to create task files
-3. **Execution**: Manager and Worker agents use agent templates
-4. **State Management**: Task templates track progress and history
+1. **Initialization**: `ralph-init.sh` copies config and agent templates to project
+2. **Decomposition**: Decomposer agent creates per-task files from source templates (`/opt/jeeves/Ralph/templates/task/`)
+3. **Execution**: Manager reads prompt template directly from source; Worker agents use copied agent templates
+4. **State Management**: Per-task files (`TASK.md`, `activity.md`, `attempts.md`) track progress and history
 5. **Learning**: RULES.md.template captures project patterns
 
 ## Template Lifecycle
 
 1. **Template Creation**: Initial templates provided in the repository
-2. **Customization**: Users modify templates for their specific needs
-3. **Initialization**: Templates copied to project during `ralph-init.sh`
-4. **Execution**: Runtime files created from templates as needed
+2. **Customization**: Users modify source templates for their specific needs
+3. **Initialization**: Config and agent templates copied to project during `ralph-init.sh`
+4. **Execution**: Task and prompt templates read from source at runtime
 5. **Evolution**: Project-specific patterns added to RULES.md
 
 By following this template system, Ralph Loop ensures consistency, reproducibility, and efficient knowledge capture across projects.

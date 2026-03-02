@@ -192,8 +192,6 @@ This creates the entire Ralph scaffolding in your project. If files already exis
   config/
     agents.yaml           # Maps 10 agent types to LLM models
     deps-tracker.yaml     # Task dependency graph (empty initially)
-  prompts/
-    ralph-prompt.md       # Manager invocation instructions
   tasks/
     TODO.md               # Master task checklist (empty initially)
     done/                 # Completed task folders move here
@@ -205,6 +203,8 @@ This creates the entire Ralph scaffolding in your project. If files already exis
 .claude/skills/           # Skills for Claude Code
 RULES.md                  # Project-level rules (from template)
 ```
+
+Task templates (`TASK.md`, `activity.md`, `attempts.md`) are created per-task by the Decomposer agent during Phase 2. The prompt template (`ralph-prompt.md`) is read directly from source at runtime.
 
 The init script also runs three installation scripts automatically:
 

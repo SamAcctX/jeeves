@@ -51,7 +51,7 @@ PROJECT_ROOT=""
 LOG_FILE=""
 LOG_DIR="logs"
 
-PROMPT_FILE=".ralph/prompts/ralph-prompt.md"
+PROMPT_FILE="/opt/jeeves/Ralph/templates/prompts/ralph-prompt.md.template"
 MANAGER_OUTPUT=""
 MANAGER_EXIT_CODE=0
 
