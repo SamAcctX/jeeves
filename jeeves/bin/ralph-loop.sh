@@ -353,7 +353,6 @@ extract_signal_message() {
 handle_complete_signal() {
     local task_id="$1"
     log_message SUCCESS "Task $task_id completed (iteration: $ITERATION)"
-    SHOULD_TERMINATE=1
 }
 
 handle_incomplete_signal() {
