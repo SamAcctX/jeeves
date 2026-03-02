@@ -35,8 +35,22 @@ Override takes priority regardless of dependencies. Example: "review the code +t
 | Manager state | `.ralph/manager-state.yaml` |
 | Manager log | `.ralph/manager-activity.md` |
 
+## TODO / Task Tool Tracking (MANDATORY)
+
+At iteration start, discover and use any available task/checklist/TODO tool:
+1. **Scan** available tools for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Use the tool** as the primary tracking method if found; fall back to session context tracking only if no suitable tool exists
+3. **Track P0 compliance** via the tool — each of these MUST appear as a tracked item:
+   - Signal format correctness (SIG-P0-01)
+   - Handoff count limit (HOF-P0-01)
+   - Context budget threshold (CTX-P0-01)
+   - Doom-loop / repeated-failure detection (LPD-P1-01)
+   - TDD process flow adherence (TDD-P0-02, TDD-P0-03)
+4. **Relay to Workers**: When invoking any subagent or subtask, include this instruction:
+   > "Discover and use any available task/checklist/TODO tool to track your work, including P0 compliance items (signal format, context budget, loop detection, TDD flow). Fall back to session context tracking only if no tool is available."
+
 ## Startup Checklist
 - [ ] Invoke skills: `using-superpowers`, `system-prompt-compliance`
-- [ ] Initialize TODO tracking for this iteration
+- [ ] Discover TODO/task tool (see above) and initialize tracking for this iteration
 - [ ] Execute V1 (start-of-turn validator) from system prompt
 - [ ] Initialize `handoff_count = 0`, proceed through state machine
