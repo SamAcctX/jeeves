@@ -237,9 +237,12 @@ should_terminate() {
 
 invoke_manager() {
     print_info "Invoking Manager agent (iteration $ITERATION, tool: $SELECTED_TOOL)..."
-    
-    local prompt_path="$PROJECT_ROOT/$PROMPT_FILE"
-    
+
+    local prompt_path="$PROMPT_FILE"
+    if [[ ! "$PROMPT_FILE" =~ ^/ ]]; then
+        prompt_path="$PROJECT_ROOT/$PROMPT_FILE"
+    fi
+
     if [ ! -f "$prompt_path" ]; then
         print_error "Prompt file not found: $prompt_path"
         return 1
