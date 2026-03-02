@@ -47,7 +47,7 @@ Tie-break: Lower priority drops on conflict with higher priority.
 - [ ] **TDD-P1-01**: READY_FOR_DEV status confirmed in activity.md before implementation
 - [ ] **DEP-P0-01**: No circular dependencies detected (check deps-tracker.yaml if present)
 - [ ] **LPD-P1-01**: Error attempt counters within limits (check activity.md error history)
-- [ ] **TLD-P1-01**: Tool signature not repeated 3x in session (check working memory)
+- [ ] **TLD-P1-01**: Tool signature not repeated 3x in session (check session context)
 
 ### P2 - BEST PRACTICE
 - [ ] **RUL-P1-01**: Checked for RULES.md files in project hierarchy
@@ -75,9 +75,20 @@ The 'skills-finder' skill works best when using curl instead of the fetch tool a
 
 The TODO list is your **living implementation plan** AND **drift prevention mechanism**. Use it creatively and diligently. There is **NO LIMIT** on TODO items — more items means better tracking.
 
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+At task start, check your available tools/APIs for any task management, checklist, or TODO capability:
+
+1. **Scan available tools** for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Common implementations**: Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool
+3. **Functional equivalence**: Any tool that allows creating, reading, updating, and ordering checklist items qualifies
+4. **Decision**:
+   - If a suitable tool is found → Use it as the **PRIMARY** tracking method for all TODO operations below
+   - If no suitable tool is found → Fall back to **session context tracking** (markdown checklists maintained in your conversation context, updated in real-time as items transition `pending → in_progress → completed`)
+
 ### Initialization (MANDATORY — at task start)
 
-At the start of every task, create a TODO list in your working memory. Structure it by TDD phase and include every actionable item you can identify:
+After tool discovery, initialize your TODO list using the discovered tool or session context tracking. Structure it by TDD phase and include every actionable item you can identify:
 
 ```
 TODO (Task {{id}}):
@@ -137,7 +148,7 @@ TODO (Task {{id}}):
 - **Granularity**: Break large items into smaller sub-items when you discover they're complex
 - **Error tracking**: Add a TODO item for each error encountered with attempt count: `[ERROR 1/3] Fix: [description]`
 - **Context tracking**: Add `[CTX ~N%]` annotations when context usage changes significantly
-- **Tool signature tracking**: Before each tool call, log `Tool check: TOOL:TARGET (N/3)` (e.g., `Tool check: edit:src/config.js (2/3)`). If N reaches 3 → STOP per TLD-P1-01
+- **Tool signature tracking**: Before each tool call, record `Tool check: TOOL:TARGET (N/3)` per TLD-P1-01. If any signature reaches 3/3 → STOP, invoke TLD-P1-02
 
 ### Pre-Signal Verification (MANDATORY — before ANY signal emission)
 
@@ -571,12 +582,10 @@ ELSE (no activity.md or no status):
 2. If test file → STOP, verify exception applies
 3. Check content for secrets: high-entropy strings, `api_key`, `password`, `token`, `secret`
 4. If potential secret → STOP, verify safe to write
-
-**Before ANY tool call (TLD-P1-01):**
-5. Generate tool signature: `TOOL_TYPE:TARGET` (e.g., `edit:src/config.js`, `bash:npm test`, `read:src/utils.js`)
+5. Generate tool signature: `TOOL_TYPE:TARGET` (e.g., `edit:src/config.js`, `bash:npm test`)
 6. Check: Is this signature in last 2 tool calls?
-   - YES → Increment counter. If counter >= 3 → STOP, execute TLD-P1-02 exit sequence
-   - NO → Record signature in working memory, proceed
+   - YES → STOP, increment counter. If counter >= 3 → TLD-P1-02 exit sequence
+   - NO → Record signature, proceed
 
 ---
 
@@ -1004,29 +1013,21 @@ If a circular pattern is detected:
 
 ### Tool-Use Loop Detection (TLD-P1-01, TLD-P1-02)
 
-Independent of error loops, track tool signatures (tool_type:target) to detect non-error repetition:
+Independent of error loops, track tool signatures (tool_type:target):
+- Generate signature before EVERY tool call (e.g., `edit:src/config.js`, `bash:npm test`, `read:src/utils.js`)
+- Same signature 3x in session → STOP, signal TASK_INCOMPLETE
+- 3+ consecutive same-type calls (e.g., edit→edit→edit on different targets) → log warning, review approach
+- Signal: `TASK_INCOMPLETE_XXXX:Tool_loop_detected_[tool_signature]_repeated_N_times`
 
-**Before EVERY tool call:**
-1. Generate signature: `TOOL_TYPE:TARGET`
-2. Check against last 2 tool calls in session
-3. If same signature 3x → STOP, signal TASK_INCOMPLETE
-
-**Developer-specific tool signature examples:**
-
-| Tool | Signature Example |
-|------|-------------------|
-| edit | `edit:src/config.js` |
-| write | `write:src/index.ts` |
-| bash | `bash:npm test` |
-| read | `read:src/utils.js` |
-| grep | `grep:pattern_in_src` |
-| glob | `glob:**/*.test.js` |
-
-**Response to Tool Loop (TLD-P1-02):**
-1. STOP — do NOT make the tool call
-2. Document in activity.md: tool signature, attempt count, what was attempted
-3. Signal: `TASK_INCOMPLETE_{{id}}:Tool_loop_detected_[tool_signature]_repeated_N_times`
-4. Exit (fresh context on next iteration may break the pattern)
+**Developer-specific examples:**
+| Tool Type | Target Example | Signature |
+|-----------|---------------|-----------|
+| edit | src/config.js | `edit:src/config.js` |
+| write | src/index.js | `write:src/index.js` |
+| bash | npm test | `bash:npm test` |
+| read | src/utils.js | `read:src/utils.js` |
+| grep | "function" | `grep:function` |
+| glob | "**/*.ts" | `glob:**/*.ts` |
 
 ---
 
@@ -1249,8 +1250,8 @@ The following shared rule files provide detailed specifications. Reference them 
 - [ ] Updating TODO items in real-time (pending → in_progress → completed)
 - [ ] Adding new TODO items as complexity is discovered
 - [ ] Tracking errors with attempt counts: `[ERROR N/3]` (LPD-P1-01)
-- [ ] Tracking tool signatures per TLD-P1-01 (edit:file, bash:cmd, read:file, etc.)
 - [ ] Checking context every 5 tool calls (CTX-P1-01)
+- [ ] Tracking tool signatures per TLD-P1-01 (edit:file, bash:cmd, read:file, etc.)
 
 **Before signaling:**
 - [ ] All TODO items completed or documented as blocked

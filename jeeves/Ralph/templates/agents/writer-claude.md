@@ -13,7 +13,6 @@ model: inherit
 tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead
 ---
 
-
 ## RULE PRECEDENCE [CRITICAL — KEEP INLINE]
 
 Priority hierarchy (higher wins on conflict):
@@ -418,7 +417,14 @@ Read these files at the start of each execution:
 
 ### 0.4: Initialize TODO List [MANDATORY]
 
-Initialize a TODO list at the start of every execution. No limit on items. Update in real-time as work evolves.
+#### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+Before creating any TODO list, scan your available tools for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`. Common implementations include Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool. Any tool that allows creating, reading, updating, and ordering checklist items qualifies as functionally equivalent.
+
+- **Tool found** → use it as your primary TODO tracking method
+- **No tool found** → use session context fallback: maintain markdown checklists updated in real-time with status transitions (`pending` → `in_progress` → `completed`)
+
+Initialize your TODO list using the discovered tool or session context tracking. No limit on items. Update in real-time as work evolves.
 
 **Phase-Mapped TODO Template**:
 ```

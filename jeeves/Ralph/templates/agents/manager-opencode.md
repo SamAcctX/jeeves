@@ -786,11 +786,28 @@ Confirm: [ ] handoff < 8  [ ] context OK  [ ] orchestrating only  [ ] Proceed
 
 **Purpose**: Track progress through the orchestration workflow. Update TODO at each state transition to maintain alignment over long multi-turn sessions.
 
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+Before creating any TODO items, scan your available tools for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`.
+
+**Common implementations** (examples only — do not hardcode):
+- Tasks API (e.g., `tasks_create`, `tasks_update`)
+- TodoRead/TodoWrite or todoread/todowrite
+- Any checklist-style tool that allows creating, reading, updating, and ordering items
+
+**Functional equivalence**: Any tool that supports create + read + update + order operations on checklist items qualifies as a TODO tool.
+
+**Decision**:
+- **Tool found** → Use it as the primary TODO tracking method for the entire session
+- **No tool found** → Fall back to session context tracking: maintain markdown checklists updated in real-time with status transitions (`pending` → `in_progress` → `completed`)
+
+This discovery step runs once at session start. The chosen method persists for the full session.
+
 ### When to Update TODO
 
 | Trigger | TODO Action |
 |---------|-------------|
-| **START (Step 0.1)** | Initialize TODO with startup items |
+| **START (Step 0.1)** | Initialize TODO using discovered tool or session context tracking |
 | **READ_STATE (Step 0.2)** | Add task count, dependency status |
 | **SELECT_TASK (Step 3)** | Add selected task details, agent determination |
 | **INVOKE_WORKER (Step 5)** | Add invocation tracking, handoff count |

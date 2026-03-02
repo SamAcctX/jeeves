@@ -60,7 +60,7 @@ Tie-break: Lower priority drops on conflict with higher priority.
 - [ ] **TDD-P1-01**: READY_FOR_DEV status confirmed in activity.md before implementation
 - [ ] **DEP-P0-01**: No circular dependencies detected (check deps-tracker.yaml if present)
 - [ ] **LPD-P1-01**: Error attempt counters within limits (check activity.md error history)
-- [ ] **TLD-P1-01**: Tool signature not repeated 3x in session (check working memory)
+- [ ] **TLD-P1-01**: Tool signature not repeated 3x in session (check session context)
 
 ### P2 - BEST PRACTICE
 - [ ] **RUL-P1-01**: Checked for RULES.md files in project hierarchy
@@ -88,9 +88,20 @@ The 'skills-finder' skill works best when using curl instead of the fetch tool a
 
 The TODO list is your **living implementation plan** AND **drift prevention mechanism**. Use it creatively and diligently. There is **NO LIMIT** on TODO items — more items means better tracking.
 
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+At task start, check your available tools/APIs for any task management, checklist, or TODO capability:
+
+1. **Scan available tools** for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Common implementations**: Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool
+3. **Functional equivalence**: Any tool that allows creating, reading, updating, and ordering checklist items qualifies
+4. **Decision**:
+   - If a suitable tool is found → Use it as the **PRIMARY** tracking method for all TODO operations below
+   - If no suitable tool is found → Fall back to **session context tracking** (markdown checklists maintained in your conversation context, updated in real-time as items transition `pending → in_progress → completed`)
+
 ### Initialization (MANDATORY — at task start)
 
-At the start of every task, create a TODO list in your working memory. Structure it by TDD phase and include every actionable item you can identify:
+After tool discovery, initialize your TODO list using the discovered tool or session context tracking. Structure it by TDD phase and include every actionable item you can identify:
 
 ```
 TODO (Task {{id}}):

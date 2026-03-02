@@ -161,6 +161,15 @@ run_sync_agents() {
         local duration=$(($(date +%s) - start_time))
         print_warning "Agent sync failed after ${duration}s (continuing anyway)"
     fi
+
+    print_info "Restarting opencode web service to reload updated agents..."
+    if opencode-web restart; then
+        print_success "Opencode web service restarted"
+    else
+        print_warning "Opencode web service restart failed"
+        print_warning "Opencode CLI may use outdated agent models, and may error, but will try anyways"
+    fi
+
 }
 
 CRITICAL_FILES=(

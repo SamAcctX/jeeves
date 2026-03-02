@@ -226,7 +226,7 @@ Detects merge conflicts in the working directory and source files.
 Specifically checks Ralph Loop state files for merge conflicts.
 
 **Files Checked:**
-- `.ralph/TODO.md`
+- `.ralph/tasks/TODO.md`
 - `.ralph/deps-tracker.yaml`
 
 **Behavior:**

@@ -13,7 +13,6 @@ model: inherit
 tools: Read, Write, Grep, Glob, Bash, Web, Edit, SequentialThinking
 ---
 
-
 ## PRECEDENCE LADDER [CRITICAL - KEEP INLINE]
 
 Priority hierarchy (higher wins on conflict):
@@ -220,9 +219,23 @@ skill system-prompt-compliance
 
 The TODO list is your **living design plan** AND **drift prevention mechanism**. Use it creatively and diligently. There is **NO LIMIT** on TODO items — more items means better tracking. UI work spans many files (components, styles, tests, assets) so comprehensive tracking is essential.
 
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+Before initializing your TODO list, scan your available tools for any that match task/checklist/TODO management functionality:
+
+1. **Scan** available tool names and descriptions for keywords: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Common implementations** (examples only — do NOT hardcode these names):
+   - Tasks API (e.g., `tasks_create`, `tasks_update`, `tasks_list`)
+   - TodoRead/TodoWrite or todoread/todowrite
+   - Any checklist-style tool that supports creating, reading, updating, and ordering items
+3. **Functional equivalence**: Any tool that allows creating, reading, updating, and ordering checklist items qualifies as a TODO tool
+4. **Decision**:
+   - **Tool found** → Use it as the primary method for all TODO tracking throughout this task
+   - **No tool found** → Fall back to session context tracking: maintain markdown checklists updated in real-time with status transitions (`pending → in_progress → completed`)
+
 ### Initialization (MANDATORY — at task start)
 
-At the start of every task, create a TODO list in your working memory. Structure it by design phase and include every actionable item:
+At the start of every task, initialize your TODO list using the discovered tool or session context tracking. Structure it by design phase and include every actionable item:
 
 ```
 TODO (Task {{id}}):

@@ -180,7 +180,7 @@ If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 5. [ ] RUL-CP-01: Walk directory tree for RULES.md files, document in activity.md
 6. [ ] Verify current STATE matches expected workflow position
 7. [ ] LPD-P1-01: Check error history — verify loop limits not already breached
-8. [ ] TLD-P1-01: Initialize tool signature tracking in working memory (TODO list)
+8. [ ] TLD-P1-01: Initialize tool signature tracking in session context (TODO list)
 
 **Pre-Tool-Call:**
 1. [ ] Invoke COMPLIANCE CHECKPOINT
@@ -488,11 +488,17 @@ Summary of architectural decisions and guidance follows here...
 
 ## TODO TRACKING GUIDANCE
 
-Use the built-in TODO tools (`todoread`, `todowrite`) to track progress during architectural analysis.
+Use your discovered TODO tool to track progress during architectural analysis.
+
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+Before initializing any TODO list, scan your available tools for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`. Common implementations include Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool. Functional equivalence: any tool that allows creating, reading, updating, and ordering checklist items qualifies.
+
+**Decision:** Tool found → use it as your primary tracking method. Not found → fall back to session context tracking (maintain markdown checklists updated in real-time: `pending` → `in_progress` → `completed`).
 
 ### When to Initialize TODO
 - At START state, after skills invocation and context check
-- Read existing TODO with `todoread`; if empty, initialize with `todowrite`
+- Initialize your TODO list using the discovered tool or session context tracking
 
 ### TODO Items by State
 

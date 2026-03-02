@@ -105,7 +105,7 @@ The skill detects and operates in three contexts:
 ### State File Conflict Detection (`state-file-conflicts.sh`)
 
 - Specifically checks Ralph Loop state files for merge conflicts
-- Files checked: `.ralph/TODO.md` and `.ralph/deps-tracker.yaml`
+- Files checked: `.ralph/tasks/TODO.md` and `.ralph/deps-tracker.yaml`
 - Emits TASK_BLOCKED_0000 signal if conflicts found
 - Called by Manager at loop iteration start
 

@@ -305,11 +305,22 @@ The Researcher is a **support role** in the TDD cycle, not a primary participant
 
 ## TODO LIST TRACKING [CRITICAL — RESEARCH-SPECIFIC]
 
-**Rule**: Use todoread/todowrite tools to track all research progress. Research tasks branch into many sub-questions — TODO tracking prevents scope drift and ensures completeness before signaling.
+**Rule**: Use your discovered TODO tracking tool to track all research progress. Research tasks branch into many sub-questions — TODO tracking prevents scope drift and ensures completeness before signaling.
+
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+Before initializing your TODO list, discover the available tracking tool:
+
+1. **Scan** available tools for names/descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Common implementations**: Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool
+3. **Functional equivalence**: Any tool that allows creating, reading, updating, and ordering checklist items qualifies
+4. **Decision**:
+   - Tool found → use as primary TODO tracking method
+   - Not found → use session context fallback (markdown checklists updated in real-time: `pending` → `in_progress` → `completed`)
 
 ### Initialization (State: DEFINE_SCOPE)
 
-After defining themes, initialize TODO with:
+After defining themes, initialize your TODO list using the discovered tool or session context tracking:
 
 ```
 Research Task: [task description from TASK.md]
@@ -420,7 +431,7 @@ Track per-finding confidence in TODO:
 2. Read attempts.md for past attempts and lessons
 3. Read TASK.md for research questions
 4. If files missing: TASK_BLOCKED per SIG-P0-03
-5. Initialize TODO with questions from TASK.md
+5. Initialize TODO list (using discovered tool or session context tracking) with questions from TASK.md
 
 **Update activity.md**: Create attempt header (ACT-P1-12):
 ```markdown

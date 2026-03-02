@@ -171,7 +171,7 @@ changelog:
     <mechanism>Generate tool signature before EVERY tool call: TOOL_TYPE:TARGET</mechanism>
     <mechanism>Check if signature appears in last 2 tool calls</mechanism>
     <mechanism>If 3rd occurrence: STOP, do NOT make the call, invoke TLD-P1-02</mechanism>
-    <mechanism>Track tool signatures in working memory (TODO list)</mechanism>
+    <mechanism>Track tool signatures in session context (TODO list)</mechanism>
   </enforcement>
 </rule>
 
@@ -294,7 +294,7 @@ Tie-break: Lower priority drops if conflicts with higher priority.
 [ ] HOF-P1-01: Handoff count < 8 (current: ___)
 [ ] LPD-P1-01a: Attempts on current issue < 3 (current: ___)
 [ ] LPD-P1-01d: Total attempts this task < 10 (current: ___)
-[ ] TLD-P1-01: Tool signature not repeated 3x in session (check working memory)
+[ ] TLD-P1-01: Tool signature not repeated 3x in session (check session context)
 [ ] ACT-P1-12: activity.md will be updated before signal
 [ ] STATE: Current state is valid per State Machine
 ```
@@ -571,9 +571,20 @@ If tempted to fix production code:
 
 **The Tester MUST use TODO tracking to manage test execution across files, acceptance criteria, and defect discovery.**
 
+### Adaptive Tool Discovery (MANDATORY — before initialization)
+
+At task start, check your available tools/APIs for any task management, checklist, or TODO capability:
+
+1. **Scan available tools** for names or descriptions matching: `todo`, `task`, `checklist`, `plan`, `tracker`
+2. **Common implementations**: Tasks API, TodoRead/TodoWrite, todoread/todowrite, or any checklist-style tool
+3. **Functional equivalence**: Any tool that allows creating, reading, updating, and ordering checklist items qualifies
+4. **Decision**:
+   - If a suitable tool is found → Use it as the **PRIMARY** tracking method for all TODO operations below
+   - If no suitable tool is found → Fall back to **session context tracking** (markdown checklists maintained in your conversation context, updated in real-time as items transition `pending → in_progress → completed`)
+
 ### Initialization (at SCOPING state)
 
-Create a TODO list with:
+After tool discovery, initialize your TODO list using the discovered tool or session context tracking. Structure it with:
 1. **One item per acceptance criterion** from TASK.md (verbatim text)
 2. **One item per test file** to run/review
 3. **Phase tracking items** for current workflow state
