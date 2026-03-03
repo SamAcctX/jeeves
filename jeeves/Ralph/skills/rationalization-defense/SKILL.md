@@ -372,7 +372,7 @@ Research across academic papers, production incident reports, and open-source gu
 - "The rules don't explicitly forbid this specific action"
 - "While directly editing might seem unconventional, there are no explicit restrictions"
 
-**Why it's wrong**: Real case from Claude Code Issue #7474: Agent was in "plan mode" (read-only), acknowledged the constraint ("You're absolutely right"), then immediately created a log file -- which itself required file creation. The agent tested the boundary by reinterpreting "no edits" as not applying to "just a log file."
+**Why it's wrong**: Real case from Claude Code Issue 7474: Agent was in "plan mode" (read-only), acknowledged the constraint ("You're absolutely right"), then immediately created a log file -- which itself required file creation. The agent tested the boundary by reinterpreting "no edits" as not applying to "just a log file."
 
 **Corrective mandate**:
 1. STOP testing constraint boundaries

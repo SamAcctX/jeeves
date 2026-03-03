@@ -153,12 +153,19 @@ build_server_config_entry() {
         if [ "$is_opencode" = true ]; then
             printf '    "%s": {
         "type": "local",
-        "command": ["python", "-m", "crawler_agent.mcp_server"]
+        "command": "python",
+        "args": ["-m", "crawler_agent.mcp_server"],
+        "env": {
+            "PYTHONPATH": "/opt/jeeves/crawl4ai"
+        }
     }' "$server_name"
         else
             printf '    "%s": {
         "command": "python",
-        "args": ["-m", "crawler_agent.mcp_server"]
+        "args": ["-m", "crawler_agent.mcp_server"],
+        "environment": {
+            "PYTHONPATH": "/opt/jeeves/crawl4ai"
+        }
     }' "$server_name"
         fi
     else
