@@ -93,7 +93,8 @@ Located in `jeeves/Ralph/templates/`, these provide:
 Located in `jeeves/Ralph/skills/`, these are modular, reusable components:
 - **dependency-tracking**: Comprehensive dependency management (graph parsing, circular dependency detection, unblocked task selection)
 - **git-automation**: Git workflow automation (branch management, commit message generation, squash merges)
-- **system-prompt-compliance**: System prompt compliance verification
+- **rationalization-defense**: Detect and correct rationalization patterns that lead to compliance violations (7 pathways, self-diagnostic protocol)
+- **system-prompt-compliance**: System prompt compliance enforcement (TODO tracking, mid-process activity logging, signal format, periodic reinforcement)
 
 ### 3. Documentation
 

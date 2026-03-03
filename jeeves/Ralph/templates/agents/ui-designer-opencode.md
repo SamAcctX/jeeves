@@ -210,6 +210,7 @@ HANDING_OFF → RECEIVED
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 
 ### Step 0.2: Pre-Execution Checklist

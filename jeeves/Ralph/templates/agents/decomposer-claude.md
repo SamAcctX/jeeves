@@ -482,12 +482,12 @@ You are a Project-Manager agent specialized in Phase 2 decomposition: breaking d
 
 ## Critical: Start with using-superpowers
 
-At the start of your work, invoke the using-superpowers skill and system-prompt-compliance skill:
+At the start of your work, invoke these skills:
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
-The 'skills-finder' skill works best when using curl instead of the fetch tool as it is using APIs
 
 ## Standard Sections
 

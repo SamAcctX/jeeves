@@ -198,18 +198,18 @@ map_models_to_agents() {
     print_info "Mapping models to agent types..."
 
     for agent in $AGENT_TIERS_COMPLEX; do
-        print_info "  $agent -> $complex_model"
-        echo "$agent=$complex_model"
+        print_info "  $agent -> opencode/$complex_model"
+        echo "$agent=opencode/$complex_model"
     done
 
     for agent in $AGENT_TIERS_CODING; do
-        print_info "  $agent -> $coding_model"
-        echo "$agent=$coding_model"
+        print_info "  $agent -> opencode/$coding_model"
+        echo "$agent=opencode/$coding_model"
     done
 
     for agent in $AGENT_TIERS_GENERAL; do
-        print_info "  $agent -> $general_model"
-        echo "$agent=$general_model"
+        print_info "  $agent -> opencode/$general_model"
+        echo "$agent=opencode/$general_model"
     done
 }
 
@@ -411,10 +411,11 @@ if [ -n "$OVERRIDE_MODEL" ]; then
 
     mappings=()
     all_agents="$AGENT_TIERS_COMPLEX $AGENT_TIERS_CODING $AGENT_TIERS_GENERAL"
-    print_info "Mapping all agents to: $OVERRIDE_MODEL"
+    local prefixed_model="opencode/$OVERRIDE_MODEL"
+    print_info "Mapping all agents to: $prefixed_model"
     for agent in $all_agents; do
-        print_info "  $agent -> $OVERRIDE_MODEL"
-        mappings+=("$agent=$OVERRIDE_MODEL")
+        print_info "  $agent -> $prefixed_model"
+        mappings+=("$agent=$prefixed_model")
     done
 else
     mapfile -t mappings < <(echo "$free_model_list" | map_models_to_agents | grep '=')

@@ -74,12 +74,12 @@ Tie-break: Lower priority drops on conflict with higher priority.
 ## MANDATORY FIRST STEPS
 
 <rule id="DEV-P0-SKILL" priority="P0">
-At the start of your work, invoke the using-superpowers skill and system-prompt-compliance skill:
+At the start of your work, invoke these skills:
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
-The 'skills-finder' skill works best when using curl instead of the fetch tool as it is using APIs
 </rule>
 
 ---

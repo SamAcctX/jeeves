@@ -16,6 +16,7 @@ Skills are modular, reusable components that:
 jeeves/Ralph/skills/
 ├── dependency-tracking/         # Dependency management utilities
 ├── git-automation/             # Git workflow automation
+├── rationalization-defense/    # Detect and correct rationalization patterns
 └── system-prompt-compliance/   # System prompt compliance checking
 ```
 
@@ -47,12 +48,23 @@ Git workflow automation for task lifecycle management:
 **Scripts**: `git-automation/scripts/`
 **References**: `git-automation/references/`
 
+### rationalization-defense
+Detect and correct rationalization patterns that lead to compliance violations:
+- 7 documented rationalization pathways (conditional completion, disclaimer hedging, delegation invention, etc.)
+- Self-diagnostic protocol (7-question checklist before TASK_COMPLETE)
+- Real-world failure case analysis
+- Integration with compliance checkpoints
+
+**Documentation**: `rationalization-defense/README.md`
+**Metadata**: `rationalization-defense/SKILL.md`
+
 ### system-prompt-compliance
-System prompt compliance verification:
-- Pre-action checklist
-- Critical warning inclusion
-- State file read requirements
+System prompt compliance enforcement:
+- TODO tool usage (mandatory for all agents)
+- Mid-process activity logging (mandatory for workers)
 - Signal format validation
+- Pre-signal compliance gate
+- Periodic reinforcement (every 15 tool calls)
 
 **Documentation**: `system-prompt-compliance/README.md`
 **Metadata**: `system-prompt-compliance/SKILL.md`

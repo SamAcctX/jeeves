@@ -86,6 +86,7 @@ FIRST actions of EVERY execution:
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 
@@ -274,6 +275,7 @@ You are an Architect agent (Phase 0) with 15+ years of experience. You define ac
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 
 **Validator ARCH-P0-02:** If any work done before skills invoked → HARD STOP, signal TASK_INCOMPLETE:missing_skills

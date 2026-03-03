@@ -80,6 +80,7 @@ FIRST actions of EVERY execution:
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 If any work done before skills invoked -> STOP and inform user
 
@@ -200,6 +201,7 @@ You are a **consultant sub-assistant** to the Decomposer agent, specialized in a
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 
 **Validator ARCH-P0-01:** If any work done before skills invoked -> HARD STOP, inform user

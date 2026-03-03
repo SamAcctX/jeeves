@@ -14,6 +14,7 @@ set -e
 declare -A MCP_SERVERS=(
     ["sequentialthinking"]="@modelcontextprotocol/server-sequential-thinking"
     ["fetch"]="python -m mcp_server_fetch"
+    ["crawl4ai"]="python -m crawler_agent.mcp_server"
     ["searxng"]="mcp-searxng"
     ["playwright"]="@playwright/mcp@latest"
 )
@@ -146,6 +147,18 @@ build_server_config_entry() {
             printf '    "%s": {
         "command": "python",
         "args": ["-m", "mcp_server_fetch"]
+    }' "$server_name"
+        fi
+    elif [ "$server_name" = "crawl4ai" ]; then
+        if [ "$is_opencode" = true ]; then
+            printf '    "%s": {
+        "type": "local",
+        "command": ["python", "-m", "crawler_agent.mcp_server"]
+    }' "$server_name"
+        else
+            printf '    "%s": {
+        "command": "python",
+        "args": ["-m", "crawler_agent.mcp_server"]
     }' "$server_name"
         fi
     else
@@ -442,6 +455,14 @@ EOF
      }
 EOF
 )
+                            elif [ "$server_name" = "crawl4ai" ]; then
+                                server_config=$(cat <<EOF
+     "$server_name": {
+         "type": "local",
+         "command": ["python", "-m", "crawler_agent.mcp_server"]
+     }
+EOF
+)
                             else
                                 if [[ "${MCP_SERVERS[$server_name]}" == python* ]]; then
                                     server_config=$(cat <<EOF
@@ -588,6 +609,14 @@ EOF
     }
 EOF
 )
+        elif [ "$server_name" = "crawl4ai" ]; then
+            server_config=$(cat <<EOF
+    "$server_name": {
+        "command": "python",
+        "args": ["-m", "crawler_agent.mcp_server"]
+    }
+EOF
+)
         else
             if [[ "${MCP_SERVERS[$server_name]}" == npx* ]]; then
                 server_config=$(cat <<EOF
@@ -710,6 +739,14 @@ EOF
     "$server_name": {
         "command": "python",
         "args": ["-m", "mcp_server_fetch"]
+    }
+EOF
+)
+                            elif [ "$server_name" = "crawl4ai" ]; then
+                                server_config=$(cat <<EOF
+    "$server_name": {
+        "command": "python",
+        "args": ["-m", "crawler_agent.mcp_server"]
     }
 EOF
 )

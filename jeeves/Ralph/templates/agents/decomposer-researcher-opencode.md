@@ -127,6 +127,7 @@ FIRST actions of EVERY execution:
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 If any work done before skills invoked → STOP and inform Decomposer.
 
@@ -224,6 +225,7 @@ If any work done before skills invoked → STOP and inform Decomposer.
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill rationalization-defense
 ```
 If skills fail or were skipped → STOP and inform Decomposer.
 
