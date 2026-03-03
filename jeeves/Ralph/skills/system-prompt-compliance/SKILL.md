@@ -147,6 +147,8 @@ Common rationalization patterns that indicate you are about to violate complianc
 | Delegation invention | "The user can handle this part" | If your prompt doesn't define delegation, it's not allowed |
 | Scope minimization | "This is close enough" | Check acceptance criteria literally |
 | Rule reinterpretation | "Verified execution probably means code review" | Use the plain meaning of words |
+| Role Boundry Testing | "The tester made a mistake in their test, let me fix it" | Role SOD restrictions are ABSOULTE - hand off to appropriate agent |
+| Contextual Dilution | Any extended thought process between <think> tags | System prompt instructions and acceptance criteria are ABSOLUTE - confirm you are strictly adhering to them |
 
 **Corrective action**: When you detect rationalization, invoke the `rationalization-defense` skill if available, or apply Section 5 (Pre-Signal Compliance Gate) immediately.
 
