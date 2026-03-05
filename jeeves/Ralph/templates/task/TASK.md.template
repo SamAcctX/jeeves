@@ -1,23 +1,47 @@
 # Task XXXX: [Title]
 
 ## Description
-[Detailed description of what needs to be implemented. Be specific about:
+[Detailed description of WHAT needs to be built and WHY. Be specific about:
 - What functionality or feature is required
 - Why it's needed (business/technical context)
-- Any specific constraints or requirements]
+- Any specific constraints or requirements
+Do NOT specify file paths, folder structures, or implementation methods — the assigned agent determines HOW.]
 
 ## Acceptance Criteria
 - [ ] Criterion 1: Specific, testable requirement
 - [ ] Criterion 2: Another specific requirement
 - [ ] All tests pass (defined per task type)
 - [ ] No scope creep (only what was requested)
+- [ ] Documentation: [inline docs / README update / API docs — specify what's needed]
+
+## Constraints
+[Technical constraints, performance requirements, compatibility requirements]
+- All file operations within `/proj` workspace only
+- All commands must be non-interactive (headless container — no GUI, no TTY prompts)
+- All long-running processes must be backgrounded with timeouts
+- All loops/scripts must have bounded iteration limits
+
+## TDD Context
+- TDD Phase: [RED | GREEN | REFACTOR | VERIFY | N/A]
+- Test Task: [Task ID of corresponding test task, or "self" if consolidated]
+- Implementation Task: [Task ID of corresponding implementation task, or "self"]
+- Expected test state after this task: [All fail | All pass | All pass (refactored) | N/A]
+- Full suite regression check required: [yes/no]
+
+[If TDD Phase is RED:]
+> **RED PHASE RULE**: Write tests ONLY. All tests MUST fail. Do NOT write any implementation code.
+> No production code may be created or modified in this task.
+
+[If TDD Phase is GREEN:]
+> **GREEN PHASE RULE**: Write minimal code to pass all tests from Task [XXXX].
+> Do not over-engineer. Focus only on making tests pass.
+
+[If TDD Phase is REFACTOR:]
+> **REFACTOR PHASE RULE**: Improve code quality only. All tests must still pass after changes.
+> Run full test suite to verify no regressions.
 
 ## Implementation Notes
-[Specific technical details, patterns to follow, files to modify, etc.]
-
-### Files to Create/Modify
-- `/path/to/file1` - Purpose
-- `/path/to/file2` - Purpose
+[Technical context, patterns to follow, integration points, reference materials]
 
 ### Technical Details
 [Any specific algorithms, data structures, APIs, or patterns to use]
@@ -28,6 +52,11 @@
 command1
 command2
 ```
+
+## Version References
+- Project type: [net-new | existing]
+- [Package]: [version or "latest stable as of decomposition"]
+- Source: [web search / existing project files / PRD]
 
 ## Dependencies
 [Technical dependencies only - packages, libraries, external resources]

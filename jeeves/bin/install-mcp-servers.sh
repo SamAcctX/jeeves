@@ -153,9 +153,8 @@ build_server_config_entry() {
         if [ "$is_opencode" = true ]; then
             printf '    "%s": {
         "type": "local",
-        "command": "python",
-        "args": ["-m", "crawler_agent.mcp_server"],
-        "env": {
+        "command": ["python", "-m", "crawler_agent.mcp_server"],
+        "environment": {
             "PYTHONPATH": "/opt/jeeves/crawl4ai"
         }
     }' "$server_name"
@@ -163,7 +162,7 @@ build_server_config_entry() {
             printf '    "%s": {
         "command": "python",
         "args": ["-m", "crawler_agent.mcp_server"],
-        "environment": {
+        "env": {
             "PYTHONPATH": "/opt/jeeves/crawl4ai"
         }
     }' "$server_name"
@@ -466,7 +465,10 @@ EOF
                                 server_config=$(cat <<EOF
      "$server_name": {
          "type": "local",
-         "command": ["python", "-m", "crawler_agent.mcp_server"]
+         "command": ["python", "-m", "crawler_agent.mcp_server"],
+         "environment": {
+             "PYTHONPATH": "/opt/jeeves/crawl4ai"
+         }
      }
 EOF
 )
@@ -620,7 +622,10 @@ EOF
             server_config=$(cat <<EOF
     "$server_name": {
         "command": "python",
-        "args": ["-m", "crawler_agent.mcp_server"]
+        "args": ["-m", "crawler_agent.mcp_server"],
+        "env": {
+            "PYTHONPATH": "/opt/jeeves/crawl4ai"
+        }
     }
 EOF
 )
@@ -753,7 +758,10 @@ EOF
                                 server_config=$(cat <<EOF
     "$server_name": {
         "command": "python",
-        "args": ["-m", "crawler_agent.mcp_server"]
+        "args": ["-m", "crawler_agent.mcp_server"],
+        "env": {
+            "PYTHONPATH": "/opt/jeeves/crawl4ai"
+        }
     }
 EOF
 )
