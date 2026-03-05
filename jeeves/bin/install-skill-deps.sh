@@ -48,8 +48,9 @@ else
     NC=''
 fi
 
-# Python parser script path
-readonly PARSER_SCRIPT="/proj/jeeves/bin/parse_skill_deps.py"
+# Python parser script path - derive from script location
+readonly SCRIPT_DIR="$(dirname "$(readlink -f "$0")")"
+readonly PARSER_SCRIPT="$SCRIPT_DIR/parse_skill_deps.py"
 
 # Temporary files
 readonly TEMP_DIR="/tmp/${SCRIPT_NAME}-$$"
