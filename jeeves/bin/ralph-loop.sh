@@ -289,7 +289,7 @@ invoke_opencode_manager() {
     MANAGER_OUTPUT=$(mktemp)
     local start_time=$(date +%s)
     
-    export OPENCODE_PERMISSION='{"*":"allow","question":"deny","permission": "allow","external_directory": {"/tmp": "allow"}}'
+    export OPENCODE_PERMISSION='{"*":"allow","question":"deny","permission":"allow","external_directory":{"/**":"allow"}}'
     
     if opencode run --agent manager --attach http://localhost:3333 $model_arg $format_arg < "$prompt_path" | tee "$MANAGER_OUTPUT"; then
         local duration=$(($(date +%s) - start_time))
