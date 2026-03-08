@@ -1,0 +1,52 @@
+FROM python:3.11-slim AS dependencies
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install -r requirements.txt
+
+FROM dependencies AS browsers
+
+ENV PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers
+
+RUN python -m playwright install --with-deps chromium
+
+FROM browsers AS runtime
+
+COPY . .
+
+COPY mcp_server_http.py crawler_agent/mcp_server_http.py
+COPY mcp_server_streamable_http.py crawler_agent/mcp_server_streamable_http.py
+COPY healthcheck.py /app/healthcheck.py
+
+RUN mkdir -p /app/crawls /app/test_crawls
+
+RUN adduser --disabled-password --gecos '' --uid 1000 appuser && \
+    chown -R appuser:appuser /app
+
+USER appuser
+
+ENV PYTHONPATH=/app \
+    CRAWL4AI_MCP_LOG=INFO \
+    PLAYWRIGHT_BROWSERS_PATH=/opt/playwright-browsers \
+    MCP_HTTP_HOST=0.0.0.0 \
+    MCP_HTTP_PORT=8080
+
+VOLUME ["/app/crawls"]
+
+EXPOSE 8080
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
+    CMD python /app/healthcheck.py || exit 1
+
+CMD ["python", "-m", "crawler_agent.mcp_server_streamable_http"]
+
+LABEL maintainer="crawl4ai-mcp" \
+      description="Crawl4AI MCP Server with HTTP/SSE transport" \
+      version="1.0.0"
