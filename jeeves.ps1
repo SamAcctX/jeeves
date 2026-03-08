@@ -3,15 +3,16 @@
     Jeeves - OpenCode Container Management Helper
 
 .DESCRIPTION
-    A PowerShell script for managing the OpenCode (jeeves) Docker container.
-    This script provides convenient commands to build, start, stop, and interact
-    with the containerized OpenCode environment.
+    A PowerShell script for managing multiple concurrent OpenCode (jeeves) Docker
+    containers. Each project directory gets its own container instance named after
+    the directory (e.g., jeeves-myproject). Ports are auto-assigned starting from
+    3333 to avoid conflicts between instances.
 
     The script can be invoked from any directory as it maps the current working
     directory (pwd) to /proj inside the container.
 
 .PARAMETER Command
-    The command to execute (build, start, stop, restart, rm, shell, logs, status, clean, help)
+    The command to execute (build, start, stop, restart, rm, shell, logs, status, list, clean, help)
 
 .PARAMETER NoCache
     Build without using Docker cache (valid for 'build' command)
@@ -25,6 +26,12 @@
 .PARAMETER Clean
     Perform a clean start: stops, removes container/image, rebuilds from scratch, then starts (valid for 'start' command)
 
+.PARAMETER Port
+    Use a specific host port for the web UI (valid for 'start' command, default: auto-assign from 3333)
+
+.PARAMETER Ports
+    Extra port mappings as comma-separated host:container pairs (valid for 'start' command)
+
 .PARAMETER Remove
     Also remove the container after stopping (valid for 'stop' command)
 
@@ -32,33 +39,41 @@
     Force stop the container using SIGKILL instead of SIGTERM (valid for 'stop' command)
 
 .PARAMETER Dind
-    Enable Docker-in-Docker (DinD) support: runs container in privileged mode with Docker socket access (valid for 'start', 'restart' commands)
+    Enable Docker-in-Docker (DinD) support (valid for 'start', 'restart' commands)
+
+.PARAMETER All
+    Operate on all jeeves instances (valid for 'clean', 'status' commands)
+
+.PARAMETER Image
+    Also remove the shared Docker image (valid for 'clean' command)
 
 .EXAMPLE
-    .\jeeves.ps1 build
-    Build the Docker image using cache
+    .\jeeves.ps1 start
+    Start the container for the current directory (auto-assign port)
 
 .EXAMPLE
-    .\jeeves.ps1 build --no-cache --desktop
-    Clean build with desktop binaries
+    .\jeeves.ps1 start --port 3334 --ports 3000:3000
+    Start with specific port and extra port mappings
 
 .EXAMPLE
-    .\jeeves.ps1 start --clean
-    Clean rebuild and start the container
+    .\jeeves.ps1 list
+    Show all running jeeves instances
 
 .EXAMPLE
-    .\jeeves.ps1 stop --force --remove
-    Force stop and remove container
-
-.EXAMPLE
-    .\jeeves.ps1 shell
-    Attach to the container shell
+    .\jeeves.ps1 clean --all --image
+    Remove all jeeves containers and the shared image
 
 .NOTES
     File Name      : jeeves.ps1
     Author         : OpenCode
     Prerequisite   : Docker must be installed and running
     Platform       : Cross-platform (Windows, Linux, macOS)
+
+    Multi-Container Model:
+    - Container names are derived from the current directory (jeeves-<folder>)
+    - Ports auto-increment from 3333 to avoid conflicts
+    - The Docker image (jeeves:latest) is shared across all instances
+    - Each instance has its own compose file in .tmp/<slug>/
 
     UID/GID Mapping:
     - On Linux/macOS: Uses $env:UID and $env:GID if available
@@ -176,14 +191,6 @@ function Build-MainParameterHashtable {
 
 $ErrorActionPreference = "Stop"
 
-<#
-.SYNOPSIS
-    Validates Docker daemon is running
-
-.DESCRIPTION
-    Checks if Docker daemon is available and running. Exits with error
-    if Docker is not available.
-#>
 function Test-DockerDaemon {
     try {
         $null = docker version 2>$null
@@ -200,21 +207,122 @@ function Test-DockerDaemon {
     }
 }
 
-<#
-.SYNOPSIS
-    Script-wide configuration variables
+function Get-ProjectSlug {
+    $currentPath = (Get-Location).Path
 
-.DESCRIPTION
-    Centralized configuration for Docker image names, tags, ports, and paths.
-    These variables are prefixed with $Script: to make them available to all functions.
-#>
+    $leafName = Split-Path -Leaf $currentPath
+
+    if (-not $leafName -or $leafName -eq [System.IO.Path]::DirectorySeparatorChar -or $leafName -eq "/" -or $leafName -eq "\") {
+        Write-Log "Cannot determine project name from root directory '$currentPath'." -error
+        Write-Log "Please run jeeves from within a project directory." -info
+        exit 1
+    }
+
+    $slug = $leafName.ToLower() -replace '[^a-z0-9]', '-'
+    $slug = $slug -replace '-+', '-'
+    $slug = $slug.Trim('-')
+
+    if (-not $slug) {
+        Write-Log "Cannot derive a valid project slug from directory '$leafName'." -error
+        Write-Log "Please run jeeves from a directory with alphanumeric characters in its name." -info
+        exit 1
+    }
+
+    return $slug
+}
+
+function Get-ProjectComposePath {
+    $slugDir = Join-Path $PSScriptRoot ".tmp"
+    $slugDir = Join-Path $slugDir $Script:PROJECT_SLUG
+    return Join-Path $slugDir "docker-compose.yml"
+}
+
+function Get-AllJeevesContainers {
+    $raw = docker ps -a --filter "label=jeeves.managed=true" --format "{{.Names}}`t{{.Status}}`t{{.Label `"jeeves.project`"}}`t{{.Label `"jeeves.directory`"}}`t{{.Ports}}" 2>$null
+    if (-not $raw) {
+        return @()
+    }
+
+    $containers = @()
+    foreach ($line in $raw -split "`n") {
+        $line = $line.Trim()
+        if (-not $line) { continue }
+        $parts = $line -split "`t"
+        $containers += @{
+            Name      = $parts[0]
+            Status    = $parts[1]
+            Project   = $parts[2]
+            Directory = $parts[3]
+            Ports     = $parts[4]
+        }
+    }
+
+    return $containers
+}
+
+function Get-NextAvailablePort {
+    param(
+        [int]$StartPort = 3333
+    )
+
+    $usedPorts = @()
+    $allContainers = Get-AllJeevesContainers
+    foreach ($container in $allContainers) {
+        if ($container.Ports -match '(\d+)->3333') {
+            $usedPorts += [int]$Matches[1]
+        }
+    }
+
+    $port = $StartPort
+    while ($usedPorts -contains $port) {
+        $port++
+        if ($port -gt 65535) {
+            Write-Log "No available ports found starting from $StartPort" -error
+            exit 1
+        }
+    }
+
+    return $port
+}
+
+function Get-PortFromComposeFile {
+    $composePath = Get-ProjectComposePath
+    if (-not (Test-Path $composePath)) {
+        return $null
+    }
+
+    $content = Get-Content $composePath -Raw
+    if ($content -match '"(\d+):3333"') {
+        return [int]$Matches[1]
+    }
+
+    return $null
+}
+
+function Test-SlugCollision {
+    $allContainers = Get-AllJeevesContainers
+    $currentDir = (Get-Location).Path
+
+    foreach ($container in $allContainers) {
+        if ($container.Project -eq $Script:PROJECT_SLUG -and $container.Directory -ne $currentDir) {
+            Write-Log "Slug collision detected: project slug '$($Script:PROJECT_SLUG)' is already in use by:" -error
+            Write-Log "  Container: $($container.Name)" -error
+            Write-Log "  Directory: $($container.Directory)" -error
+            Write-Log "  Current:   $currentDir" -error
+            Write-Log "Two different directories resolve to the same container name." -info
+            Write-Log "Rename one of the directories to avoid this conflict." -info
+            exit 1
+        }
+    }
+}
+
 $Script:IMAGE_NAME = "jeeves"
 $Script:IMAGE_TAG = "latest"
-$Script:CONTAINER_NAME = "jeeves"
+$Script:PROJECT_SLUG = Get-ProjectSlug
+$Script:CONTAINER_NAME = "jeeves-$Script:PROJECT_SLUG"
 $Script:DOCKERFILE_PATH = Join-Path $PSScriptRoot "Dockerfile.jeeves"
 $Script:BUILD_CONTEXT = $PSScriptRoot
-$Script:HOST_PORT = 3333
-$Script:CONTAINER_PORT = 3333
+$Script:DEFAULT_PORT = 3333
 $Script:WORKSPACE_MOUNT = "$(Get-Location):/proj:rw"
 
 <#
@@ -318,30 +426,29 @@ function Get-UserMountSpec {
     to ensure proper temporary file management.
 #>
 function Initialize-TemporaryDirectory {
-    $tmpPath = Join-Path $PSScriptRoot ".tmp"
-    
-    if (-not (Test-Path $tmpPath)) {
-        New-Item -ItemType Directory -Path $tmpPath -Force | Out-Null
-        Write-Log "Created .tmp directory for compose files" -trace
+    $tmpBase = Join-Path $PSScriptRoot ".tmp"
+    $slugDir = Join-Path $tmpBase $Script:PROJECT_SLUG
+
+    if (-not (Test-Path $slugDir)) {
+        New-Item -ItemType Directory -Path $slugDir -Force | Out-Null
+        Write-Log "Created .tmp/$($Script:PROJECT_SLUG) directory for compose files" -trace
     }
-    
-    # Ensure .gitignore exists and contains .tmp
-    $gitignorePath = Join-Path $PSScriptRoot ".gitignore"
-    if (Test-Path $gitignorePath) {
-        $gitignoreContent = Get-Content $gitignorePath
+
+    $scriptGitignorePath = Join-Path $PSScriptRoot ".gitignore"
+    if (Test-Path $scriptGitignorePath) {
+        $gitignoreContent = Get-Content $scriptGitignorePath
         if ($gitignoreContent -notcontains ".tmp/") {
-            Add-Content -Path $gitignorePath -Value "`n.tmp/" -Encoding UTF8
-            Write-Log "Added .tmp/ to .gitignore" -trace
+            Add-Content -Path $scriptGitignorePath -Value "`n.tmp/" -Encoding UTF8
+            Write-Log "Added .tmp/ to script .gitignore" -trace
         }
     }
-    
-    # Ensure .dockerignore exists and contains .tmp
-    $dockerignorePath = Join-Path $PSScriptRoot ".dockerignore"
-    if (Test-Path $dockerignorePath) {
-        $dockerignoreContent = Get-Content $dockerignorePath
+
+    $scriptDockerignorePath = Join-Path $PSScriptRoot ".dockerignore"
+    if (Test-Path $scriptDockerignorePath) {
+        $dockerignoreContent = Get-Content $scriptDockerignorePath
         if ($dockerignoreContent -notcontains ".tmp/") {
-            Add-Content -Path $dockerignorePath -Value "`n.tmp/" -Encoding UTF8
-            Write-Log "Added .tmp/ to .dockerignore" -trace
+            Add-Content -Path $scriptDockerignorePath -Value "`n.tmp/" -Encoding UTF8
+            Write-Log "Added .tmp/ to script .dockerignore" -trace
         }
     }
 }
@@ -360,21 +467,35 @@ function Initialize-TemporaryDirectory {
     health checks, and resource limits as specified in the PRD.
 #>
 function New-DockerComposeFile {
-    param([switch]$Dind)
-    
+    param(
+        [switch]$Dind,
+        [int]$Port = 0,
+        [string]$ExtraPorts = ""
+    )
+
+    if ($Port -eq 0) {
+        $Port = $Script:DEFAULT_PORT
+    }
+
     $mountSpec = Get-UserMountSpec
-    $tmpPath = Join-Path $PSScriptRoot ".tmp"
-    
+    $currentDir = (Get-Location).Path
+    $networkName = "jeeves-$($Script:PROJECT_SLUG)-network"
+
     $composeContent = @"
 services:
   jeeves:
     build:
-      context: ..
+      context: ../..
       dockerfile: Dockerfile.jeeves
     image: jeeves:latest
+    container_name: $($Script:CONTAINER_NAME)
     runtime: nvidia
     shm_size: "2gb"
     gpus: all
+    labels:
+      - "jeeves.managed=true"
+      - "jeeves.project=$($Script:PROJECT_SLUG)"
+      - "jeeves.directory=$currentDir"
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - CUDA_VISIBLE_DEVICES=all
@@ -382,20 +503,18 @@ services:
       - PLAYWRIGHT_MCP_BROWSER=chromium
       - PLAYWRIGHT_MCP_NO_SANDBOX=1
       - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
-      # Disable Exa web search to ensure SearXNG is used instead
       - OPENCODE_ENABLE_EXA=false
 "@
 
     if ($Dind) {
-        $composeContent += "`n      - ENABLE_DIND=true`n"
+        $composeContent += "      - ENABLE_DIND=true`n"
     }
 
-    # Pass host git config to container
     try {
         $gitName = git config --global user.name
         $gitEmail = git config --global user.email
         if ($gitName) {
-            $composeContent += "`n      - GIT_AUTHOR_NAME=$gitName`n"
+            $composeContent += "      - GIT_AUTHOR_NAME=$gitName`n"
         }
         if ($gitEmail) {
             $composeContent += "      - GIT_AUTHOR_EMAIL=$gitEmail`n"
@@ -403,61 +522,48 @@ services:
     } catch {
         Write-Log "Warning: Could not read host git config" -warning
     }
-    
-    $composeContent += "`n    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
-    
+
+    $composeContent += "    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
+
     foreach ($configMount in $mountSpec.ConfigMounts) {
         $composeContent += "      - $configMount`n"
     }
-    
+
     if ($mountSpec.UserFlag) {
         $userSpec = $mountSpec.UserFlag -replace '--user ', ''
         $composeContent += "    user: $userSpec`n"
     }
-    
+
     if ($Dind) {
         $composeContent += "    privileged: true`n"
     }
-    
-    $composeContent += @"
-    ports:
-      - "3333:3333"
-      - "3334:3334"
-    networks:
-      - jeeves-network
 
-#  browserless:
-#    image: ghcr.io/browserless/chromium:latest
-#    environment:
-#      - MAX_CONCURRENT_SESSIONS=10
-#      - DEFAULT_BLOCK_ADS=1
-#      - FUNCTION_ENABLED=1
-#      - TOKEN=1234
-#    ports:
-#      - "3334:3000"
-#    networks:
-#      - jeeves-network
-#    healthcheck:
-#      test: ["CMD", "curl", "-f", "http://localhost:3000/docs"]
-#      interval: 30s
-#      timeout: 10s
-#      retries: 3
-#    deploy:
-#      resources:
-#        limits:
-#          memory: 512M
-#          cpus: '1.0'
+    $composeContent += "    ports:`n"
+    $composeContent += "      - `"$($Port):3333`"`n"
+
+    if ($ExtraPorts) {
+        $mappings = $ExtraPorts -split ','
+        foreach ($mapping in $mappings) {
+            $mapping = $mapping.Trim()
+            if ($mapping) {
+                $composeContent += "      - `"$mapping`"`n"
+            }
+        }
+    }
+
+    $composeContent += @"
+    networks:
+      - $networkName
 
 networks:
-  jeeves-network:
+  $($networkName):
     driver: bridge
 "@
-    
-    # Write to .tmp directory
-    $composeFile = Join-Path $tmpPath "docker-compose.yml"
+
+    $composeFile = Get-ProjectComposePath
     $composeContent | Out-File -FilePath $composeFile -Encoding UTF8
     Write-Log "Generated docker-compose.yml: $composeFile" -trace
-    
+
     return $composeFile
 }
 
@@ -584,18 +690,15 @@ function Build-Image {
     String containing the container ID, or $null if not running
 #>
 function Get-ContainerId {
-    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $composeFile = Get-ProjectComposePath
     if (Test-Path $composeFile) {
-        # Use docker compose to find jeeves container
         $composePs = & docker compose -f $composeFile ps -q jeeves 2>$null
         if ($composePs) {
             return $composePs.Trim()
         }
         return $null
     } else {
-        # Legacy single container method
-        $containerId = docker ps -q -f "name=${Script:CONTAINER_NAME}"
+        $containerId = docker ps -q -f "name=^${Script:CONTAINER_NAME}$"
         if (-not $containerId) {
             return $null
         }
@@ -686,18 +789,16 @@ function Ensure-ContainerNotPresent {
         [switch]$SkipStop
     )
 
-    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $composeFile = Get-ProjectComposePath
     if (Test-Path $composeFile) {
         if (-not $SkipStop) {
-            Write-Log "Removing services using Docker Compose..." -debug
+            Write-Log "Removing services for '${Script:CONTAINER_NAME}' using Docker Compose..." -debug
             & docker compose -f $composeFile down -v --remove-orphans
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "Services removed" -success
+                Write-Log "Services removed for '${Script:CONTAINER_NAME}'" -success
             }
         }
     } else {
-        # Legacy single container method
         if (-not $SkipStop) {
             Ensure-ContainerStopped -Force:$Force
         } else {
@@ -708,7 +809,7 @@ function Ensure-ContainerNotPresent {
             }
         }
 
-        $allContainers = docker ps -a -q -f "name=${Script:CONTAINER_NAME}"
+        $allContainers = docker ps -a -q -f "name=^${Script:CONTAINER_NAME}$"
         if (-not $allContainers) {
             Write-Log "No container instances found for '${Script:CONTAINER_NAME}'" -trace
             return
@@ -716,17 +817,11 @@ function Ensure-ContainerNotPresent {
 
         Write-Log "Removing container: ${Script:CONTAINER_NAME}" -debug
 
-        # Initialize rmArgs array with base command and mandatory flags
-        $rmArgs = @(
-            "rm"
-        )
-
-        # Add all containers to remove
+        $rmArgs = @("rm")
         if ($allContainers) {
             $rmArgs += $allContainers
         }
 
-        # Execute the command using splatting operator
         docker @rmArgs
 
         if ($LASTEXITCODE -eq 0) {
@@ -789,17 +884,21 @@ function Ensure-ContainerRunning {
 function Start-Container {
     param(
         [switch]$Clean,
-        [switch]$Dind
+        [switch]$Dind,
+        [int]$Port = 0,
+        [string]$ExtraPorts = ""
     )
 
     if ($Clean) {
-        Write-Log "Clean start requested..." -warning
+        Write-Log "Clean start requested for '${Script:CONTAINER_NAME}'..." -warning
         Ensure-ContainerNotPresent -Force
         Remove-Image
         Build-Image -NoCache -Clean
     } else {
         Ensure-ImageExists
     }
+
+    Test-SlugCollision
 
     $existingContainer = Get-ContainerId
     if ($existingContainer) {
@@ -809,25 +908,30 @@ function Start-Container {
 
     Ensure-ContainerNotPresent -SkipStop
 
-    Write-Log "Starting container services..." -debug
+    if ($Port -eq 0) {
+        $existingPort = Get-PortFromComposeFile
+        if ($existingPort) {
+            $Port = $existingPort
+        } else {
+            $Port = Get-NextAvailablePort
+        }
+    }
 
-    # 1. Ensure .tmp directory exists and is properly ignored
+    Write-Log "Starting '${Script:CONTAINER_NAME}' on port $Port..." -debug
+
     Initialize-TemporaryDirectory
 
-    # 2. Generate docker-compose.yml with resolved paths
-    $composeFile = New-DockerComposeFile -Dind:$Dind
+    $composeFile = New-DockerComposeFile -Dind:$Dind -Port $Port -ExtraPorts $ExtraPorts
 
-    # 3. Run docker compose instead of docker run
     & docker compose -f $composeFile up -d
 
-    # 4. Handle errors and cleanup if needed
     if ($LASTEXITCODE -ne 0) {
-        Write-Log "Failed to start services" -error
+        Write-Log "Failed to start services for '${Script:CONTAINER_NAME}'" -error
         exit 1
     }
 
-    Write-Log "Services started successfully" -success
-    Write-Log "Access the web UI at: http://localhost:${Script:HOST_PORT}" -info
+    Write-Log "Container '${Script:CONTAINER_NAME}' started successfully" -success
+    Write-Log "Access the web UI at: http://localhost:$Port" -info
 }
 
 <#
@@ -863,16 +967,15 @@ function Stop-Container {
         return
     }
 
-    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $composeFile = Get-ProjectComposePath
     if (Test-Path $composeFile) {
-        Write-Log "Stopping services using Docker Compose..." -debug
+        Write-Log "Stopping '${Script:CONTAINER_NAME}' using Docker Compose..." -debug
         & docker compose -f $composeFile down
 
         if ($LASTEXITCODE -eq 0) {
-            Write-Log "Services stopped" -success
+            Write-Log "Container '${Script:CONTAINER_NAME}' stopped" -success
         } else {
-            Write-Log "Failed to stop services using Docker Compose, falling back to Docker" -warning
+            Write-Log "Failed to stop via Docker Compose, falling back to Docker" -warning
             Ensure-ContainerStopped -Force:$Force
         }
     } else {
@@ -916,13 +1019,15 @@ function Restart-Container {
         [switch]$Dind,
         [switch]$NoCache,
         [switch]$Desktop,
-        [switch]$InstallClaudeCode
+        [switch]$InstallClaudeCode,
+        [int]$Port = 0,
+        [string]$ExtraPorts = ""
     )
 
     Ensure-ImageExists -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
 
     $containerId = Get-ContainerId
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $composeFile = Get-ProjectComposePath
     $usingCompose = Test-Path $composeFile
 
     if ($containerId) {
@@ -932,21 +1037,21 @@ function Restart-Container {
             & docker compose -f $composeFile restart jeeves
 
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "Container restarted successfully" -success
+                Write-Log "Container '${Script:CONTAINER_NAME}' restarted successfully" -success
             } else {
-                Write-Log "Failed to restart container with docker compose, falling back to docker restart" -warning
+                Write-Log "Failed to restart via docker compose, falling back to docker restart" -warning
                 docker restart $containerId
             }
         } else {
             docker restart $containerId
 
             if ($LASTEXITCODE -eq 0) {
-                Write-Log "Container restarted successfully" -success
+                Write-Log "Container '${Script:CONTAINER_NAME}' restarted successfully" -success
             }
         }
     } else {
         Write-Log "Container '${Script:CONTAINER_NAME}' is not running, starting it..." -warning
-        Start-Container -Dind:$Dind
+        Start-Container -Dind:$Dind -Port $Port -ExtraPorts $ExtraPorts
     }
 }
 
@@ -1045,10 +1150,9 @@ function Enter-Shell {
     Press Ctrl+C to exit log viewing
 #>
 function Show-Logs {
-    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    $composeFile = Get-ProjectComposePath
     if (Test-Path $composeFile) {
-        Write-Log "Showing logs for all services..." -debug
+        Write-Log "Showing logs for '${Script:CONTAINER_NAME}'..." -debug
         & docker compose -f $composeFile logs -f
     } else {
         $containerId = Get-ContainerId
@@ -1057,14 +1161,12 @@ function Show-Logs {
             exit 1
         }
 
-        # Initialize logsArgs array with base command and mandatory flags
         $logsArgs = @(
             "logs"
             "-f"
             $containerId
         )
 
-        # Execute the command using splatting operator
         docker @logsArgs
     }
 }
@@ -1081,34 +1183,37 @@ function Show-Logs {
     Formatted status information to the console
 #>
 function Show-Status {
-    Write-Log "=== Jeeves Service Status ===" -debug
+    param([switch]$All)
 
-    # Check if docker-compose.yml exists (new method) or fall back to docker (old method)
-    $composeFile = Join-Path $PSScriptRoot ".tmp\docker-compose.yml"
+    if ($All) {
+        Show-ListAll
+        return
+    }
+
+    Write-Log "=== Jeeves Status: ${Script:CONTAINER_NAME} ===" -debug
+
+    $composeFile = Get-ProjectComposePath
     if (Test-Path $composeFile) {
-        Write-Log "Using Docker Compose services:" -info
         & docker compose -f $composeFile ps
 
-        # Additional status information
-        Write-Log "" -info
-        Write-Log "Web UI: http://localhost:${Script:HOST_PORT}" -trace
+        $port = Get-PortFromComposeFile
+        if ($port) {
+            Write-Log "" -info
+            Write-Log "Web UI: http://localhost:$port" -trace
+        }
     } else {
-        # Legacy single container status
         $containerId = Get-ContainerId
         if ($containerId) {
             Write-Log "Status: Running" -success
             Write-Log "Container ID: $containerId" -trace
-            Write-Log "Web UI: http://localhost:${Script:HOST_PORT}" -trace
         } else {
-            # Initialize psArgs array with base command and mandatory flags
             $psArgs = @(
                 "ps"
                 "-a"
                 "-q"
-                "-f", "name=${Script:CONTAINER_NAME}"
+                "-f", "name=^${Script:CONTAINER_NAME}$"
             )
 
-            # Execute the command using splatting operator
             $stoppedContainer = docker @psArgs
             if ($stoppedContainer) {
                 Write-Log "Status: Stopped" -info
@@ -1118,13 +1223,43 @@ function Show-Status {
         }
     }
 
-    # Check image status
-    $imagesArgs = @(
-        "images"
-        "-q", "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
-    )
+    $imageExists = docker images -q "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
+    if ($imageExists) {
+        Write-Log "Image: ${Script:IMAGE_NAME}:${Script:IMAGE_TAG} (exists)" -trace
+    } else {
+        Write-Log "Image: ${Script:IMAGE_NAME}:${Script:IMAGE_TAG} (not found)" -error
+    }
+}
 
-    $imageExists = docker @imagesArgs
+function Show-ListAll {
+    Write-Log "=== All Jeeves Instances ===" -debug
+
+    $allContainers = Get-AllJeevesContainers
+
+    if ($allContainers.Count -eq 0) {
+        Write-Log "No jeeves containers found" -info
+        return
+    }
+
+    $headerFormat = "{0,-20} {1,-25} {2,-8} {3,-15} {4}"
+    Write-Host ($headerFormat -f "PROJECT", "CONTAINER", "PORT", "STATUS", "DIRECTORY") -ForegroundColor Cyan
+    Write-Host ($headerFormat -f "-------", "---------", "----", "------", "---------") -ForegroundColor Gray
+
+    foreach ($container in $allContainers) {
+        $port = "-"
+        if ($container.Ports -match '(\d+)->3333') {
+            $port = $Matches[1]
+        }
+
+        $statusShort = if ($container.Status -match '(Up|Exited|Created)') { $Matches[1] } else { $container.Status }
+
+        $color = if ($statusShort -eq "Up") { "Green" } elseif ($statusShort -eq "Exited") { "Yellow" } else { "Gray" }
+
+        Write-Host ($headerFormat -f $container.Project, $container.Name, $port, $statusShort, $container.Directory) -ForegroundColor $color
+    }
+
+    $imageExists = docker images -q "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
+    Write-Host ""
     if ($imageExists) {
         Write-Log "Image: ${Script:IMAGE_NAME}:${Script:IMAGE_TAG} (exists)" -trace
     } else {
@@ -1144,6 +1279,8 @@ function Show-Status {
     This operation is destructive. The image will need to be rebuilt.
 #>
 function Remove-Image {
+    param([switch]$Force)
+
     Write-Log "Removing image: ${Script:IMAGE_NAME}:${Script:IMAGE_TAG}" -debug
 
     $imageExists = docker images -q "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
@@ -1152,19 +1289,52 @@ function Remove-Image {
         return
     }
 
+    $allContainers = Get-AllJeevesContainers
+    $otherContainers = @($allContainers | Where-Object { $_.Project -ne $Script:PROJECT_SLUG })
+
+    if ($otherContainers.Count -gt 0 -and -not $Force) {
+        Write-Log "Cannot remove shared image: other jeeves containers exist:" -error
+        foreach ($c in $otherContainers) {
+            Write-Log "  $($c.Name) ($($c.Status)) - $($c.Directory)" -warning
+        }
+        Write-Log "Stop/remove those containers first, or use --force to remove anyway." -info
+        return
+    }
+
     Ensure-ContainerNotPresent -Force
 
-    # Initialize rmiArgs array with base command and mandatory flags
     $rmiArgs = @(
         "rmi"
         "${Script:IMAGE_NAME}:${Script:IMAGE_TAG}"
     )
-    
-    # Execute the command using splatting operator
+
     docker @rmiArgs
 
     if ($LASTEXITCODE -eq 0) {
         Write-Log "Image removed" -success
+    }
+}
+
+function Remove-AllContainers {
+    $allContainers = Get-AllJeevesContainers
+    if ($allContainers.Count -eq 0) {
+        Write-Log "No jeeves containers found" -info
+        return
+    }
+
+    foreach ($container in $allContainers) {
+        Write-Log "Removing container: $($container.Name)..." -debug
+        docker rm -f $container.Name 2>$null
+        if ($LASTEXITCODE -eq 0) {
+            Write-Log "Removed $($container.Name)" -success
+        }
+
+        $slugDir = Join-Path $PSScriptRoot ".tmp"
+        $slugDir = Join-Path $slugDir $container.Project
+        $composeInDir = Join-Path $slugDir "docker-compose.yml"
+        if (Test-Path $composeInDir) {
+            & docker compose -f $composeInDir down -v --remove-orphans 2>$null
+        }
     }
 }
 
@@ -1181,16 +1351,21 @@ Jeeves - OpenCode Container Management Helper
 
 Usage: jeeves <command> [options]
 
+  Jeeves supports multiple concurrent containers, one per project directory.
+  Container names are derived from the current directory (e.g., jeeves-myproject).
+  Ports are auto-assigned starting from 3333.
+
 Commands:
-  build     Build the Docker image (stops container if running)
-  start     Start the container (builds image if needed)
-  stop      Stop the container
-  restart   Restart the container (builds image if needed)
-  rm        Remove the container (stops if running)
+  build     Build the Docker image (shared across all instances)
+  start     Start the container for the current directory
+  stop      Stop the container for the current directory
+  restart   Restart the container for the current directory
+  rm        Remove the container for the current directory
   shell     Attach to the container shell (builds and starts if needed)
-  logs      Show container logs
-  status    Show container and image status
-  clean     Remove container and image
+  logs      Show container logs for the current directory
+  status    Show status for the current directory's container
+  list      List all running jeeves instances
+  clean     Remove container (and optionally image)
 
 Options:
   --help                Show detailed help for a command
@@ -1198,33 +1373,37 @@ Options:
   --desktop             Build desktop binaries (build command)
   --install-claude-code Install Claude Code in container (build command)
   --clean               Clean start: rebuild everything (start command)
+  --port <n>            Use specific host port (start command)
+  --ports <mappings>    Extra port mappings, e.g. 3000:3000,8080:8080 (start command)
   --remove              Also remove container (stop command)
   --force               Force stop container (stop command)
   --new                 Stop and remove container before shell (shell command)
   --zsh                 Use zsh shell instead of bash (shell command)
-  --dind                Enable Docker-in-Docker (DinD) support (start command)
+  --dind                Enable Docker-in-Docker support (start command)
+  --all                 Operate on all instances (clean, status)
+  --image               Also remove shared Docker image (clean command)
 
 Aliases:
   b -> build
   up -> start
   down -> stop
   attach, sh -> shell
-  st, ps -> status
+  st -> status
+  ls, ps -> list
 
 Examples:
-  jeeves build                    # Build the image
-  jeeves build --no-cache         # Clean build without cache
-  jeeves build --desktop          # Build with desktop support
-  jeeves build --install-claude-code  # Build with Claude Code installed
-  jeeves start                    # Start the container
-  jeeves start --clean            # Clean rebuild and start
-  jeeves shell                    # Enter the container
-  jeeves shell --new              # Stop, remove, and enter fresh container
-  jeeves logs                     # View logs
-  jeeves stop                     # Stop the container
-  jeeves stop --remove            # Stop and remove container
-  jeeves stop --force             # Force stop
-  jeeves clean                    # Remove everything
+  jeeves build                           # Build the image
+  jeeves start                           # Start (auto-assign port)
+  jeeves start --port 3334               # Start on specific port
+  jeeves start --ports 3000:3000         # Start with extra port mappings
+  jeeves start --clean                   # Clean rebuild and start
+  jeeves shell                           # Enter the container
+  jeeves list                            # Show all running instances
+  jeeves stop                            # Stop this project's container
+  jeeves clean                           # Remove this project's container
+  jeeves clean --image                   # Remove container + shared image
+  jeeves clean --all                     # Remove all jeeves containers
+  jeeves status --all                    # Show all instances
 
 For detailed help on a specific command, use: jeeves <command> --help
 "@ -ForegroundColor Cyan
@@ -1253,42 +1432,29 @@ function Show-CommandHelp {
 Jeeves build - Build the Docker Image
 
 DESCRIPTION:
-    Builds the jeeves Docker image from the Dockerfile located in the
-    Dockerfiles/jeeves directory. The image includes OpenCode CLI, TUI,
-    and Web UI tools along with CUDA support and development dependencies.
+    Builds the jeeves Docker image. The image is shared across all
+    jeeves container instances. Includes OpenCode CLI, TUI, Web UI
+    tools along with CUDA support and development dependencies.
 
 USAGE:
     jeeves build [options]
 
 OPTIONS:
-    --no-cache   Build without using Docker's layer cache
-                 This forces a complete rebuild of all layers, useful for
-                 ensuring a clean build or troubleshooting build issues.
-
+    --no-cache            Build without Docker's layer cache
     --desktop             Build desktop binaries (Linux, Windows)
-                          Includes the OpenCode desktop application (Tauri-based)
-                          in the image. This significantly increases build time.
-
     --install-claude-code Install Claude Code in the container
-                          Downloads and installs Claude Code from the official
-                          installer. Disabled by default.
-
     --help                Show this help message
 
 EXAMPLES:
     jeeves build
     jeeves build --no-cache
     jeeves build --desktop
-    jeeves build --no-cache --desktop
-    jeeves build --install-claude-code
     jeeves build --no-cache --desktop --install-claude-code
 
 NOTES:
-    - The build uses UID/GID arguments for proper file permissions
-    - Build context is: ./Dockerfiles/jeeves
-    - Image will be tagged as: jeeves:latest
-    - Desktop builds can take 30+ minutes due to cross-compilation
-    - Container will be stopped before rebuilding if running
+    - Image is tagged as jeeves:latest and shared by all instances
+    - Desktop builds can take 30+ minutes
+    - Running containers are stopped before rebuilding
 "@
         }
         "start" {
@@ -1296,36 +1462,34 @@ NOTES:
 Jeeves start - Start the Container
 
 DESCRIPTION:
-    Starts the jeeves container with the current working directory mounted
-    to /proj inside the container. This allows you to work on files
-    in your current directory from within the container.
+    Starts a jeeves container for the current working directory, mounted
+    to /proj inside the container. The container is named based on the
+    current directory (e.g., jeeves-myproject). Ports are auto-assigned
+    starting from 3333.
 
 USAGE:
     jeeves start [options]
 
 OPTIONS:
-    --clean      Perform a clean start
-                 Stops the container if running, removes the container,
-                 removes the image, rebuilds from scratch (--no-cache),
-                 and then starts the container.
-
-    --dind       Enable Docker-in-Docker (DinD) support
-                 Runs the container in privileged mode and enables Docker
-                 socket access inside the container, allowing Docker commands
-                 to be run from within the container.
-
-    --help       Show this help message
+    --clean               Clean start: stop, remove, rebuild, then start
+    --dind                Enable Docker-in-Docker (DinD) support
+    --port <n>            Use a specific host port instead of auto-assign
+    --ports <mappings>    Extra port mappings (e.g., 3000:3000,8080:8080)
+    --help                Show this help message
 
 EXAMPLES:
     jeeves start
+    jeeves start --port 3334
+    jeeves start --ports 3000:3000,8080:8080
     jeeves start --clean
+    jeeves start --dind
 
 NOTES:
-- Port 3333 on host maps to port 3333 in container
-- Current directory (pwd) is mounted to /proj
-- Container name: jeeves
-- Web UI available at: http://localhost:3333
-- Container runs in detached mode (background)
+    - Container name: jeeves-<folder-name>
+    - Port auto-increments from 3333 if already in use
+    - Current directory (pwd) is mounted to /proj
+    - Multiple instances can run concurrently from different directories
+    - Web UI available at: http://localhost:<assigned-port>
 "@
         }
         "stop" {
@@ -1333,23 +1497,15 @@ NOTES:
 Jeeves stop - Stop the Container
 
 DESCRIPTION:
-    Stops the jeeves container if running. By default, performs a graceful
-    shutdown using SIGTERM. If the container is not running, this command
-    exits gracefully. Optionally force kills with SIGKILL and/or removes
-    the container after stopping.
+    Stops the jeeves container for the current directory. Only affects
+    the container associated with this directory.
 
 USAGE:
     jeeves stop [options]
 
 OPTIONS:
     --remove     Remove the container after stopping
-                 Deletes the container from Docker. Container state will
-                 be lost, but the Docker image remains intact.
-
     --force      Force stop using SIGKILL
-                 Immediately terminates the container without allowing
-                 for graceful shutdown. Useful if the container is stuck.
-
     --help       Show this help message
 
 EXAMPLES:
@@ -1359,10 +1515,9 @@ EXAMPLES:
     jeeves stop --force --remove
 
 NOTES:
+    - Only stops this project's container (jeeves-<folder-name>)
+    - Other running jeeves instances are not affected
     - Default: Graceful shutdown with docker stop
-    - With --force: Immediate termination with docker kill
-    - With --remove: Container is deleted after stopping
-    - To rebuild after removal, use: jeeves build
 "@
         }
         "restart" {
@@ -1370,47 +1525,29 @@ NOTES:
 Jeeves restart - Restart the Container
 
 DESCRIPTION:
-    Restarts the container using docker compose restart (or docker restart for
-    legacy setups), which preserves container state and is faster than stop-then-start.
-    If the container is not running, it will be started instead.
-    Useful for applying changes that don't require a full rebuild.
+    Restarts the container for the current directory using docker compose
+    restart, preserving container state. If not running, starts it.
 
 USAGE:
     jeeves restart [options]
 
 OPTIONS:
-    --dind                Enable Docker-in-Docker (DinD) support
-                          Runs the container in privileged mode with Docker
-                          socket access inside the container.
-
-    --no-cache            Build without using Docker's layer cache
-                          Forces a complete rebuild of all layers.
-                          Only used if image needs to be built.
-
-    --desktop             Build desktop binaries (Linux, Windows)
-                          Includes the OpenCode desktop application.
-                          Only used if image needs to be built.
-
-    --install-claude-code Install Claude Code in the container
-                          Downloads and installs Claude Code.
-                          Only used if image needs to be built.
-
+    --dind                Enable Docker-in-Docker support
+    --port <n>            Use specific port (only when starting fresh)
+    --ports <mappings>    Extra port mappings (only when starting fresh)
+    --no-cache            Build without cache (if image needs building)
+    --desktop             Build desktop binaries (if image needs building)
+    --install-claude-code Install Claude Code (if image needs building)
     --help                Show this help message
 
 EXAMPLES:
     jeeves restart
     jeeves restart --dind
-    jeeves restart --no-cache
-    jeeves restart --desktop
-    jeeves restart --no-cache --desktop --install-claude-code
 
 NOTES:
-- Uses docker compose restart (faster, preserves state)
-- Falls back to docker restart for legacy setups
-- If not running, starts container normally
-- Builds image if missing before restarting
-- Container data in /proj is preserved
-- Container name and configuration remain the same
+    - Uses docker compose restart (faster, preserves state)
+    - If not running, starts container normally
+    - Port/extra ports only apply when starting from scratch
 "@
         }
         "rm" {
@@ -1418,9 +1555,8 @@ NOTES:
 Jeeves rm - Remove the Container
 
 DESCRIPTION:
-    Removes the jeeves container from Docker. If the container is running,
-    it will be stopped first. The container's state will be lost, but the
-    Docker image remains intact.
+    Removes the jeeves container for the current directory. Stops the
+    container first if running. The shared Docker image is not removed.
 
 USAGE:
     jeeves rm
@@ -1429,11 +1565,9 @@ EXAMPLES:
     jeeves rm
 
 NOTES:
-    - Stops container if running
-    - Removes container from Docker
-    - Docker image is NOT removed (use 'clean' command)
-    - To start again, use: jeeves start
-    - To rebuild image, use: jeeves build
+    - Only removes this project's container
+    - Docker image is NOT removed (use 'clean --image')
+    - Other running instances are not affected
 "@
         }
         "shell" {
@@ -1441,34 +1575,28 @@ NOTES:
 Jeeves shell - Attach to Container Shell
 
 DESCRIPTION:
-    Opens an interactive shell inside the running container. This allows
-    you to execute commands directly within the container environment.
+    Opens an interactive shell inside the running container for the
+    current directory. Builds and starts the container if needed.
 
 USAGE:
     jeeves shell [options]
 
 OPTIONS:
-    --new        Stop and remove the current container before entering
-                 This ensures a fresh container instance is created.
-
+    --new        Stop and remove container before entering (fresh start)
     --zsh        Use zsh shell instead of bash
-
+    --raw        Disable tmux auto-attach
     --help       Show this help message
 
 EXAMPLES:
     jeeves shell
     jeeves shell --new
     jeeves shell --zsh
-    jeeves shell --new --zsh
 
 NOTES:
-- Builds image and starts container if not running
-- Opens an interactive bash shell by default, or zsh with --zsh option
-- Your current directory is available at /proj
-- OpenCode CLI is available as 'opencode'
-- Type 'exit' to leave the shell
-- Tmux auto-attaches for persistent sessions
-- Hint:  Use the Shift/Option key interact with the terminal outside of tmux, useful for copy-paste and keyboard shortcuts
+    - Your current directory is available at /proj
+    - Type 'exit' to leave the shell
+    - Tmux auto-attaches for persistent sessions
+    - Use Shift/Option key to interact outside tmux
 "@
         }
         "logs" {
@@ -1476,8 +1604,8 @@ NOTES:
 Jeeves logs - View Container Logs
 
 DESCRIPTION:
-    Displays the container's stdout/stderr logs and follows new output in
-    real-time. Shows all output from the OpenCode Web UI service.
+    Displays logs for the current directory's container and follows
+    new output in real-time.
 
 USAGE:
     jeeves logs
@@ -1487,57 +1615,87 @@ EXAMPLES:
 
 NOTES:
     - Container must be running
-    - Shows logs from OpenCode Web UI (port 3333)
-    - Follows new output in real-time
+    - Shows logs for this project's container only
     - Press Ctrl+C to exit log viewer
-    - Logs include web server activity and errors
 "@
         }
         "status" {
 @"
-Jeeves status - Show Container and Image Status
+Jeeves status - Show Container Status
 
 DESCRIPTION:
-    Displays the current state of the jeeves container and image.
-    Shows whether the container is running, stopped, or not created,
-    and whether the Docker image exists.
+    Displays the current state of this project's container. Use --all
+    to show all running jeeves instances (same as 'jeeves list').
 
 USAGE:
-    jeeves status
+    jeeves status [options]
+
+OPTIONS:
+    --all        Show all jeeves instances instead of just this project
 
 EXAMPLES:
     jeeves status
+    jeeves status --all
 
 NOTES:
-    - Shows container status (running/stopped/not created)
-    - Shows container ID if running
-    - Shows Web UI URL if running
-    - Shows Docker image existence status
-    - Useful for troubleshooting connectivity issues
+    - Shows container status for current directory
+    - Shows assigned port and Web UI URL
+    - Use 'jeeves list' for a quick view of all instances
+"@
+        }
+        "list" {
+@"
+Jeeves list - List All Jeeves Instances
+
+DESCRIPTION:
+    Shows all running and stopped jeeves containers across all projects.
+    Displays project name, container name, port, status, and source
+    directory for each instance.
+
+USAGE:
+    jeeves list
+
+ALIASES:
+    jeeves ls
+    jeeves ps
+
+EXAMPLES:
+    jeeves list
+
+NOTES:
+    - Shows all containers with the jeeves.managed label
+    - Useful for finding which ports are in use
+    - Useful for identifying containers before running 'clean --all'
 "@
         }
         "clean" {
 @"
-Jeeves clean - Remove Container and Image
+Jeeves clean - Remove Container and Optionally Image
 
 DESCRIPTION:
-    Removes both the container and the Docker image. This completely removes
-    jeeves from Docker, freeing up disk space and requiring a rebuild to
-    use again.
+    Removes the container for the current directory. Optionally removes
+    all jeeves containers and/or the shared Docker image.
 
 USAGE:
-    jeeves clean
+    jeeves clean [options]
+
+OPTIONS:
+    --image      Also remove the shared Docker image
+    --all        Remove ALL jeeves containers (not just this project)
+    --force      Force image removal even if other containers exist
+    --help       Show this help message
 
 EXAMPLES:
-    jeeves clean
+    jeeves clean                   # Remove this project's container
+    jeeves clean --image           # Remove container + shared image
+    jeeves clean --all             # Remove all jeeves containers
+    jeeves clean --all --image     # Remove everything
 
 NOTES:
-    - Stops container if running
-    - Removes container from Docker
-    - Removes Docker image from local registry
-    - To use again, you must run: jeeves build
+    - Default: only removes this project's container
+    - Image removal warns if other containers still exist
+    - Use --force to override image removal safety check
     - Destructive operation - cannot be undone
-    - Useful for freeing disk space or complete reset
 "@
         }
         default {
@@ -1565,6 +1723,7 @@ function Show-Menu {
 ╔═══════════════════════════════════════════════════════════════╗
 ║                Jeeves - Claude/OpenCode Helper                ║
 ║                   Container Management Menu                   ║
+║              Project: $($Script:PROJECT_SLUG.PadRight(40))║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Select an option:
@@ -1578,8 +1737,9 @@ Select an option:
         @{ Key = "5"; Label = "Remove container"; Action = "rm" }
         @{ Key = "6"; Label = "Attach to shell (with options)"; Action = "shell-menu" }
         @{ Key = "7"; Label = "View logs"; Action = "logs" }
-        @{ Key = "8"; Label = "Show status"; Action = "status" }
-        @{ Key = "9"; Label = "Clean (remove all)"; Action = "clean" }
+        @{ Key = "8"; Label = "Show status (this project)"; Action = "status" }
+        @{ Key = "9"; Label = "List all running instances"; Action = "list" }
+        @{ Key = "C"; Label = "Clean (with options)"; Action = "clean-menu" }
         @{ Key = "H"; Label = "Help"; Action = "help" }
         @{ Key = "0"; Label = "Exit"; Action = "exit" }
     )
@@ -1613,6 +1773,8 @@ Select an option:
             Show-StopMenu
         } elseif ($matchedOption.Action -eq "shell-menu") {
             Show-ShellMenu
+        } elseif ($matchedOption.Action -eq "clean-menu") {
+            Show-CleanMenu
         } else {
             return $matchedOption.Action
         }
@@ -1679,17 +1841,20 @@ function Show-StartMenu {
     Clear-Host
     Write-Host @"
 ╔═══════════════════════════════════════════════════════════════╗
-║                Jeeves - Start Container Options               ║
+║              Jeeves - Start Container Options                  ║
+║              Project: $($Script:PROJECT_SLUG.PadRight(40))║
 ╚═══════════════════════════════════════════════════════════════╝
 
 Select start options:
 "@
 
     $startOptions = @(
-        @{ Key = "1"; Label = "Start without DinD"; Action = "start" }
+        @{ Key = "1"; Label = "Start (auto-assign port)"; Action = "start" }
         @{ Key = "2"; Label = "Start with DinD"; Action = "start-dind" }
-        @{ Key = "3"; Label = "Clean start (rebuild & start) without DinD"; Action = "start-clean" }
-        @{ Key = "4"; Label = "Clean start (rebuild & start) with DinD"; Action = "start-clean-dind" }
+        @{ Key = "3"; Label = "Start with custom port"; Action = "start-custom-port" }
+        @{ Key = "4"; Label = "Start with extra port mappings"; Action = "start-extra-ports" }
+        @{ Key = "5"; Label = "Clean start (rebuild & start)"; Action = "start-clean" }
+        @{ Key = "6"; Label = "Clean start with DinD"; Action = "start-clean-dind" }
         @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
         @{ Key = "0"; Label = "Exit"; Action = "exit" }
     )
@@ -1713,6 +1878,13 @@ Select start options:
             exit 0
         } elseif ($matchedOption.Action -eq "back") {
             Show-Menu
+        } elseif ($matchedOption.Action -eq "start-custom-port") {
+            $portInput = Read-Host "Enter port number (default: 3333)"
+            if (-not $portInput) { $portInput = "3333" }
+            $Script:MenuPort = [int]$portInput
+            return "start-port"
+        } elseif ($matchedOption.Action -eq "start-extra-ports") {
+            return Show-ExtraPortsMenu
         } else {
             return $matchedOption.Action
         }
@@ -1720,6 +1892,61 @@ Select start options:
         Write-Host "Invalid selection. Please try again." -ForegroundColor Red
         Start-Sleep -Seconds 1
         Show-StartMenu
+    }
+}
+
+function Show-ExtraPortsMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║              Jeeves - Extra Port Mappings                      ║
+║              Project: $($Script:PROJECT_SLUG.PadRight(40))║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select port mapping preset or enter custom:
+"@
+
+    $portOptions = @(
+        @{ Key = "1"; Label = "Node.js (3000:3000)"; Mapping = "3000:3000" }
+        @{ Key = "2"; Label = "Vite/React (5173:5173)"; Mapping = "5173:5173" }
+        @{ Key = "3"; Label = "Next.js (3000:3000)"; Mapping = "3000:3000" }
+        @{ Key = "4"; Label = "Django (8000:8000)"; Mapping = "8000:8000" }
+        @{ Key = "5"; Label = "Flask (5000:5000)"; Mapping = "5000:5000" }
+        @{ Key = "6"; Label = "Rails (3000:3000)"; Mapping = "3000:3000" }
+        @{ Key = "7"; Label = "Custom (enter your own)"; Mapping = "" }
+        @{ Key = "B"; Label = "Back to start menu"; Mapping = "back" }
+        @{ Key = "0"; Label = "Exit"; Mapping = "exit" }
+    )
+
+    foreach ($option in $portOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $portOptions | Where-Object {
+        $_.Key -eq $selection
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Mapping -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Mapping -eq "back") {
+            return Show-StartMenu
+        } elseif ($matchedOption.Mapping -eq "") {
+            $customPorts = Read-Host "Enter port mappings (e.g. 8080:8080,3000:3000)"
+            $Script:MenuExtraPorts = $customPorts
+        } else {
+            $Script:MenuExtraPorts = $matchedOption.Mapping
+        }
+        return "start-extra"
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        return Show-ExtraPortsMenu
     }
 }
 
@@ -1819,6 +2046,55 @@ Select shell options:
     }
 }
 
+function Show-CleanMenu {
+    Clear-Host
+    Write-Host @"
+╔═══════════════════════════════════════════════════════════════╗
+║              Jeeves - Clean Options                            ║
+║              Project: $($Script:PROJECT_SLUG.PadRight(40))║
+╚═══════════════════════════════════════════════════════════════╝
+
+Select clean option:
+"@
+
+    $cleanOptions = @(
+        @{ Key = "1"; Label = "Remove this project's container"; Action = "clean-container" }
+        @{ Key = "2"; Label = "Remove this project's container + shared image"; Action = "clean-container-image" }
+        @{ Key = "3"; Label = "Remove ALL jeeves containers"; Action = "clean-all" }
+        @{ Key = "4"; Label = "Remove ALL jeeves containers + shared image"; Action = "clean-all-image" }
+        @{ Key = "B"; Label = "Back to main menu"; Action = "back" }
+        @{ Key = "0"; Label = "Exit"; Action = "exit" }
+    )
+
+    foreach ($option in $cleanOptions) {
+        $padding = " " * (4 - $option.Key.Length)
+        Write-Host "  [$($option.Key)]$padding$($option.Label)"
+    }
+
+    Write-Host ""
+    $selection = Read-Host "Enter selection"
+
+    $matchedOption = $cleanOptions | Where-Object {
+        $_.Key -eq $selection -or
+        $_.Action -eq $selection.ToLower()
+    }
+
+    if ($matchedOption) {
+        if ($matchedOption.Action -eq "exit") {
+            Write-Host "Exiting..." -ForegroundColor Gray
+            exit 0
+        } elseif ($matchedOption.Action -eq "back") {
+            Show-Menu
+        } else {
+            return $matchedOption.Action
+        }
+    } else {
+        Write-Host "Invalid selection. Please try again." -ForegroundColor Red
+        Start-Sleep -Seconds 1
+        Show-CleanMenu
+    }
+}
+
 <#
 .SYNOPSIS
     Main command dispatcher
@@ -1863,25 +2139,32 @@ function Main {
         [switch]$Raw,
 
         [Parameter(Mandatory = $false)]
-        [switch]$Zsh
+        [switch]$Zsh,
+
+        [Parameter(Mandatory = $false)]
+        [int]$Port = 0,
+
+        [Parameter(Mandatory = $false)]
+        [string]$Ports = "",
+
+        [Parameter(Mandatory = $false)]
+        [switch]$All,
+
+        [Parameter(Mandatory = $false)]
+        [switch]$Image
     )
 
-    # Validate Docker is available
     Test-DockerDaemon
 
-    # Handle --help flag for specific command help
     if ($Help -and $Command -ne "") {
         Show-CommandHelp $Command
         exit 0
     }
 
-    # If no command provided, show interactive menu
     if ($Command -eq "") {
         $selectedCommand = Show-Menu
 
-        # Map menu selection back to command
         switch -Regex ($selectedCommand) {
-            # Build options
             "^(build)$" { Build-Image -NoCache:$false -Desktop:$false -InstallClaudeCode:$false }
             "^(build-nocache)$" { Build-Image -NoCache:$true -Desktop:$false -InstallClaudeCode:$false }
             "^(build-desktop)$" { Build-Image -NoCache:$false -Desktop:$true -InstallClaudeCode:$false }
@@ -1890,38 +2173,39 @@ function Main {
             "^(build-nocache-claude)$" { Build-Image -NoCache:$true -Desktop:$false -InstallClaudeCode:$true }
             "^(build-desktop-claude)$" { Build-Image -NoCache:$false -Desktop:$true -InstallClaudeCode:$true }
             "^(build-all)$" { Build-Image -NoCache:$true -Desktop:$true -InstallClaudeCode:$true }
-            
-            # Start options
+
             "^(start)$" { Start-Container -Clean:$false -Dind:$false }
             "^(start-dind)$" { Start-Container -Clean:$false -Dind:$true }
+            "^(start-port)$" { Start-Container -Clean:$false -Dind:$false -Port $Script:MenuPort }
+            "^(start-extra)$" { Start-Container -Clean:$false -Dind:$false -ExtraPorts $Script:MenuExtraPorts }
             "^(start-clean)$" { Start-Container -Clean:$true -Dind:$false }
             "^(start-clean-dind)$" { Start-Container -Clean:$true -Dind:$true }
-            
-            # Stop options
+
             "^(stop)$" { Stop-Container -Force:$false -Remove:$false }
             "^(stop-remove)$" { Stop-Container -Force:$false -Remove:$true }
             "^(stop-force)$" { Stop-Container -Force:$true -Remove:$false }
             "^(stop-force-remove)$" { Stop-Container -Force:$true -Remove:$true }
-            
-            # Restart and other commands
+
             "^(restart)$" { Restart-Container -Dind:$Dind -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode }
             "^(rm)$" { Remove-Container }
-            
-            # Shell options - uses running container, starts non-dind if not running
+
             "^(bash-shell)$" { Enter-Shell -New:$false -Raw:$false -Zsh:$false }
             "^(bash-shell-raw)$" { Enter-Shell -New:$false -Raw:$true -Zsh:$false }
             "^(zsh-shell)$" { Enter-Shell -New:$false -Raw:$false -Zsh:$true }
             "^(zsh-shell-raw)$" { Enter-Shell -New:$false -Raw:$true -Zsh:$true }
-            
-            # Logs and status
+
             "^(logs)$" { Show-Logs }
             "^(status)$" { Show-Status }
-            "^(clean)$" { Remove-Container; Remove-Image }
+            "^(list)$" { Show-ListAll }
+
+            "^(clean-container)$" { Remove-Container }
+            "^(clean-container-image)$" { Remove-Container; Remove-Image -Force }
+            "^(clean-all)$" { Remove-AllContainers }
+            "^(clean-all-image)$" { Remove-AllContainers; Remove-Image -Force }
         }
         exit 0
     }
 
-    # Command dispatcher for direct command invocation
     switch -Regex ($Command) {
         "^(build|b)$" {
             if ($Help) { Show-CommandHelp "build"; exit 0 }
@@ -1929,7 +2213,7 @@ function Main {
         }
         "^(start|up)$" {
             if ($Help) { Show-CommandHelp "start"; exit 0 }
-            Start-Container -Clean:$Clean -Dind:$Dind
+            Start-Container -Clean:$Clean -Dind:$Dind -Port $Port -ExtraPorts $Ports
         }
         "^(stop|down)$" {
             if ($Help) { Show-CommandHelp "stop"; exit 0 }
@@ -1937,7 +2221,7 @@ function Main {
         }
         "^(restart)$" {
             if ($Help) { Show-CommandHelp "restart"; exit 0 }
-            Restart-Container -Dind:$Dind -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode
+            Restart-Container -Dind:$Dind -NoCache:$NoCache -Desktop:$Desktop -InstallClaudeCode:$InstallClaudeCode -Port $Port -ExtraPorts $Ports
         }
         "^(rm|remove)$" {
             if ($Help) { Show-CommandHelp "rm"; exit 0 }
@@ -1951,13 +2235,24 @@ function Main {
             if ($Help) { Show-CommandHelp "logs"; exit 0 }
             Show-Logs
         }
-        "^(status|st|ps)$" {
+        "^(status|st)$" {
             if ($Help) { Show-CommandHelp "status"; exit 0 }
-            Show-Status
+            Show-Status -All:$All
+        }
+        "^(list|ls|ps)$" {
+            if ($Help) { Show-CommandHelp "list"; exit 0 }
+            Show-ListAll
         }
         "^(clean)$" {
             if ($Help) { Show-CommandHelp "clean"; exit 0 }
-            Remove-Container; Remove-Image
+            if ($All) {
+                Remove-AllContainers
+            } else {
+                Remove-Container
+            }
+            if ($Image) {
+                Remove-Image -Force:$Force
+            }
         }
         "^(help|h|\?|)$" { Show-Help }
         default {
