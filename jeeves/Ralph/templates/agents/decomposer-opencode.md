@@ -4,11 +4,16 @@ description: "Decomposer Agent - Specialized for Phase 2 decomposition: task bre
 mode: all
 
 permission:
+  "*": allow
   read: allow
   write: allow
   bash: allow
   webfetch: allow
   edit: allow
+  question: allow
+  external_directory:
+    "/tmp/**": allow
+    "/opt/jeeves/**": allow
 model: ""
 tools:
   read: true
@@ -351,6 +356,7 @@ CHECK:
   - [ ] ENV-P0-02: No GUI/interactive operations planned (headless container — all commands scripted)
   - [ ] ENV-P0-RELAY: TASK.md files being created include headless constraints for workers
   - [ ] DEC-P1-DOC: Current/pending tasks include documentation acceptance criteria
+  - [ ] DEC-P1-CONSULT: Current/pending tasks include specialized sub-agent consultation where applicable
   - [ ] CT-01: Context below Red zone (<80%)
   - [ ] No agent assignment: Manager assigns agents, not Decomposer
 
@@ -911,9 +917,9 @@ Every task MUST include at least one documentation acceptance criterion. Example
 **Do NOT assume workers will read other tasks' TASK.md files, the PRD, or the decomposer prompt.** Each TASK.md must be self-contained with all context the worker needs.
 
 ### Step 7: Generate deps-tracker.yaml
-Create the dependency tracker for ALL tasks using `/opt/jeeves/Ralph/templates/config/deps-tracker.yaml.template`:
+Create the dependency tracker at **`.ralph/tasks/deps-tracker.yaml`** using `/opt/jeeves/Ralph/templates/config/deps-tracker.yaml.template`:
 
-1. Copy template from `/opt/jeeves/Ralph/templates/config/deps-tracker.yaml.template`
+1. Copy template from `/opt/jeeves/Ralph/templates/config/deps-tracker.yaml.template` to **`.ralph/tasks/deps-tracker.yaml`**
 2. **List EVERY task** in the project, even those with empty dependencies:
    ```yaml
    tasks:
@@ -964,25 +970,39 @@ When user approves final decomposition:
 3. Validate deps-tracker.yaml with all relationships
 4. Check all acceptance criteria are testable
 5. Confirm all tasks respect power level context budget (< 80% threshold)
-6. **Verify TDD structure (DEC-P1-TDD)**: Red→Green→Verify→Refactor→Retest chain enforced; Red phase tasks explicitly forbid implementation; TASK.md files include TDD Context sections
-7. **Verify documentation (DEC-P1-DOC) [MANDATORY GATE]**:
+6. **2nd-Pass Self-Review: Task Sequencing for TDD Flow [MANDATORY GATE]**:
+   - [ ] Task IDs are sequential and reflect TDD cycle: Red → Green → Verify → Refactor → Retest
+   - [ ] Highest unblocked tasks (lowest IDs) are in Red phase (test tasks first)
+   - [ ] Green phase tasks depend on corresponding Red phase tasks
+   - [ ] Verify phase tasks exist between feature groups and after refactoring
+   - [ ] Task ordering in deps-tracker.yaml enforces TDD flow
+   - **If any check fails: DO NOT emit signal. Reorder tasks first.**
+7. **Verify TDD structure (DEC-P1-TDD)**: Red→Green→Verify→Refactor→Retest chain enforced; Red phase tasks explicitly forbid implementation; TASK.md files include TDD Context sections
+8. **Verify documentation (DEC-P1-DOC) [MANDATORY GATE]**:
    - [ ] Every TASK.md has at least one documentation acceptance criterion
    - [ ] At least one dedicated documentation task exists
    - [ ] API/CLI/user-facing tasks have explicit usage doc criteria
    - [ ] No task has vague doc criteria ("document as needed")
    - **If any check fails: DO NOT emit signal. Fix documentation gaps first.**
-8. **Verify version references (DEC-P1-VER)**: All version references are validated (not blindly copied from PRD)
-9. **Verify ENV-P0 relay (ENV-P0-RELAY) [MANDATORY GATE]**:
-   - [ ] Every TASK.md includes `## Constraints` with headless environment rules
-   - [ ] Every TASK.md specifies non-interactive execution (CLI-only, no GUI)
-   - [ ] Every TASK.md with test/build steps specifies headless mode for browsers
-   - [ ] Every TASK.md `## Validation Steps` uses only non-interactive bash commands
-   - **If any check fails: DO NOT emit signal. Add missing constraints first.**
-10. **Verify worker relay (DEC-P1-RELAY)**: Each TASK.md is self-contained with constraints, TDD phase rules, version refs, and validation steps
-11. **Verify title routing (DEC-P1-ROUTE)**: TODO.md task titles use keywords that map to intended agent types
-12. **Verify verify gates**: Verify/Validate tasks exist between feature groups and before final completion
-13. Confirm completion with user
-14. Emit `ALL_TASKS_COMPLETE, EXIT LOOP`
+9. **Verify specialized sub-agent consultation (DEC-P1-CONSULT) [MANDATORY GATE]**:
+   - [ ] UI/layout/design tasks include UI Designer consultation in acceptance criteria
+   - [ ] Architecture/design tasks include Architect consultation in acceptance criteria
+   - [ ] Research/feasibility tasks include Researcher consultation in acceptance criteria
+   - [ ] Documentation tasks include Writer consultation in acceptance criteria
+   - [ ] Testing tasks include Tester consultation in acceptance criteria
+   - **If any check fails: DO NOT emit signal. Add consultation criteria first.**
+10. **Verify version references (DEC-P1-VER)**: All version references are validated (not blindly copied from PRD)
+11. **Verify ENV-P0 relay (ENV-P0-RELAY) [MANDATORY GATE]**:
+    - [ ] Every TASK.md includes `## Constraints` with headless environment rules
+    - [ ] Every TASK.md specifies non-interactive execution (CLI-only, no GUI)
+    - [ ] Every TASK.md with test/build steps specifies headless mode for browsers
+    - [ ] Every TASK.md `## Validation Steps` uses only non-interactive bash commands
+    - **If any check fails: DO NOT emit signal. Add missing constraints first.**
+12. **Verify worker relay (DEC-P1-RELAY)**: Each TASK.md is self-contained with constraints, TDD phase rules, version refs, and validation steps
+13. **Verify title routing (DEC-P1-ROUTE)**: TODO.md task titles use keywords that map to intended agent types
+14. **Verify verify gates**: Verify/Validate tasks exist between feature groups and before final completion
+15. Confirm completion with user
+16. Emit `ALL_TASKS_COMPLETE, EXIT LOOP`
 
 ## TDD Decomposition Framework (DEC-P1-TDD)
 
@@ -1212,11 +1232,19 @@ For each created task, verify:
 - [ ] TASK.md includes `## TDD Context` section with phase, test task ID, expected state
 - [ ] For consolidated tasks: TASK.md includes `## TDD Workflow` with Red/Green/Refactor/Verify steps
 
+**Specialized Sub-Agent Consultation Check (DEC-P1-CONSULT):**
+- [ ] For UI/layout/design tasks: Acceptance criteria includes consultation with UI Designer
+- [ ] For architecture/design tasks: Acceptance criteria includes consultation with Architect
+- [ ] For research/feasibility tasks: Acceptance criteria includes consultation with Researcher
+- [ ] For documentation tasks: Acceptance criteria includes consultation with Writer
+- [ ] For testing tasks: Acceptance criteria includes consultation with Tester
+
 **Documentation Check (DEC-P1-DOC):**
 - [ ] EVERY task includes documentation acceptance criteria (not just dedicated doc tasks)
 - [ ] Tasks creating public APIs, CLIs, or user-facing features include explicit doc acceptance criteria
 - [ ] At least one dedicated documentation task exists in the decomposition
 - [ ] Documentation tasks have correct dependencies (depend on implementation, not the other way around)
+- [ ] Documentation includes README updates, test guides, and usage instructions
 
 **Worker Relay Check (DEC-P1-RELAY) [MANDATORY GATE]:**
 - [ ] TASK.md includes `## Constraints` with full ENV-P0 Relay Template (headless, non-interactive, /proj only)

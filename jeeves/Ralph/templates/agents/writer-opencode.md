@@ -4,11 +4,16 @@ description: "Writer Agent - Specialized for documentation, content creation, co
 mode: subagent
 
 permission:
+  "*": allow
   read: allow
   write: allow
   bash: allow
   webfetch: allow
   edit: allow
+  question: deny
+  external_directory:
+    "/tmp/**": allow
+    "/opt/jeeves/**": allow
 model: ""
 tools:
   read: true

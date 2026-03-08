@@ -4,11 +4,16 @@ description: "Decomposer Researcher Agent - Specialized for investigation, docum
 mode: subagent
 
 permission:
+  "*": allow
   read: allow
   write: allow
   bash: allow
   webfetch: allow
   edit: allow
+  question: allow
+  external_directory:
+    "/tmp/**": allow
+    "/opt/jeeves/**": allow
 model: ""
 tools:
   read: true

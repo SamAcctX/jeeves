@@ -4,11 +4,16 @@ description: "Decomposer Architect Agent - Specialized for system design, patter
 mode: subagent
 
 permission:
+  "*": allow
   read: allow
   write: allow
   bash: allow
   webfetch: allow
   edit: allow
+  question: allow
+  external_directory:
+    "/tmp/**": allow
+    "/opt/jeeves/**": allow
 model: ""
 tools:
   read: true
