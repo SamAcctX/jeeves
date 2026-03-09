@@ -15,7 +15,7 @@ permission:
     "/tmp/**": allow
     "/opt/jeeves/**": allow
 model: ""
-  tools:
+tools:
   read: true
   write: true
   edit: true
