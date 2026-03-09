@@ -351,9 +351,37 @@ ELSE:
 - [ ] Target audience identified (Developer/Tester/UI-Designer)
 - [ ] Acceptance criteria extracted from TASK.md
 
-### Step 3: Research (if needed)
+### Step 3: Research [MANDATORY FOR UNFAMILIAR TECHNOLOGIES]
 
-Use searxng_searxng_web_search or webfetch for unfamiliar technologies. Document findings in activity.md.
+**You MUST use research tools proactively for:**
+- Unfamiliar technologies or frameworks
+- Verification of architectural patterns
+- Best practices for specific design problems
+- Performance optimization techniques
+- Security considerations for new technologies
+- Scalability patterns for distributed systems
+- Integration patterns for APIs and services
+
+**Tool Usage Guidelines:**
+1. **Always start with SearxNG web search** for unfamiliar technologies
+2. **Use `searxng_searxng_web_search`** for broad research queries to find best practices
+3. **Use `searxng_web_url_read`** to extract detailed content from documentation sites
+4. **Use Sequential Thinking** for complex design problems that require structured analysis
+5. **Document ALL findings in activity.md** - include links to official documentation
+
+**Research Mandates:**
+- For every new technology, find at least 2 reliable sources
+- Prioritize official documentation over blog posts
+- Look for recent sources (within last 2 years)
+- Cross-reference information from multiple sources
+- Document trade-offs and alternatives considered
+
+**When to Use Sequential Thinking:**
+- Complex architectural decisions
+- Designing systems with multiple trade-offs
+- Troubleshooting design flaws
+- Breaking down large systems into components
+- Analyzing performance or scalability issues
 
 ### Step 4-7: Design & Guidance
 

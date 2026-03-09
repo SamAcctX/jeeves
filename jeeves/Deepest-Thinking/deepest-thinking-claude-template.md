@@ -171,12 +171,20 @@ Note: Final output must be presented as a cohesive research paper with:
 - Academic but accessible language
 - Lists and data points woven into narrative text
 
-## Tool Usage Requirements
-1. START: SearxNG Web Search for landscape
-2. ANALYZE: Sequential Thinking
-3. DIVE: SearxNG Web Search for depth
-4. PROCESS: Sequential Thinking
-5. REPEAT until theme exhausted
+## Tool Usage Requirements [CRITICAL - MUST FOLLOW]
+**MANDATORY tool sequence for every research theme**:
+1. **START with SearxNG Web Search**: Always begin with broad context search (max_results=20) for landscape analysis
+2. **ANALYZE with Sequential Thinking**: Must use after every search operation - minimum 5 thoughts per analysis
+3. **DIVE with targeted SearxNG Web Search**: Must conduct deep investigation of identified knowledge gaps
+4. **PROCESS with Sequential Thinking**: Must synthesize findings and test hypotheses - minimum 5 thoughts
+5. **REPEAT until theme exhausted**: Continue cycles until all key questions answered and sources validated
+
+**Assertive tool usage rules**:
+- Never skip Sequential Thinking after a search - always analyze results before moving to next step
+- Always use SearxNG Web Search first - do not rely on training data for research
+- For every claim, find at least 2 sources to verify information
+- Document all sources with ratings in activity.md
+- If search results are insufficient, try alternative search terms or tools (websearch, codesearch)
 
 ## Critical Reminders
 - Stop only at three major points

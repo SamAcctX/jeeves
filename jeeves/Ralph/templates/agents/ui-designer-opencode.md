@@ -28,6 +28,7 @@ tools:
   sequentialthinking: true
   searxng_searxng_web_search: true
   searxng_web_url_read: true
+  crawl4ai: true
 ---
 
 ## PRECEDENCE LADDER [CRITICAL - KEEP INLINE]

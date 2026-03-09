@@ -10,7 +10,7 @@ permission:
   webfetch: allow
   edit: allow
 model: inherit
-tools: Read, Write, Grep, Glob, Bash, Web, Edit, SequentialThinking
+tools: Read, Write, Grep, Glob, Bash, Web, Edit, SequentialThinking, searxng_searxng_web_search, searxng_web_url_read, crawl4ai
 ---
 
 ## PRECEDENCE LADDER [CRITICAL - KEEP INLINE]

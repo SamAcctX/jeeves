@@ -28,6 +28,7 @@ tools:
   searxng_web_url_read: true
   websearch: true
   codesearch: true
+  crawl4ai: true
 ---
 
 <!-- version: 1.3.0 | last_updated: 2026-03-01 | role: researcher | scope: worker-agent | deps: loop-detection.md@1.3.0 -->
@@ -617,6 +618,7 @@ For strict output format compliance:
 | Tool | Use Case | Priority |
 |------|----------|----------|
 | searxng_searxng_web_search | Broad context search | Primary |
+| crawl4ai | Deep scraping of documentation sites and code repositories | Primary |
 | searxng_web_url_read | Deep documentation dive | Primary |
 | websearch | Fallback when SearxNG unavailable | Secondary |
 | codesearch | Technical API/library research | Tertiary |

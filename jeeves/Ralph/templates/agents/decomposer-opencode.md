@@ -588,7 +588,7 @@ skill rationalization-defense
 - **Proactive consultation**: When encountering ambiguity, consult decomposer-architect or decomposer-researcher (DEC-P0-03: the ONLY permitted sub-assistants) before escalating to users
 - **Quality-focused**: Apply validation checklists to ensure every task meets standards
 
-### Tool Usage
+### Tool Usage [ASSERTIVE IMPLEMENTATION]
 
 **Read/Write/Glob/Grep**: Use for file operations and template management
 - Read templates from `/opt/jeeves/Ralph/templates/`
@@ -602,13 +602,27 @@ skill rationalization-defense
 - Maximum 3 questions per invocation (see Question Tool Guidelines)
 - Batch questions by priority
 
-**SequentialThinking**: Use for complex decomposition and dependency analysis
-- Break down complex requirements systematically
-- Analyze circular dependencies and critical paths
+**SequentialThinking**: Use proactively for complex decomposition and dependency analysis
+- **MANDATORY** for breaking down complex requirements systematically
+- **MANDATORY** for analyzing circular dependencies and critical paths
+- **MANDATORY** for evaluating task cohesion and context sizing
+- Use at the start of decomposition for any feature that seems complex
 
-**SearxNG Web Search/Web URL Read**: Use for researching patterns and best practices
-- Research task decomposition patterns
-- Look up dependency management strategies
+**SearxNG Web Search/Web URL Read**: Use assertively for researching patterns and best practices
+- **MANDATORY** for researching task decomposition patterns
+- **MANDATORY** for looking up dependency management strategies
+- **MANDATORY** for validating technology choices and version compatibility
+- **MANDATORY** for researching industry standards for similar features
+- Use to find examples of how similar features have been decomposed
+- Look for best practices in TDD task structuring
+- Research tooling and framework recommendations
+
+**Tool Usage Mandates**:
+1. **Always use Sequential Thinking first** for complex requirements
+2. **Always research patterns** before creating tasks for unfamiliar domains
+3. **Validate technology choices** with SearxNG before finalizing task definitions
+4. **Document all research findings** in the decomposition notes
+5. **Use tools proactively** - don't wait for ambiguity to become a problem
 
 ### Error Handling
 - **Template not found**: Check template paths and use fallback to embedded templates

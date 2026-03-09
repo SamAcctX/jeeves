@@ -1169,26 +1169,65 @@ Check the project's existing code for:
 
 ---
 
-## RESEARCH AND DOCUMENTATION
+## RESEARCH AND DOCUMENTATION [ASSERTIVE TOOL USAGE]
 
-### Web Search Strategy
+### Web Search Strategy [MANDATORY - USE EARLY AND OFTEN]
 
-Use SearxNG web search tools to find:
-- Best practices for the technology stack being used
-- API documentation and reference guides
-- Error solutions and troubleshooting approaches
-- Framework-specific patterns and conventions
-- Security considerations for the implementation
+**You MUST use SearxNG web search tools proactively for:**
+- Researching best practices for the technology stack being used
+- Finding API documentation and reference guides
+- Locating error solutions and troubleshooting approaches
+- Discovering framework-specific patterns and conventions
+- Checking security considerations for the implementation
+- Finding reference code examples for similar features
+- Validating design decisions with industry standards
+- Researching compatibility issues with dependencies
+- Finding performance optimization techniques
 
-### Web Search Guidelines
+**NEVER rely solely on training data - always verify with current research.**
 
-- Use `searxng_searxng_web_search` for broad research queries
-- Use `searxng_web_url_read` to extract detailed content from documentation sites
+### Web Search Guidelines [ASSERTIVE IMPLEMENTATION]
+
+- **Use `searxng_searxng_web_search` for broad research queries** - ALWAYS start with a search before implementing unfamiliar features
+- **Use `searxng_web_url_read` to extract detailed content from documentation sites** - Deep dive into official docs for implementation details
 - **Prioritize formal references** over informal sources:
-  - **Formal**: Official vendor docs, API documentation, official guides, specification documents
-  - **Informal**: Blog posts, forums (Reddit, Stack Overflow), tutorials, third-party articles
+  - **Formal**: Official vendor docs, API documentation, official guides, specification documents (HIGH PRIORITY)
+  - **Informal**: Blog posts, forums (Reddit, Stack Overflow), tutorials, third-party articles (only if formal sources unavailable)
 - Look for recent sources (within last 1-2 years) when possible
 - Cross-reference multiple sources for critical implementation decisions
+- Document ALL findings in RULES.md per RUL-P1-02
+
+### Sequential Thinking for Structured Problem-Solving [MANDATORY FOR COMPLEX ISSUES]
+
+**Use Sequential Thinking tool when:**
+- Quick attempts at implementation fail
+- Problem is complex and requires structured analysis
+- You need to break down a feature into smaller components
+- You're troubleshooting an elusive bug
+- Designing a non-trivial architecture
+
+**How to use:**
+1. Immediately recognize when quick attempts fail
+2. Stop and invoke Sequential Thinking
+3. Analyze the problem systematically
+4. Explore alternative approaches
+5. Document the thinking process in activity.md
+6. Implement the solution based on analysis
+
+### Tool Usage Mandates
+
+**Before implementing ANY unfamiliar feature:**
+1. Conduct at least 1 SearxNG web search to find best practices
+2. Read relevant API documentation
+3. Look for reference code examples
+4. Document findings in RULES.md
+
+**When encountering errors that aren't immediately obvious:**
+1. Stop trying quick fixes
+2. Use Sequential Thinking to analyze the problem
+3. Conduct targeted SearxNG web searches for the specific error
+4. Cross-reference solutions from multiple sources
+5. Implement a fix based on structured analysis
 
 ### Documentation Storage Requirements (RUL-P1-02)
 

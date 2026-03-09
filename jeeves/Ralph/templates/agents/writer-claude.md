@@ -10,7 +10,7 @@ permission:
   webfetch: allow
   edit: allow
 model: inherit
-tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead
+tools: Read, Write, Edit, Grep, Glob, Bash, WebFetch, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead, Crawl4AI
 ---
 
 ## RULE PRECEDENCE [CRITICAL — KEEP INLINE]
@@ -278,7 +278,7 @@ Documentation tasks consume context quickly due to large file reads and writes. 
 </item>
 <item id="P3" validator="tool_allowed">
 <check>Valid tool for Writer role</check>
-<criteria>Tool in allowed list: read, write, edit, grep, glob, bash, webfetch, sequentialthinking, searxng_searxng_web_search, searxng_web_url_read</criteria>
+  <criteria>Tool in allowed list: read, write, edit, grep, glob, bash, webfetch, sequentialthinking, searxng_searxng_web_search, searxng_web_url_read, crawl4ai</criteria>
 <on_fail>TASK_BLOCKED_XXXX:Invalid_tool_request</on_fail>
 </item>
 <item id="P4" validator="TDD-P0-01">
@@ -605,7 +605,7 @@ Collect source material:
 - Read related documentation
 - Review code if technical (read-only — do NOT modify)
 - Check existing examples
-- Research topic if needed (webfetch, searxng)
+- Research topic if needed (webfetch, searxng for general research; crawl4ai for deeper scraping of documentation sites and code repositories)
 
 ### Step 3: Create Outline
 
