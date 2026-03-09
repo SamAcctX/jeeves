@@ -301,10 +301,11 @@ function Get-PortFromComposeFile {
 
 function Test-SlugCollision {
     $allContainers = Get-AllJeevesContainers
-    $currentDir = (Get-Location).Path
+    $currentDir = (Get-Location).Path -replace '\\', '/'
 
     foreach ($container in $allContainers) {
-        if ($container.Project -eq $Script:PROJECT_SLUG -and $container.Directory -ne $currentDir) {
+        $containerDir = $container.Directory -replace '\\', '/'
+        if ($container.Project -eq $Script:PROJECT_SLUG -and $containerDir -ne $currentDir) {
             Write-Log "Slug collision detected: project slug '$($Script:PROJECT_SLUG)' is already in use by:" -error
             Write-Log "  Container: $($container.Name)" -error
             Write-Log "  Directory: $($container.Directory)" -error
@@ -495,7 +496,7 @@ services:
     labels:
       - "jeeves.managed=true"
       - "jeeves.project=$($Script:PROJECT_SLUG)"
-      - "jeeves.directory=$currentDir"
+      - "jeeves.directory=$($currentDir -replace '\\', '/')"
     environment:
       - NVIDIA_DRIVER_CAPABILITIES=all
       - CUDA_VISIBLE_DEVICES=all
@@ -507,23 +508,23 @@ services:
 "@
 
     if ($Dind) {
-        $composeContent += "      - ENABLE_DIND=true`n"
+        $composeContent += "`n      - ENABLE_DIND=true"
     }
 
     try {
         $gitName = git config --global user.name
         $gitEmail = git config --global user.email
         if ($gitName) {
-            $composeContent += "      - GIT_AUTHOR_NAME=$gitName`n"
+            $composeContent += "`n      - GIT_AUTHOR_NAME=$gitName"
         }
         if ($gitEmail) {
-            $composeContent += "      - GIT_AUTHOR_EMAIL=$gitEmail`n"
+            $composeContent += "`n      - GIT_AUTHOR_EMAIL=$gitEmail"
         }
     } catch {
         Write-Log "Warning: Could not read host git config" -warning
     }
 
-    $composeContent += "    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
+    $composeContent += "`n    volumes:`n      - $($mountSpec.WorkspaceMount)`n"
 
     foreach ($configMount in $mountSpec.ConfigMounts) {
         $composeContent += "      - $configMount`n"
