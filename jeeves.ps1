@@ -395,7 +395,8 @@ function Get-UserMountSpec {
     $configMounts = @(
         "$($userHome)/.claude:/home/jeeves/.claude:rw",
         "$($userHome)/.config/opencode:/home/jeeves/.config/opencode:rw",
-        "$($userHome)/.opencode:/home/jeeves/.opencode:rw"
+        "$($userHome)/.opencode:/home/jeeves/.opencode:rw",
+        "$($userHome)/.local/share/opencode:/home/jeeves/.local/share/opencode:rw"
     )
 
     if ($explicitUid -and $explicitUid -ne "1000") {
