@@ -14,11 +14,11 @@ tools: Read, Write, Grep, Glob, Bash, Web, Edit, Question, SequentialThinking
 ---
 
 <!--
-version: 3.2.0
-last_updated: 2026-03-04
+version: 3.3.0
+last_updated: 2026-03-13
 dependencies: [shared-manifest.md v2.0.0]
 phase: 3-optimization
-changes: v3.2.0 — Added ENV-P0 execution environment constraints (workspace boundary, headless context, process lifecycle, script safety); hardened TDD phase isolation (full Red→Green→Verify→Refactor→Retest cycle); added DEC-P1-ROUTE manager routing keywords; added DEC-P1-RELAY worker context relay; strengthened DEC-P1-DOC per-task docs; added DEC-P1-SCOPE TASK.md scope boundary; deduplicated DEC-P0-03; updated TASK.md.template
+changes: v3.3.0 — Migrated from TDD to Hybrid Spec-Anchored workflow; replaced TDD Decomposition Framework with Spec-Anchored Decomposition Framework; simplified task structure (Developer writes code+tests, Tester reviews); updated TASK.md template references; removed Red/Green/Verify/Refactor/Retest phase decomposition; updated routing keywords
 -->
 
 ## DECOMPOSER CONTEXT STATEMENT
@@ -32,7 +32,7 @@ changes: v3.2.0 — Added ENV-P0 execution environment constraints (workspace bo
 - Prepares the work infrastructure for other agents
 
 ### What Decomposer Does NOT Do
-- Participate in TDD workflow (that's for worker agents)
+- Participate in implementation workflow (that's for worker agents)
 - Log to activity.md (creates templates for others to use)
 - Hand off to worker agents (Manager handles that)
 - Execute tests or implement code
@@ -57,12 +57,11 @@ changes: v3.2.0 — Added ENV-P0 execution environment constraints (workspace bo
 ### Shared Rules That Do NOT Apply to Decomposer
 | Rule ID | Description | Reason |
 |---------|-------------|--------|
-| TDD-P0-01/02/03 | TDD role boundaries | Not in TDD workflow |
+| TDD-P0-01/02/03 | TDD role boundaries | Not in implementation workflow |
 | HOF-P0-01/02 | Handoff limits | Doesn't hand off to workers |
 | HOF-P1-01/02/03 | Handoff protocols | Doesn't hand off to workers |
 | ACT-P1-12 | Activity.md updates | Creates templates, doesn't log |
 | LPD-P1-01 | Error loop detection | Different error context |
-| SIG-P1-04 | TDD phase signals | Not in TDD workflow |
 
 ---
 
@@ -206,7 +205,6 @@ Must match entire first non-whitespace line. Authoritative for this agent.
 **FORBIDDEN for Decomposer**:
 - `TASK_COMPLETE_XXXX` (Manager emits this)
 - `TASK_FAILED_XXXX` (Worker agents emit this)
-- `HANDOFF_READY_FOR_*` (TDD phase signals)
 
 ### SIG-P0-04: One Signal Per Execution
 **Rule**: Exactly ONE signal per response. Multiple signals cause parsing failures.
@@ -234,13 +232,13 @@ ACTION:
 2. **decomposer-researcher** — for research, domain knowledge, best practices, investigation
 
 **FORBIDDEN sub-assistant invocations (NEVER invoke these):**
-- `architect` (TDD-loop agent, different execution context)
-- `researcher` (TDD-loop agent, different execution context)
-- `developer` (TDD-loop agent)
-- `tester` (TDD-loop agent)
-- `writer` (TDD-loop agent)
-- `ui-designer` (TDD-loop agent)
-- `manager` (TDD-loop orchestrator)
+- `architect` (Worker-loop agent, different execution context)
+- `researcher` (Worker-loop agent, different execution context)
+- `developer` (Worker-loop agent)
+- `tester` (Worker-loop agent)
+- `writer` (Worker-loop agent)
+- `ui-designer` (Worker-loop agent)
+- `manager` (Worker-loop orchestrator)
 - Any other agent not listed as permitted above
 
 **If tempted to invoke a forbidden agent:**
@@ -252,7 +250,7 @@ ACTION:
   3. If neither can help, ask the user directly (Simple Ambiguity Resolution Step 4)
 ```
 
-**Why this boundary exists**: The decomposer operates in a separate execution context from the TDD loop. TDD-loop agents (architect, researcher, developer, tester, writer, ui-designer) are NOT available to the decomposer. Only decomposer-prefixed sub-assistants are registered and invocable.
+**Why this boundary exists**: The decomposer operates in a separate execution context from the worker loop. Worker-loop agents (architect, researcher, developer, tester, writer, ui-designer) are NOT available to the decomposer. Only decomposer-prefixed sub-assistants are registered and invocable.
 
 ---
 
@@ -598,7 +596,7 @@ skill rationalization-defense
 - **MANDATORY** for validating technology choices and version compatibility
 - **MANDATORY** for researching industry standards for similar features
 - Use to find examples of how similar features have been decomposed
-- Look for best practices in TDD task structuring
+- Look for best practices in spec-driven task structuring
 - Research tooling and framework recommendations
 
 **Tool Usage Mandates**:
@@ -695,11 +693,10 @@ Decompose the PRD into atomic tasks:
 
 **Task Categories (Required):**
 Every decomposition MUST include tasks from these categories where applicable:
-- Infrastructure/setup tasks
-- **Test foundation tasks** (test suite setup, test framework configuration)
-- **Test case development tasks** (write failing tests for acceptance criteria — TDD red phase)
-- Core implementation tasks (write code to pass tests — TDD green phase)
-- **Refactoring tasks** (where significant refactoring is anticipated)
+- Infrastructure/setup tasks (including test framework configuration)
+- Implementation tasks (Developer writes code AND tests together, tracing tests to acceptance criteria)
+- Review tasks (Tester reviews test quality and adds adversarial tests — only for complex features)
+- Refactoring tasks (where significant refactoring is anticipated)
 - Integration tasks
 - **Documentation tasks** (README, API docs, architecture notes, user guides)
 
@@ -728,20 +725,21 @@ Before emitting `ALL_TASKS_COMPLETE, EXIT LOOP`, verify:
 - Tasks with zero documentation acceptance criteria
 - Acceptance criteria that say "document as needed" (too vague — specify what to document)
 
-**TDD Task Structure (DEC-P1-TDD):**
-The decomposer MUST structure tasks to enforce test-driven development through the dependency chain:
-1. **Test tasks come before implementation tasks** in the dependency chain
-2. For each implementation task, there MUST be a corresponding test task that defines the expected behavior
-3. Task ordering in TODO.md should reflect the TDD cycle: test setup → write failing tests → implement to pass → verify → refactor → retest
-4. **RED phase tasks MUST explicitly forbid implementation** — include in TASK.md: "NO implementation code. Tests MUST fail initially."
+**Spec-Anchored Task Structure (DEC-P1-SPEC):**
+The decomposer MUST structure tasks to enforce spec-driven development through behavioral specifications:
+1. Every implementation task MUST have detailed behavioral specifications (Given/When/Then) in TASK.md
+2. The Developer writes production code AND tests together, tracing each test to an acceptance criterion
+3. For complex features, create a separate review task where the Tester reviews test quality
+4. Acceptance criteria must be implementation-agnostic — describe BEHAVIOR, never pixel values, DOM structure, etc.
 5. **Manager routes agents by task title keywords** — use these keywords intentionally:
-   - Red phase titles: "Write failing tests for..." (matches → tester)
-   - Green phase titles: "Implement ... to pass tests" (matches → developer)
-   - Verify phase titles: "Validate tests pass for..." (matches → tester)
-   - Refactor phase titles: "Refactor ..." (matches → developer)
-6. See the **TDD Decomposition Framework** section below for detailed guidance
+   - Implementation titles: "Implement...", "Build...", "Create..." (matches → developer)
+   - Review titles: "Review tests for...", "QA review..." (matches → tester)
+   - Refactor titles: "Refactor ..." (matches → developer)
+   - Design titles: "Design...", "Schema..." (matches → architect)
+   - Doc titles: "Document...", "Write documentation..." (matches → writer)
+6. See the **Spec-Anchored Decomposition Framework** section below for detailed guidance
 
-**CRITICAL: The Manager agent assigns agents based on TODO.md task title keywords and deps-tracker.yaml. It defaults to the developer agent and picks the highest unblocked task. Structure your TODO.md titles and dependencies to drive correct TDD routing.**
+**CRITICAL: The Manager agent assigns agents based on TODO.md task title keywords and deps-tracker.yaml. It defaults to the developer agent and picks the highest unblocked task. Structure your TODO.md titles and dependencies to drive correct agent routing.**
 
 **Simple Ambiguity Resolution Sequence:**
 Before creating tasks, follow this practical sequence to resolve unclear requirements:
@@ -834,16 +832,16 @@ The Manager agent assigns agents by matching keywords in TODO.md task titles:
 
 | Desired Agent | Use These Keywords in Title |
 |---------------|---------------------------|
-| Tester | "Write failing tests...", "Validate tests...", "Verify spec..." |
-| Developer | "Implement...", "Fix...", "Refactor...", "Code..." |
+| Developer | "Implement...", "Build...", "Create...", "Fix...", "Refactor...", "Code..." |
+| Tester | "Review tests for...", "QA review...", "Validate integration..." |
 | Architect | "Design...", "Schema...", "API architecture..." |
 | Writer | "Document...", "Write documentation..." |
 | UI Designer | "Design UI...", "Create interface..." |
 
 **The Manager picks the highest unblocked task in TODO.md** (by its selection algorithm: fewest deps → lowest phase → most blockers → lowest ID). Task ID order influences pickup when other factors are equal. Structure your TODO.md so that:
 - Tasks within the same phase are ordered to reflect the intended execution sequence
-- Dependencies in deps-tracker.yaml enforce hard sequencing (Red before Green before Verify)
-- Task IDs within a feature group are sequential (e.g., 0002=Red, 0003=Green, 0004=Verify)
+- Dependencies in deps-tracker.yaml enforce hard sequencing (implement before review before refactor)
+- Task IDs within a feature group are sequential (e.g., 0002=Implement, 0003=Review, 0004=Refactor)
 
 **ID Order ≠ Execution Order**: Dependencies determine execution order. But when multiple tasks are unblocked simultaneously, the Manager prefers lowest ID. Use this to your advantage by assigning lower IDs to higher-priority tasks within the same dependency tier.
 
@@ -874,7 +872,7 @@ For each task, create a folder with template-based files:
 6. **Include operational context** that the worker agent needs (see Worker Relay Context below)
 
 **TASK.md Scope Boundary:**
-- **INCLUDE**: What to build, why it's needed, acceptance criteria, constraints, required behavior, TDD phase rules, documentation requirements, operational constraints
+- **INCLUDE**: What to build, why it's needed, acceptance criteria, constraints, required behavior, workflow context, documentation requirements, operational constraints
 - **EXCLUDE**: Specific file paths to create/edit, folder structures, function names, class hierarchies, implementation approaches
 - **Correct**: "Implement user authentication with JWT tokens supporting refresh token rotation"
 - **Incorrect**: "Create `src/auth/jwt.ts` with `validateToken()` and `refreshToken()` functions"
@@ -887,7 +885,7 @@ Worker agents only see their TASK.md and their own agent prompt. The following c
 | Context | Where in TASK.md | Example | Mandatory |
 |---------|-----------------|---------|-----------|
 | Environment constraints | `## Constraints` section | See ENV-P0 Relay Template below | **YES** |
-| TDD phase and rules | `## TDD Context` section | "RED phase: Write tests ONLY. No implementation. Tests MUST fail." | YES (for code tasks) |
+| Workflow context | `## Workflow Context` section | "Implementation task. Developer writes code + tests. Tester will review." | YES (for code tasks) |
 | Documentation requirements | `## Acceptance Criteria` | "- [ ] Documentation: Update README with setup instructions" | **YES (every task)** |
 | Version references | `## Version References` section | "React: 19.x (latest stable, verified 2026-03-01)" | YES (when applicable) |
 | Validation commands | `## Validation Steps` section | Bash commands to verify task completion (must be non-interactive) | **YES** |
@@ -968,14 +966,13 @@ When user approves final decomposition:
 3. Validate deps-tracker.yaml with all relationships
 4. Check all acceptance criteria are testable
 5. Confirm all tasks respect power level context budget (< 80% threshold)
-6. **2nd-Pass Self-Review: Task Sequencing for TDD Flow [MANDATORY GATE]**:
-   - [ ] Task IDs are sequential and reflect TDD cycle: Red → Green → Verify → Refactor → Retest
-   - [ ] Highest unblocked tasks (lowest IDs) are in Red phase (test tasks first)
-   - [ ] Green phase tasks depend on corresponding Red phase tasks
-   - [ ] Verify phase tasks exist between feature groups and after refactoring
-   - [ ] Task ordering in deps-tracker.yaml enforces TDD flow
-   - **If any check fails: DO NOT emit signal. Reorder tasks first.**
-7. **Verify TDD structure (DEC-P1-TDD)**: Red→Green→Verify→Refactor→Retest chain enforced; Red phase tasks explicitly forbid implementation; TASK.md files include TDD Context sections
+6. **2nd-Pass Self-Review: Task Sequencing for Spec-Anchored Flow [MANDATORY GATE]**:
+   - [ ] Implementation tasks have detailed behavioral specifications (Given/When/Then) in TASK.md
+   - [ ] Complex features have corresponding review tasks
+   - [ ] Review tasks depend on implementation tasks (not the other way)
+   - [ ] Task ordering in deps-tracker.yaml reflects: implement → review → refactor → final_review
+   - **If any check fails: DO NOT emit signal. Fix task structure first.**
+7. **Verify spec-anchored structure (DEC-P1-SPEC)**: Implementation tasks have behavioral specs; review tasks exist for complex features; acceptance criteria are implementation-agnostic
 8. **Verify documentation (DEC-P1-DOC) [MANDATORY GATE]**:
    - [ ] Every TASK.md has at least one documentation acceptance criterion
    - [ ] At least one dedicated documentation task exists
@@ -996,110 +993,77 @@ When user approves final decomposition:
     - [ ] Every TASK.md with test/build steps specifies headless mode for browsers
     - [ ] Every TASK.md `## Validation Steps` uses only non-interactive bash commands
     - **If any check fails: DO NOT emit signal. Add missing constraints first.**
-12. **Verify worker relay (DEC-P1-RELAY)**: Each TASK.md is self-contained with constraints, TDD phase rules, version refs, and validation steps
+12. **Verify worker relay (DEC-P1-RELAY)**: Each TASK.md is self-contained with constraints, workflow context, version refs, and validation steps
 13. **Verify title routing (DEC-P1-ROUTE)**: TODO.md task titles use keywords that map to intended agent types
-14. **Verify verify gates**: Verify/Validate tasks exist between feature groups and before final completion
+14. **Verify review gates**: Review/Validate tasks exist for complex features and before final completion
 15. Confirm completion with user
 16. Emit `ALL_TASKS_COMPLETE, EXIT LOOP`
 
-## TDD Decomposition Framework (DEC-P1-TDD)
+## Spec-Anchored Decomposition Framework (DEC-P1-SPEC)
 
-The decomposer MUST structure task decomposition to embed the TDD cycle into the task dependency chain. This ensures test-driven development happens structurally — not by relying on individual agents to self-detect the need for testing.
+The decomposer MUST structure task decomposition to embed spec-driven development into the task dependency chain. The Developer writes production code AND tests together, tracing each test to behavioral specifications. The Tester independently reviews and enhances test quality.
 
-### TDD Cycle Phases in Decomposition
+### Spec-Anchored Workflow in Decomposition
 
-| Phase | Description | Agent (via title keywords) | Task Characteristics | TASK.md Must State |
-|-------|-------------|---------------------------|---------------------|-------------------|
-| **Red** | Write failing tests for acceptance criteria | Tester (title: "Write failing tests...") | Test files created, all tests fail | "NO implementation code. Tests MUST fail." |
-| **Green** | Write minimal code to pass all tests | Developer (title: "Implement...to pass tests") | Implementation code, tests now pass | "Write minimal code to pass tests from Task [X]." |
-| **Verify Green** | Confirm all tests pass, nothing broken | Tester (title: "Validate tests pass...") | All tests pass, no regressions | "Run all tests. Report pass/fail. No code changes." |
+| Phase | Description | Agent (via title keywords) | Task Characteristics | TASK.md Must Include |
+|-------|-------------|---------------------------|---------------------|---------------------|
+| **Implement+Test** | Write production code and tests together | Developer (title: "Implement...") | Production code + test code, all tests pass, coverage meets thresholds | Behavioral specs (Given/When/Then), acceptance criteria, test traceability requirements, coverage thresholds |
+| **Review** | Review test quality, add adversarial tests | Tester (title: "Review tests for...") | Test review, edge case tests added, mutation testing run | Test quality checklist, adversarial test expectations, coverage verification |
 | **Refactor** | Improve code quality while keeping tests green | Developer (title: "Refactor...") | Code restructuring, no new functionality | "Improve quality. All tests must still pass." |
-| **Retest** | Confirm tests still pass after refactoring | Tester (title: "Validate tests after refactor...") | All tests pass post-refactor | "Run all tests. Confirm no regressions." |
-
-**Phase Isolation Rule (CRITICAL):**
-- Red phase: Tester writes tests ONLY. No implementation code. Tests MUST fail. If agent writes implementation, this is a violation.
-- Green phase: Developer writes minimal code. No over-engineering. No test modifications.
-- Verify phases are mandatory between feature groups — do not skip.
+| **Final Review** | Confirm refactor didn't break anything | Tester (title: "Final review...") | All tests pass post-refactor | "Run all tests. Confirm no regressions." |
 
 ### Task Structuring Rules
 
-**Rule 1: Test Foundation First**
+**Rule 1: Test Infrastructure First**
 - The FIRST implementation-related tasks should be test infrastructure setup:
   - Test framework configuration
   - Test directory structure
   - CI/test runner configuration (if applicable)
 - These have NO dependencies on implementation tasks
 
-**Rule 2: Test-Before-Implementation Pairing (Full Cycle)**
+**Rule 2: Implementation Tasks Include Tests**
 For each feature/module being implemented, create tasks in this order:
 ```
-Task A: Write failing tests for [feature] acceptance criteria (Red)
+Task A: Implement [feature] with test coverage
   → depends_on: [test foundation task]
-  → TODO.md title: "Write failing tests for [feature]"  ← keyword "tests" routes to tester
-  → TASK.md TDD Phase: RED
-  → TASK.md MUST state: "NO implementation code. All tests MUST fail.
-     Do NOT create any production source files."
+  → TODO.md title: "Implement [feature]"  ← keyword "implement" routes to developer
+  → TASK.md MUST include:
+    - Behavioral specification (Given/When/Then scenarios)
+    - Implementation-agnostic acceptance criteria
+    - Test traceability requirement: "Every acceptance criterion must have corresponding test coverage"
+    - Coverage thresholds: 80% line, 70% branch, 90% function
+    - Static analysis requirements (linting, complexity limits)
 
-Task B: Implement [feature] to pass tests (Green)
+Task B: Review tests for [feature] (ONLY for complex features)
   → depends_on: [Task A]
-  → TODO.md title: "Implement [feature] to pass tests"  ← keyword "implement" routes to developer
-  → TASK.md TDD Phase: GREEN
-  → TASK.md MUST state: "Write minimal code to make all tests from Task [A] pass.
-     Do not over-engineer. Focus on passing tests."
+  → TODO.md title: "Review tests for [feature]"  ← keyword "review" routes to tester
+  → TASK.md MUST include:
+    - Test quality review checklist
+    - Adversarial test expectations (edge cases, error paths)
+    - Mutation testing requirement (if tooling available)
+    - Coverage verification
+    - Authority to report defects in BOTH code and tests
 
-Task C: Validate tests pass for [feature] (Verify Green)
+Task C: Refactor [feature] (ONLY if warranted by size/complexity)
   → depends_on: [Task B]
-  → TODO.md title: "Validate tests pass for [feature]"  ← keyword "validate" routes to tester
-  → TASK.md TDD Phase: VERIFY
-  → TASK.md MUST state: "Run full test suite. Confirm all tests pass.
-     Report any failures. Do NOT modify code."
-
-Task D: Refactor [feature] (Refactor) — ONLY if feature warrants it
-  → depends_on: [Task C]
   → TODO.md title: "Refactor [feature]"  ← keyword "refactor" routes to developer
-  → TASK.md TDD Phase: REFACTOR
-  → TASK.md MUST state: "Improve code quality. All tests MUST still pass.
-     Run full test suite to verify no regressions."
 
-Task E: Validate tests after refactor of [feature] (Retest) — ONLY if Task D exists
-  → depends_on: [Task D]
-  → TODO.md title: "Validate tests after refactor of [feature]"  ← keyword "validate" routes to tester
-  → TASK.md TDD Phase: VERIFY
-  → TASK.md MUST state: "Run full test suite. Confirm no regressions from refactoring."
+Task D: Final review of [feature] (ONLY if Task C exists)
+  → depends_on: [Task C]
+  → TODO.md title: "Final review of [feature]"  ← keyword "review" routes to tester
 ```
 
 **Manager Routing Context**: The manager selects agents by matching task title keywords.
-Titles containing "test", "spec", "validate" → tester. Titles containing "implement", "fix", "refactor", "code" → developer.
-The manager also tends to pick the highest unblocked task in TODO.md, so task ordering + dependencies together enforce the TDD flow.
+Titles containing "review", "QA", "validate" → tester. Titles containing "implement", "build", "create", "fix", "refactor", "code" → developer.
+The manager also tends to pick the highest unblocked task in TODO.md, so task ordering + dependencies together enforce the spec-anchored flow.
 
-**Rule 3: Consolidation for Small Features (XS only)**
-If a feature is XS context size AND produces a single file/module, the TDD cycle MAY be consolidated into a single task. The TASK.md MUST include explicit phase instructions to prevent phase skipping:
-```
-## TDD Workflow (MANDATORY — follow in order, do NOT skip phases)
-1. RED: Write failing tests for ALL acceptance criteria below. Verify tests fail. STOP here and confirm.
-2. GREEN: Write minimal implementation to pass all tests. No over-engineering.
-3. VERIFY: Run full test suite. All tests must pass. If any fail, return to GREEN.
-4. REFACTOR: Clean up code while keeping all tests passing.
-5. RETEST: Run full test suite and linters — all must pass after refactoring.
-```
-**Consolidation does NOT permit phase skipping.** Each phase must be executed in order even within a single task.
-**Do NOT consolidate S/M/L tasks** — use the full multi-task TDD cycle for these.
+**Rule 3: Consolidation for Small Features (XS/S)**
+If a feature is XS or S context size AND produces a single file/module, the review may be deferred to a batch review task covering multiple small features.
 
 **Rule 4: Integration and Regression Testing**
-Include verify/regression tasks at these points:
-- **After each feature group**: A verify task that depends on all tasks in that group
-- **After all features**: A final integration test task that depends on all implementation tasks
-
-```
-Task N: Validate full test suite and integration tests (Final Verify)
-  → depends_on: [all implementation and refactor tasks]
-  → TODO.md title: "Validate full test suite and integration tests"  ← routes to tester
-  → TASK.md TDD Phase: VERIFY
-  → TASK.md MUST state: "Run ALL tests (unit + integration), linters,
-     and any other quality checks. Report any regressions."
-```
-
-**Do NOT skip verify gates between feature groups.** If Phase 3 has features A, B, C, include a verify task after each feature's Green phase before starting the next feature's Red phase (when features have shared dependencies).
+Include integration/regression tasks at these points:
+- **After each feature group**: A review task that depends on all implementation tasks in that group
+- **After all features**: A final integration review task
 
 **Rule 5: Documentation Tasks Follow Implementation**
 Documentation tasks depend on the implementation they document, but should be explicitly included:
@@ -1108,16 +1072,14 @@ Task D: Document [feature] (API docs, README updates, etc.)
   → depends_on: [Task B or Task C if refactoring exists]
 ```
 
-### TDD Notes in TASK.md Files
+### Workflow Context in TASK.md Files
 
-Every TASK.md for an implementation-related task MUST include a `## TDD Context` section:
+Every TASK.md for an implementation-related task MUST include a `## Workflow Context` section:
 
 ```markdown
-## TDD Context
-- TDD Phase: [RED | GREEN | REFACTOR | VERIFY]
-- Test Task: [Task ID of corresponding test task, or "self" if consolidated]
-- Implementation Task: [Task ID of corresponding implementation task]
-- Expected test state after this task: [All fail | All pass | All pass (refactored)]
+## Workflow Context
+- Task Type: [implementation | review | documentation | infrastructure]
+- Review Task: [Task ID of corresponding review task, or "included" if small feature batch review]
 - Full suite regression check required: [yes/no]
 ```
 
@@ -1125,53 +1087,44 @@ Every TASK.md for an implementation-related task MUST include a `## TDD Context`
 
 ```
 0001: Set up test framework and test infrastructure
-      → depends_on: [] | TDD Phase: FOUNDATION | Routes to: developer
+      → depends_on: [] | Phase: FOUNDATION | Routes to: developer
 
-0002: Write failing tests for user registration
-      → depends_on: [0001] | TDD Phase: RED | Routes to: tester
-      → TASK.md: "NO implementation code. Tests MUST fail."
+0002: Implement user registration with test coverage
+      → depends_on: [0001] | Phase: IMPLEMENT+TEST | Routes to: developer
+      → TASK.md includes behavioral specs, acceptance criteria, test traceability, coverage thresholds
 
-0003: Implement user registration to pass tests
-      → depends_on: [0002] | TDD Phase: GREEN | Routes to: developer
+0003: Implement user login with test coverage
+      → depends_on: [0001] | Phase: IMPLEMENT+TEST | Routes to: developer
+      → TASK.md includes behavioral specs, acceptance criteria, test traceability, coverage thresholds
 
-0004: Validate tests pass for user registration
-      → depends_on: [0003] | TDD Phase: VERIFY | Routes to: tester
+0004: Review tests for user registration and login
+      → depends_on: [0002, 0003] | Phase: REVIEW | Routes to: tester
+      → TASK.md includes test quality checklist, adversarial test requirements, mutation testing
 
-0005: Write failing tests for user login
-      → depends_on: [0004] | TDD Phase: RED | Routes to: tester
-      → TASK.md: "NO implementation code. Tests MUST fail."
+0005: Refactor authentication module
+      → depends_on: [0004] | Phase: REFACTOR | Routes to: developer
 
-0006: Implement user login to pass tests
-      → depends_on: [0005] | TDD Phase: GREEN | Routes to: developer
+0006: Final review of authentication module
+      → depends_on: [0005] | Phase: FINAL_REVIEW | Routes to: tester
 
-0007: Validate tests pass for user login
-      → depends_on: [0006] | TDD Phase: VERIFY | Routes to: tester
-
-0008: Refactor authentication module
-      → depends_on: [0004, 0007] | TDD Phase: REFACTOR | Routes to: developer
-
-0009: Validate tests after refactor of authentication
-      → depends_on: [0008] | TDD Phase: VERIFY | Routes to: tester
-
-0010: Validate full test suite and integration tests
-      → depends_on: [0009] | TDD Phase: VERIFY | Routes to: tester
-
-0011: Document authentication API and setup guide
-      → depends_on: [0009] | Phase: DOCUMENTATION | Routes to: writer
+0007: Document authentication API and setup guide
+      → depends_on: [0005] | Phase: DOCUMENTATION | Routes to: writer
 ```
 
 **Why this ordering works with the Manager:**
 - Manager picks highest unblocked task → 0001 first (no deps)
-- After 0001 completes → 0002 unblocked (title "Write failing tests" → tester)
-- After 0002 completes → 0003 unblocked (title "Implement" → developer)
-- Verify gates (0004, 0007, 0009, 0010) ensure tester validates before proceeding
-- Dependencies enforce Red→Green→Verify→Refactor→Retest flow
+- After 0001 → 0002 and 0003 unblocked (both "Implement" → developer)
+- After both complete → 0004 unblocked ("Review" → tester)
+- Tester reviews quality, adds adversarial tests
+- If defects found → handoff back to developer for fixes
+- Dependencies enforce implement → review → refactor → final_review flow
 
-### When NOT to Apply TDD Structure
-- Pure infrastructure tasks (Docker setup, CI config with no application logic)
+### When NOT to Create Separate Review Tasks
+- XS tasks (trivial implementations)
+- Infrastructure tasks (Docker setup, CI config)
 - Documentation-only tasks
 - Design/architecture tasks
-- Data migration tasks where testing is handled differently
+- When multiple small features can share a batch review task
 
 ---
 
@@ -1224,11 +1177,12 @@ For each created task, verify:
 - [ ] Acceptance criteria can be verified in isolation
 - [ ] Task does not duplicate reference context from sibling tasks
 
-**TDD Structure Check (DEC-P1-TDD):**
-- [ ] Implementation task has a corresponding test task (or inline TDD instructions)
-- [ ] Test task appears BEFORE implementation task in dependency chain
-- [ ] TASK.md includes `## TDD Context` section with phase, test task ID, expected state
-- [ ] For consolidated tasks: TASK.md includes `## TDD Workflow` with Red/Green/Refactor/Verify steps
+**Spec-Anchored Structure Check (DEC-P1-SPEC):**
+- [ ] Implementation tasks have behavioral specifications (Given/When/Then) in TASK.md
+- [ ] Acceptance criteria are implementation-agnostic (no pixel values, DOM structure, etc.)
+- [ ] Complex features have a corresponding review task
+- [ ] TASK.md includes `## Workflow Context` section with task type and review task reference
+- [ ] Test traceability requirement included in acceptance criteria
 
 **Specialized Sub-Agent Consultation Check (DEC-P1-CONSULT):**
 - [ ] For UI/layout/design tasks: Acceptance criteria includes consultation with UI Designer
@@ -1247,7 +1201,7 @@ For each created task, verify:
 **Worker Relay Check (DEC-P1-RELAY) [MANDATORY GATE]:**
 - [ ] TASK.md includes `## Constraints` with full ENV-P0 Relay Template (headless, non-interactive, /proj only)
 - [ ] TASK.md `## Constraints` explicitly states: no GUI, no display server, CLI-only execution
-- [ ] TASK.md includes `## TDD Context` with phase, rules, and expected test state
+- [ ] TASK.md includes `## Workflow Context` with task type and review task reference
 - [ ] TASK.md includes `## Version References` with validated versions
 - [ ] TASK.md includes `## Validation Steps` with non-interactive bash commands to verify completion
 - [ ] TASK.md is self-contained — worker does not need to read PRD or other tasks
@@ -1255,8 +1209,8 @@ For each created task, verify:
 
 **Title Routing Check (DEC-P1-ROUTE):**
 - [ ] TODO.md task title contains keywords that route to the intended agent type
-- [ ] Red phase titles contain "test"/"spec"/"validate" (→ tester)
-- [ ] Green phase titles contain "implement"/"fix"/"code" (→ developer)
+- [ ] Implementation titles contain "implement"/"build"/"create"/"fix" (→ developer)
+- [ ] Review titles contain "review"/"QA"/"validate" (→ tester)
 - [ ] Doc titles contain "document"/"write" (→ writer)
 
 **Version Validation Check (DEC-P1-VER):**
@@ -1336,7 +1290,7 @@ XXXX:
 
 ## Important Notes
 
-**No Agent Assignment — But Use Routing Keywords:** Do NOT assign specific agents to tasks during decomposition. The Runtime Manager assigns agents based on TODO.md task title keyword matching (see DEC-P1-ROUTE). Use intentional keywords in titles so the Manager routes to the correct agent type (e.g., "Write failing tests..." → tester, "Implement..." → developer).
+**No Agent Assignment — But Use Routing Keywords:** Do NOT assign specific agents to tasks during decomposition. The Runtime Manager assigns agents based on TODO.md task title keyword matching (see DEC-P1-ROUTE). Use intentional keywords in titles so the Manager routes to the correct agent type (e.g., "Review tests for..." → tester, "Implement..." → developer).
 
 **Maximum Tasks:** 4-digit IDs support up to 9999 tasks. If you need more, the project is too large - consider breaking into phases/releases.
 
@@ -1486,7 +1440,7 @@ Question: How should auth work?
 
 | Topic | Reference File | Reason |
 |-------|---------------|--------|
-| TDD Phases | [tdd-phases.md](shared/tdd-phases.md) | Not in TDD workflow |
+| Workflow Phases | [workflow-phases.md](shared/workflow-phases.md) | Not in implementation workflow |
 | Handoff Guidelines | [handoff.md](shared/handoff.md) | Doesn't hand off to workers |
 | Activity Format | [activity-format.md](shared/activity-format.md) | Creates templates, doesn't log |
 | Loop Detection | [loop-detection.md](shared/loop-detection.md) | Different error context |

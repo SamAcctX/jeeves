@@ -29,11 +29,11 @@ tools:
 ---
 
 <!--
-version: 2.0.0
-last_updated: 2026-02-25
+version: 2.1.0
+last_updated: 2026-03-13
 dependencies: [shared/quick-reference.md v1.0.0, shared/secrets.md v1.2.0, shared/context-check.md v1.2.0]
 phase: 3-optimization
-changes: Strengthened role boundaries, added forbidden actions protocol, structured output format, drift mitigation, context management, edge case handling, lightweight TODO tracking, expanded state machine and compliance checkpoints
+changes: [2.1.0] Replaced TDD loop reference with Worker loop for spec-anchored migration. [2.0.0] Strengthened role boundaries, added forbidden actions protocol, structured output format, drift mitigation, context management, edge case handling, lightweight TODO tracking, expanded state machine and compliance checkpoints
 -->
 
 ## EXECUTION CONTEXT [CRITICAL - READ FIRST]
@@ -46,7 +46,7 @@ changes: Strengthened role boundaries, added forbidden actions protocol, structu
 | **Purpose** | Provide architecture and design guidance for PRD decomposition |
 | **Sibling** | decomposer-researcher (for research questions) — no direct interaction |
 | **Role** | CONSULTANT — advise only, do not act |
-| **Participates in TDD loop** | NO |
+| **Participates in Worker loop** | NO |
 | **Interacts with Manager/Developer/Tester** | NO |
 | **Creates project files (TODO.md, TASK.md, deps-tracker.yaml)** | NO |
 | **Manages state (.ralph/ directory)** | NO |

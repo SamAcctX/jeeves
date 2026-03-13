@@ -32,7 +32,7 @@ Agent templates define specialized AI agents for different roles in the software
 |------------|---------|---------------------|
 | `architect-*.md` | System design and architecture | API design, database schema, system architecture, design patterns |
 | `developer-*.md` | Implementation and debugging | Coding, refactoring, debugging, feature implementation |
-| `tester-*.md` | Quality assurance and testing | Test creation, validation, defect reporting, TDD compliance |
+| `tester-*.md` | Quality assurance and testing | Test creation, validation, defect reporting, spec-anchored workflow compliance |
 | `ui-designer-*.md` | UI/UX design and implementation | Interface design, responsive layout, accessibility, visual design |
 | `researcher-*.md` | Research and analysis | Technical research, documentation analysis, knowledge synthesis |
 | `writer-*.md` | Documentation and content creation | Content creation, editing, technical writing, documentation structure |
@@ -56,7 +56,7 @@ These templates are included by all agents and contain standardized information:
 | `rules-lookup.md` | Rules system lookup and compliance |
 | `secrets.md` | Secrets management and security guidelines |
 | `signals.md` | Signal format specifications and handling |
-| `tdd-phases.md` | TDD phase tracking and workflow |
+| `workflow-phases.md` | Spec-anchored workflow phase tracking |
 
 ## Configuration Templates (config/)
 
@@ -85,7 +85,7 @@ Task templates define the structure for individual task files created in `.ralph
 | File | Purpose | Details |
 |------|---------|---------|
 | `TASK.md.template` | Task definition template | Individual task description with acceptance criteria, implementation notes, files to modify, technical details, validation steps, dependencies, and metadata. |
-| `activity.md.template` | Task activity log template | Comprehensive activity log with TDD phase tracking, handoff history, defect reports, progress log, errors/issues, decisions made, lessons learned, and resources/references. |
+| `activity.md.template` | Task activity log template | Comprehensive activity log with workflow phase tracking, handoff history, defect reports, progress log, errors/issues, decisions made, lessons learned, and resources/references. |
 | `attempts.md.template` | Task attempt history template | Detailed attempt log for each task iteration. Tracks approach, actions taken, results, errors encountered, and lessons learned per attempt. |
 
 ## Rules System Template (RULES.md.template)

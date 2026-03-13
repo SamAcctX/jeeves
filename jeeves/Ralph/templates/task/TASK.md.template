@@ -7,12 +7,37 @@
 - Any specific constraints or requirements
 Do NOT specify file paths, folder structures, or implementation methods — the assigned agent determines HOW.]
 
+## Behavioral Specification
+[Define the expected behavior using Given/When/Then format. These specifications are the CONTRACT both Developer and Tester work from.]
+
+### Scenario 1: [Name]
+- **Given**: [preconditions]
+- **When**: [action/trigger]
+- **Then**: [expected outcome]
+
+### Scenario 2: [Name]
+- **Given**: [preconditions]
+- **When**: [action/trigger]
+- **Then**: [expected outcome]
+
+[Add as many scenarios as needed to fully describe the expected behavior. Include:]
+- Happy path scenarios
+- Error/edge case scenarios
+- Boundary value scenarios
+
+> **IMPORTANT**: Behavioral specifications must be implementation-agnostic — describe BEHAVIOR and OUTCOMES, never implementation details like pixel values, DOM structure, CSS selectors, or internal function names. The Developer determines HOW; the spec defines WHAT.
+
 ## Acceptance Criteria
 - [ ] Criterion 1: Specific, testable requirement
 - [ ] Criterion 2: Another specific requirement
 - [ ] All tests pass (defined per task type)
 - [ ] No scope creep (only what was requested)
 - [ ] Documentation: [inline docs / README update / API docs — specify what's needed]
+- [ ] Tests: All acceptance criteria have corresponding test coverage
+- [ ] Coverage: Meets project coverage thresholds (80% line, 70% branch, 90% function)
+- [ ] Static Analysis: Passes linting with complexity limits (if configured)
+
+> **Acceptance criteria must be implementation-agnostic** — describe BEHAVIOR and OUTCOMES, never pixel values, DOM structure, CSS selectors, or internal function names. The Developer determines HOW to implement; these criteria define WHAT must be true when done.
 
 ## Constraints
 [Technical constraints, performance requirements, compatibility requirements]
@@ -21,30 +46,19 @@ Do NOT specify file paths, folder structures, or implementation methods — the 
 - All long-running processes must be backgrounded with timeouts
 - All loops/scripts must have bounded iteration limits
 
-## TDD Context
-- TDD Phase: [RED | GREEN | REFACTOR | VERIFY | N/A]
-- Test Task: [Task ID of corresponding test task, or "self" if consolidated]
-- Implementation Task: [Task ID of corresponding implementation task, or "self"]
-- Expected test state after this task: [All fail | All pass | All pass (refactored) | N/A]
+## Workflow Context
+- Task Type: [implementation | review | documentation | infrastructure]
+- Review Task: [Task ID of corresponding review task, or "included" if Developer self-reviews before handoff]
 - Full suite regression check required: [yes/no]
-
-[If TDD Phase is RED:]
-> **RED PHASE RULE**: Write tests ONLY. All tests MUST fail. Do NOT write any implementation code.
-> No production code may be created or modified in this task.
-
-[If TDD Phase is GREEN:]
-> **GREEN PHASE RULE**: Write minimal code to pass all tests from Task [XXXX].
-> Do not over-engineer. Focus only on making tests pass.
-
-[If TDD Phase is REFACTOR:]
-> **REFACTOR PHASE RULE**: Improve code quality only. All tests must still pass after changes.
-> Run full test suite to verify no regressions.
 
 ## Implementation Notes
 [Technical context, patterns to follow, integration points, reference materials]
 
 ### Technical Details
 [Any specific algorithms, data structures, APIs, or patterns to use]
+
+### Test Traceability
+[The Developer must trace every test to a behavioral specification scenario or acceptance criterion. The Tester will verify this traceability during review.]
 
 ### Validation Steps
 ```bash

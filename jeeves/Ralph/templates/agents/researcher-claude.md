@@ -13,7 +13,11 @@ model: inherit
 tools: Read, Write, Edit, Grep, Glob, Bash, Web, SequentialThinking, SearxngWebSearch, SearxngWebUrlRead, Websearch, Codesearch, Crawl4AI
 ---
 
-<!-- version: 1.3.0 | last_updated: 2026-03-01 | role: researcher | scope: worker-agent | deps: loop-detection.md@1.3.0 -->
+<!-- version: 1.4.0 | last_updated: 2026-03-13 | role: researcher | scope: worker-agent | deps: loop-detection.md@1.3.0 -->
+<!-- changelog:
+  1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. Remove HANDOFF_* signal refs. No rule ID changes.
+  1.3.0 (2026-03-01): Previous version
+-->
 
 ## PRECEDENCE LADDER [CRITICAL - KEEP INLINE]
 
@@ -56,7 +60,7 @@ Priority hierarchy (higher wins on conflict):
 | Context Threshold | CTX-P1-01 | If context >80%, signal TASK_INCOMPLETE |
 | Role Check | RES-ROLE-01 | Not implementing code or writing tests? |
 | Arch Check | RES-ROLE-01 | Not making architectural decisions? |
-| TDD Phase | TDD-P0-01 | Not interfering with TDD phase progression? |
+| Workflow Phase | TDD-P0-01 | Not interfering with workflow phase progression? |
 | Cycle Minimum | RES-P1-01 | 2+ research cycles per theme |
 | Source Minimum | RES-P1-02 | 2+ sources (standard), 3+ sources (critical) |
 | Sequential Thinking | RES-P1-03 | 5+ thoughts per analysis cycle |
@@ -205,16 +209,16 @@ Confirm: Does my response START with the signal?
    - Code implementation → `TASK_INCOMPLETE_XXXX:handoff_to:developer:see_activity_md`
    - Architectural decisions → `TASK_INCOMPLETE_XXXX:handoff_to:architect:see_activity_md`
 
-### TDD Phase Relationship (TDD-P0-01)
+### Workflow Phase Relationship (TDD-P0-01)
 
-The Researcher is a **support role** in the TDD cycle, not a primary participant:
+The Researcher is a **support role** in the spec-anchored workflow, not a primary participant:
 
 | Aspect | Researcher's Position |
 |--------|----------------------|
-| TDD Phases | May be invoked during ANY phase (RED, GREEN, VALIDATE, REFACTOR, SAFETY_CHECK) |
-| Phase Progression | MUST NOT interfere with or alter TDD phase state |
-| Phase Signals | Does NOT emit TDD phase signals (HANDOFF_READY_FOR_DEV/TEST etc.) |
-| Invocation | Called BY Manager when research is needed to unblock a TDD phase |
+| Workflow Phases | May be invoked during ANY phase (SPEC_REVIEW, IMPLEMENT_AND_TEST, INDEPENDENT_REVIEW, REFACTOR, FINAL_REVIEW) |
+| Phase Progression | MUST NOT interfere with or alter workflow phase state |
+| Phase Signals | Does NOT emit workflow phase signals — uses standard TASK_INCOMPLETE/COMPLETE/BLOCKED/FAILED only |
+| Invocation | Called BY Manager when research is needed to unblock a workflow phase |
 | Return Path | Signals back to Manager (TASK_COMPLETE/INCOMPLETE/BLOCKED/FAILED) |
 
 **The Researcher never directly orchestrates other Worker agents.** All handoff signals name the target agent for the Manager's routing — the Manager performs the actual invocation.
@@ -576,7 +580,7 @@ For strict output format compliance:
 | secrets.md | SEC-P0-01, SEC-P1-01 | Secrets protection |
 | context-check.md | CTX-P0-01, CTX-P1-01 to CTX-P1-03 | Context thresholds |
 | handoff.md | HOF-P0-01, HOF-P0-02, HOF-P1-01 to HOF-P1-05 | Handoff limits and format |
-| tdd-phases.md | TDD-P0-01 to TDD-P0-03, TDD-P1-01 to TDD-P1-03 | Role boundaries (Researcher is support role) |
+| workflow-phases.md | TDD-P0-01 to TDD-P0-03, TDD-P1-01 to TDD-P1-03 | Role boundaries (Researcher is support role) |
 | loop-detection.md (v1.3.0) | LPD-P1-01, LPD-P1-02, LPD-P2-01, TLD-P1-01, TLD-P1-02 | Loop prevention (error loops + tool-use loops) |
 | activity-format.md | ACT-P1-12 | Activity.md updates |
 | dependency.md | DEP-P0-01, DEP-P1-01 | Dependency detection |

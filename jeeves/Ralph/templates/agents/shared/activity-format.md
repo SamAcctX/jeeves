@@ -1,6 +1,6 @@
 # Activity.md Format (DUP-09)
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
+<!-- version: 1.3.0 | last_updated: 2026-03-13 | canonical: YES -->
 
 **Priority**: P1 (Must-follow)
 **Scope**: Universal (all agents)
@@ -95,7 +95,7 @@ Status: {in_progress|completed|blocked|failed}
 |-------|----------|-------------|
 | From | YES | Current agent role (developer, tester, architect, etc.) |
 | To | YES | Target agent role (must be in valid agent list per HOF-P1-02) |
-| State | YES | `READY_FOR_DEV`, `READY_FOR_TEST`, `READY_FOR_TEST_REFACTOR`, `DEFECT_FOUND`, or TDD phase state |
+| State | YES | `READY_FOR_REVIEW`, `READY_FOR_FINAL_REVIEW`, `DEFECT_FOUND`, `REVIEW_COMPLETE` |
 | Context | YES | Non-empty summary of work done and what remains |
 
 ### Context Resumption Checkpoint (MANDATORY when context >80%)

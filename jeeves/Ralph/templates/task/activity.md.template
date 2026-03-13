@@ -1,9 +1,9 @@
-## TDD Phase Tracking
+## Workflow Phase Tracking
 
-**Current Phase**: [TEST_CREATION|AWAITING_DEV|IMPLEMENTATION|AWAITING_TEST|VALIDATION|AWAITING_REFACTOR|REFACTOR|AWAITING_TEST_REFACTOR|FINAL_VALIDATION|DONE]
+**Current Phase**: [SPEC_REVIEW|IMPLEMENT_AND_TEST|INDEPENDENT_REVIEW|REFACTOR|FINAL_REVIEW|DONE]
 **Active Role**: [Tester|Developer|None]
-**Last Handoff**: [timestamp] - [READY_FOR_DEV|READY_FOR_TEST|READY_FOR_TEST_REFACTOR|DONE]
-**Handoff Scope**: [tests-only|prod-only|refactor-validation|complete]
+**Last Handoff**: [timestamp] - [READY_FOR_REVIEW|READY_FOR_FINAL_REVIEW|DEFECT_FOUND|REVIEW_COMPLETE|DONE]
+**Handoff Scope**: [implementation|review|refactor-validation|complete]
 **Resumable State**: [What to resume when session restarts]
 
 ---

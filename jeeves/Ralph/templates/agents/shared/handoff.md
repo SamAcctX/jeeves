@@ -1,6 +1,6 @@
 # Handoff Guidelines (DUP-06)
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
+<!-- version: 1.3.0 | last_updated: 2026-03-13 | canonical: YES -->
 
 **Priority**: P1 (Must-follow); P0 rules embedded below
 **Scope**: Universal (all agents)
@@ -42,7 +42,7 @@ If any lower-priority rule conflicts with a higher-priority rule, the lower-prio
 **Enforcement**: Cannot handoff BACK to the same agent type that just handed off to you. This creates A→B→A→B infinite loops.
 
 **Clarification**:
-- `Developer → Tester → Developer` is **ALLOWED** (normal TDD cycle — different agent initiated handoff)
+- `Developer → Tester → Developer` is **ALLOWED** (normal review cycle — different agent initiated handoff)
 - `Developer → Developer` is **FORBIDDEN** (self-handoff)
 - `Developer → Tester → Developer → Tester → Developer` — each individual handoff is valid, but if the same error persists, LPD-P1-01b (loop-detection.md) applies after 3 cross-iteration repetitions
 
@@ -123,7 +123,7 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
    ## Handoff Record [timestamp]
    **From**: {current_agent}
    **To**: {target_agent}
-   **State**: {READY_FOR_DEV|READY_FOR_TEST|DEFECT_FOUND|etc.}
+   **State**: {READY_FOR_REVIEW|READY_FOR_FINAL_REVIEW|DEFECT_FOUND|REVIEW_COMPLETE}
    **Context**: [summary of work done and next steps]
    ```
 
@@ -141,23 +141,10 @@ TASK_INCOMPLETE_0042:handoff_to:developer:see_activity_md
 **Receiving Handoff**:
 
 1. Check activity.md for handoff status
-2. Verify READY_FOR_* status matches your role
+2. Verify handoff State matches your role (e.g., READY_FOR_REVIEW → Tester, DEFECT_FOUND → Developer)
 3. Read context from previous agent
 4. Continue work as specified
 5. Return control to original agent when complete (unless defect found)
-
----
-
-## HOF-P1-04: TDD Handoff Patterns
-
-| Current State | Signal | Next Agent | Instruction |
-|---------------|--------|------------|-------------|
-| Tests drafted | `HANDOFF_READY_FOR_DEV_XXXX` | Developer | "Tests ready. Implement minimal code." |
-| Implementation complete | `HANDOFF_READY_FOR_TEST_XXXX` | Tester | "Implementation complete. Validate tests." |
-| Refactor complete | `HANDOFF_READY_FOR_TEST_REFACTOR_XXXX` | Tester | "Refactor complete. Confirm no regressions." |
-| Defects found | `HANDOFF_DEFECT_FOUND_XXXX` | Developer | "Defects found. Fix production code." |
-
-**Note**: TDD phase signals are emitted BY Workers and parsed BY Manager.
 
 ---
 
@@ -245,8 +232,7 @@ TODO: Pre-handoff checkpoint — validate all HOF-CP-01 items
 
 - **SIG-P0-01**: Signal format (see: signals.md)
 - **SIG-P1-03**: Handoff signal format (see: signals.md)
-- **SIG-P1-04**: TDD phase signals — separate namespace for HANDOFF_* (see: signals.md)
 - **ACT-P1-12**: Activity.md updates (see: activity-format.md)
-- **TDD-P0-01**: Role boundary enforcement (see: tdd-phases.md)
+- **TDD-P0-01**: Role boundary enforcement (see: workflow-phases.md)
 - **LPD-P1-01b**: Cross-iteration loop detection — same error across 3+ handoff cycles (see: loop-detection.md)
 - **CTX-P0-01**: Context hard stop — may force handoff at >90% (see: context-check.md)

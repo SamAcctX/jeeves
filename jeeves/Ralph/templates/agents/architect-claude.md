@@ -13,7 +13,11 @@ model: inherit
 tools: Read, Write, Grep, Glob, Bash, WebFetch, Edit, SequentialThinking, SearxngSearxngWebSearch, SearxngWebUrlRead
 ---
 
-<!-- version: 1.3.0 | last_updated: 2026-03-01 | dependencies: [signals.md v1.2.0, handoff.md v1.2.0, tdd-phases.md v1.2.0, context-check.md v1.2.0, loop-detection.md v1.3.0, dependency.md v1.2.0, secrets.md v1.2.0, activity-format.md v1.2.0, rules-lookup.md v1.2.0] -->
+<!-- version: 1.4.0 | last_updated: 2026-03-13 | dependencies: [signals.md v1.2.0, handoff.md v1.2.0, workflow-phases.md v1.3.0, context-check.md v1.2.0, loop-detection.md v1.3.0, dependency.md v1.2.0, secrets.md v1.2.0, activity-format.md v1.2.0, rules-lookup.md v1.2.0] -->
+<!-- changelog:
+  1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. No rule ID changes.
+  1.3.0 (2026-03-01): Previous version
+-->
 
 ## PRECEDENCE LADDER
 
@@ -53,7 +57,7 @@ STOP: If handoff_count >= 8, emit TASK_INCOMPLETE_XXXX:handoff_limit_reached
 ### HOF-P0-02: No Handoff Loops [CRITICAL - KEEP INLINE]
 Cannot handoff BACK to the same agent type that just handed off to you.
 - Check `last_handoff_from` in activity.md before signaling handoff
-- `Developer → Tester → Developer` = ALLOWED (normal TDD cycle)
+- `Developer → Tester → Developer` = ALLOWED (normal review cycle)
 - `Architect → Architect` = FORBIDDEN (self-handoff)
 - On violation: STOP → `TASK_INCOMPLETE_XXXX:handoff_loop_detected`
 
@@ -290,7 +294,7 @@ Check context usage against CTX-P1-01 thresholds above. Document in activity.md.
 3. Skip to state indicated by "Next Steps"
 4. Do NOT re-read full task history
 
-### Step 0.3: TDD Role Verification [STOP POINT]
+### Step 0.3: Role Verification [STOP POINT]
 
 | Phase | Agent | Activity |
 |-------|-------|----------|
@@ -632,8 +636,8 @@ When TLD-P1-01a is breached (same tool signature 3x in one session):
 | LPD-P1-02 | loop-detection.md | Error loop mandatory exit sequence |
 | TLD-P1-01 | loop-detection.md | Tool-use loop: same tool signature (tool_type:target) 3x/session → STOP |
 | TLD-P1-02 | loop-detection.md | Tool loop exit sequence: STOP → document → TASK_INCOMPLETE → EXIT |
-| TDD-P0-01 | tdd-phases.md | Role boundary enforcement — SOD strictly enforced |
-| TDD-P1-01 | tdd-phases.md | TDD phase state machine (RED→GREEN→VALIDATE→REFACTOR→DONE) |
+| TDD-P0-01 | workflow-phases.md | Role boundary enforcement — SOD strictly enforced |
+| TDD-P1-01 | workflow-phases.md | Spec-anchored phase state machine (SPEC_REVIEW→IMPLEMENT_AND_TEST→INDEPENDENT_REVIEW→REFACTOR→DONE) |
 | ACT-P1-12 | activity-format.md | Activity.md format — attempt headers, handoff records |
 | RUL-P1-01 | rules-lookup.md | RULES.md lookup procedure — walk directory tree |
 | RUL-P1-02 | rules-lookup.md | Document applied rules in activity.md |
