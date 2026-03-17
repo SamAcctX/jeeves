@@ -13,7 +13,7 @@
 |------|-------------|-----------------|-----------|
 | `signals.md` | Signal format, types, regex validator, first-token discipline | P0 | SIG-P0-01 through SIG-P1-05 |
 | `secrets.md` | Secrets protection, detection patterns, exposure protocol | P0 | SEC-P0-01, SEC-P1-01 |
-| `context-check.md` | Context window thresholds, hard stop, recovery protocol | P0/P1 | CTX-P0-01, CTX-P1-01 through CTX-P3-01 |
+| `context-check.md` | Compaction exit protocol | P0/P1 | CTX-P0-01, CTX-P1-02 |
 | `handoff.md` | Handoff limits, loop prevention, handoff process | P0/P1 | HOF-P0-01, HOF-P0-02, HOF-P1-01 through HOF-P2-01 |
 | `workflow-phases.md` | Spec-Anchored workflow state machine, SOD enforcement, role boundaries | P0/P1 | TDD-P0-01 through TDD-P2-01 |
 | `dependency.md` | Dependency discovery, circular detection, blocking rules | P0/P1 | DEP-P0-01, DEP-P1-01 |
@@ -34,7 +34,7 @@
 | SIG-P0-03 | signals.md | Signal types: COMPLETE/INCOMPLETE/FAILED/BLOCKED — message rules |
 | SIG-P0-04 | signals.md | Exactly ONE signal per execution (highest severity wins) |
 | SEC-P0-01 | secrets.md | NEVER write secrets to repository files |
-| CTX-P0-01 | context-check.md | Context >90% → HARD STOP, no further tool calls |
+| CTX-P0-01 | context-check.md | Compaction prompt received → EXIT (stop, log, signal TASK_INCOMPLETE) |
 | HOF-P0-01 | handoff.md | Maximum 8 Worker subagent invocations per task |
 | HOF-P0-02 | handoff.md | Cannot handoff back to same agent that just handed off to you |
 | TDD-P0-01 | workflow-phases.md | Role boundary enforcement — SOD strictly enforced (Developer can write tests, cannot self-verify) |
@@ -51,9 +51,7 @@
 | SIG-P1-03 | signals.md | Handoff signal format: `TASK_INCOMPLETE_XXXX:handoff_to:AGENT:see_activity_md` |
 | SIG-P1-05 | signals.md | System error signals use Task ID 0000 |
 | SEC-P1-01 | secrets.md | Secret exposure response protocol (rotate, remove, document) |
-| CTX-P1-01 | context-check.md | Context thresholds: >60% prep, >80% signal+checkpoint, >90% STOP |
-| CTX-P1-02 | context-check.md | Context limit response — create resumption checkpoint |
-| CTX-P1-03 | context-check.md | Context recovery — read checkpoint before continuing |
+| CTX-P1-02 | context-check.md | Context resumption — read checkpoint before continuing |
 | HOF-P1-01 | handoff.md | Handoff count details — 1 initial + up to 7 handoffs |
 | HOF-P1-02 | handoff.md | Handoff signal format + valid target agents list |
 | HOF-P1-03 | handoff.md | Handoff process — update activity.md, signal, Manager verifies |
@@ -72,9 +70,7 @@
 
 | Rule ID | File | One-Line Summary |
 |---------|------|-----------------|
-| CTX-P2-01 | context-check.md | Context pressure warning signs (measurable indicators) |
-| CTX-P2-02 | context-check.md | Repeated context limit pattern — signal task decomposition |
-| CTX-P3-01 | context-check.md | Token cost estimation guidelines |
+
 | HOF-P2-01 | handoff.md | Handoff best practices (DOs and DON'Ts) |
 | TDD-P2-01 | workflow-phases.md | Workflow stop conditions (context, handoff, loops, dependencies) |
 | LPD-P2-01 | loop-detection.md | Early warning signs for loops |
@@ -87,7 +83,7 @@
 |--------------|------|---------|-------|
 | SIG-CP-01 | signals.md | pre-response | 8 items — signal format validation |
 | SEC-CP-01 | secrets.md | pre-write | 5 items — secrets scan before file writes |
-| CTX-CP-01 | context-check.md | start-of-turn, pre-tool-call, pre-response | 6 items — context threshold monitoring |
+| CTX-CP-01 | context-check.md | on-compaction | 5 items — compaction exit protocol |
 | HOF-CP-01 | handoff.md | pre-handoff | 7 items — handoff limit and format validation |
 | TDD-CP-01 | workflow-phases.md | pre-response | 4 items per role — SOD and phase compliance |
 | DEP-CP-01 | dependency.md | start-of-turn | 5 items — dependency and circular detection |

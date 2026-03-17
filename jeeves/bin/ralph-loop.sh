@@ -336,6 +336,7 @@ SIGNAL_COMPLETE="TASK_COMPLETE_[0-9]{4}"
 SIGNAL_INCOMPLETE="TASK_INCOMPLETE_[0-9]{4}"
 SIGNAL_FAILED="TASK_FAILED_[0-9]{4}"
 SIGNAL_BLOCKED="TASK_BLOCKED_[0-9]{4}"
+SIGNAL_ALL_COMPLETE="ALL[_ ]TASKS[_ ]COMPLETE, EXIT LOOP"
 
 strip_ansi() {
     local file="$1"
@@ -383,6 +384,11 @@ handle_blocked_signal() {
     SHOULD_TERMINATE=1
 }
 
+handle_all_complete_signal() {
+    log_message SUCCESS "All tasks complete - exiting loop (iteration: $ITERATION)"
+    SHOULD_TERMINATE=1
+}
+
 parse_todo_md() {
     local todo_file="$PROJECT_ROOT/$RALPH_DIR/tasks/TODO.md"
     
@@ -414,6 +420,12 @@ parse_signals() {
     fi
     
     log_message INFO "Parsing signals from output (iteration: $ITERATION, file: $output_file)"
+    
+    # Check for ALL_TASKS_COMPLETE signal first
+    if grep -qE "^${SIGNAL_ALL_COMPLETE}" "$output_file" 2>/dev/null; then
+        handle_all_complete_signal
+        return 0
+    fi
     
     local all_signals
     all_signals=$(grep -E "^(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || true)

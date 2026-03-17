@@ -8,48 +8,63 @@
 Do NOT specify file paths, folder structures, or implementation methods — the assigned agent determines HOW.]
 
 ## Behavioral Specification
-[Define the expected behavior using Given/When/Then format. These specifications are the CONTRACT both Developer and Tester work from.]
+[Define expected behavior using Given/When/Then format. These specs are
+the CONTRACT both Developer and Tester work from.
 
-### Scenario 1: [Name]
-- **Given**: [preconditions]
+Specifications must capture the full requirement space — not just the
+obvious happy path, but all situations that naturally arise from the
+feature. If the PRD says "users can do X", specify what happens in every
+meaningful state X can be performed in.]
+
+### Scenario 1: [Descriptive name]
+- **Given**: [preconditions — be specific about system state]
 - **When**: [action/trigger]
 - **Then**: [expected outcome]
 
-### Scenario 2: [Name]
-- **Given**: [preconditions]
-- **When**: [action/trigger]
-- **Then**: [expected outcome]
+### Scenario 2: [Descriptive name]
+- **Given**: [different preconditions or system state]
+- **When**: [same or related action]
+- **Then**: [expected outcome under these conditions]
 
-[Add as many scenarios as needed to fully describe the expected behavior. Include:]
-- Happy path scenarios
-- Error/edge case scenarios
-- Boundary value scenarios
+[Continue with as many scenarios as needed to fully capture the
+requirement. Every scenario represents a specific behavior the
+implementation must support.]
 
-> **IMPORTANT**: Behavioral specifications must be implementation-agnostic — describe BEHAVIOR and OUTCOMES, never implementation details like pixel values, DOM structure, CSS selectors, or internal function names. The Developer determines HOW; the spec defines WHAT.
+> **IMPORTANT**: Specifications must be implementation-agnostic — describe
+> BEHAVIOR and OUTCOMES, never implementation details like pixel values,
+> DOM structure, CSS selectors, or internal function names. The Developer
+> determines HOW; the spec defines WHAT.
 
 ## Acceptance Criteria
-- [ ] Criterion 1: Specific, testable requirement
-- [ ] Criterion 2: Another specific requirement
-- [ ] All tests pass (defined per task type)
+- [ ] Criterion 1: [specific, testable requirement mapped to PRD]
+- [ ] Criterion 2: [another specific requirement mapped to PRD]
+- [ ] All behavioral spec scenarios have corresponding test coverage
+- [ ] Full project test suite passes (ALL tests, not just this feature's)
+- [ ] No pre-existing tests broken, skipped, or deleted without justification
+- [ ] Test coverage meets project thresholds (80% line, 70% branch, 90% function)
 - [ ] No scope creep (only what was requested)
-- [ ] Documentation: [inline docs / README update / API docs — specify what's needed]
-- [ ] Tests: All acceptance criteria have corresponding test coverage
-- [ ] Coverage: Meets project coverage thresholds (80% line, 70% branch, 90% function)
-- [ ] Static Analysis: Passes linting with complexity limits (if configured)
+- [ ] Documentation: [specific doc requirement — inline docs, README, API docs, etc.]
+- [ ] If infrastructure was created/modified: AGENTS.md updated with
+      exact commands (including working directory) for build, test, and run
 
-> **Acceptance criteria must be implementation-agnostic** — describe BEHAVIOR and OUTCOMES, never pixel values, DOM structure, CSS selectors, or internal function names. The Developer determines HOW to implement; these criteria define WHAT must be true when done.
+> **Acceptance criteria must be implementation-agnostic** — describe what
+> must be true when done, not how to get there.
 
 ## Constraints
-[Technical constraints, performance requirements, compatibility requirements]
-- All file operations within `/proj` workspace only
-- All commands must be non-interactive (headless container — no GUI, no TTY prompts)
-- All long-running processes must be backgrounded with timeouts
-- All loops/scripts must have bounded iteration limits
+- All operations within `/proj` directory only
+- Headless environment — no GUI, no display server, no interactive prompts
+- All test execution via CLI (`pytest`, `npm test`, `jest --ci`, etc.)
+- Browser tests MUST use headless mode only (Playwright: `headless: true`)
+- All servers must run backgrounded with timeout wrappers
+- All commands must be non-interactive (use `--yes`, `-y`, `--ci` flags)
+- No foreground processes that block execution
+- Read AGENTS.md for project-specific build/test commands and working directories
+- If this task creates infrastructure: update AGENTS.md with usage instructions
 
 ## Workflow Context
 - Task Type: [implementation | review | documentation | infrastructure]
-- Review Task: [Task ID of corresponding review task, or "included" if Developer self-reviews before handoff]
-- Full suite regression check required: [yes/no]
+- Review Task: [Task ID of review task, or "included" for batch review]
+- Full suite regression check required: YES
 
 ## Implementation Notes
 [Technical context, patterns to follow, integration points, reference materials]
@@ -59,6 +74,11 @@ Do NOT specify file paths, folder structures, or implementation methods — the 
 
 ### Test Traceability
 [The Developer must trace every test to a behavioral specification scenario or acceptance criterion. The Tester will verify this traceability during review.]
+
+### Validation Approach
+Consider established testing techniques (boundary analysis, equivalence
+partitioning, pairwise testing, state transition testing, etc.) as
+appropriate to ensure comprehensive validation of all specified behaviors.
 
 ### Validation Steps
 ```bash
