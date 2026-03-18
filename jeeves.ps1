@@ -506,6 +506,7 @@ services:
       - PLAYWRIGHT_MCP_NO_SANDBOX=1
       - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
       - OPENCODE_ENABLE_EXA=false
+      - UV_USE_IO_URING=0
 "@
 
     if ($Dind) {
