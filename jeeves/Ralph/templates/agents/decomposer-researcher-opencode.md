@@ -28,6 +28,9 @@ tools:
   searxng_web_url_read: true
   websearch: true
   codesearch: true
+  todoread: true
+  todowrite: true
+  skill: true
 ---
 
 <!--
@@ -455,18 +458,27 @@ When the Decomposer asks for version validation (DEC-P1-VER):
 
 ---
 
-## INTERNAL RESEARCH TRACKING (LIGHTWEIGHT)
+## RESEARCH PROGRESS TRACKING
 
-For multi-question research sessions, maintain internal tracking:
+Use the `todowrite` tool to track research progress persistently. Do NOT
+rely on mental tracking — the TODO list survives context drift.
+
+**At the start of each research session**, call `todowrite` with one
+item per research question:
 
 ```
-[RESEARCH PROGRESS]
-- Questions: [N received] | Answered: [N] | Remaining: [N]
-- Research Cycles: [N completed] per question
-- Sources Found: [N total] | Quality 4+: [N]
-- Contradictions: [N found] | Resolved: [N]
-- Compaction received: [no]
-- Status: [IN_PROGRESS | SYNTHESIZING | READY_TO_RESPOND]
+todowrite([
+  { content: "Research Q1: [question text]", status: "in_progress", priority: "high" },
+  { content: "Research Q2: [question text]", status: "pending", priority: "high" },
+  { content: "Research Q3: [question text]", status: "pending", priority: "medium" },
+  { content: "Verify source minimums (RES-P1-02)", status: "pending", priority: "high" },
+  { content: "Synthesize findings and write response", status: "pending", priority: "high" }
+])
 ```
 
-Update after each research cycle. If compaction prompt received, immediately prepare partial findings.
+Mark each question `completed` after its research cycles finish and
+sources are verified. Call `todoread` before writing the final response
+to ensure no questions were skipped.
+
+If compaction prompt received, call `todoread` to capture remaining
+items, then return partial findings tagged `[PARTIAL]`.

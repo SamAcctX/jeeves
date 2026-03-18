@@ -26,6 +26,9 @@ tools:
   sequentialthinking: true
   searxng_searxng_web_search: true
   searxng_web_url_read: true
+  todoread: true
+  todowrite: true
+  skill: true
 ---
 
 <!--
@@ -436,21 +439,38 @@ If the platform injects a compaction prompt, STOP immediately:
 - [ ] Current state matches expected state machine position
 - [ ] Compaction received: [no]
 
-### Lightweight Analysis Tracking
+### TODO-Based Progress Tracking
 
-For multi-step architectural analysis, maintain internal tracking:
+Use the `todowrite` tool to track analysis steps persistently. Do NOT
+rely on mental tracking — the TODO list survives context drift.
 
+**At the start of each review**, call `todowrite` with the review steps:
+
+For Gate 1 (per-task review):
 ```
-[ANALYSIS PROGRESS]
-- Question: [Decomposer's question]
-- Scope: [Defined scope of analysis]
-- Steps Completed: [list]
-- Steps Remaining: [list]
-- Key Findings So Far: [brief]
-- Compaction received: [no]
+todowrite([
+  { content: "Check PRD traceability — all requirements covered?", status: "pending", priority: "high" },
+  { content: "Check implied requirements — missing situations?", status: "pending", priority: "high" },
+  { content: "Check acceptance criteria — specific and measurable?", status: "pending", priority: "high" },
+  { content: "Check scope — fits one agent session?", status: "pending", priority: "medium" },
+  { content: "Check dependencies — hidden deps or integration risks?", status: "pending", priority: "medium" },
+  { content: "Write structured review response", status: "pending", priority: "high" }
+])
 ```
 
-Update after each major analysis step to prevent drift and ensure completeness.
+For Gate 3 (post-decomposition review):
+```
+todowrite([
+  { content: "Check aggregate PRD coverage — all requirements owned?", status: "pending", priority: "high" },
+  { content: "Check dependency ordering — correct and complete?", status: "pending", priority: "high" },
+  { content: "Check task granularity — consolidate or decompose?", status: "pending", priority: "medium" },
+  { content: "Check integration/regression tasks — present?", status: "pending", priority: "medium" },
+  { content: "Write structured review response", status: "pending", priority: "high" }
+])
+```
+
+Mark each item `completed` as you finish it. Call `todoread` before
+writing the final response to ensure no steps were skipped.
 
 ---
 

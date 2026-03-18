@@ -27,6 +27,9 @@ tools:
   sequentialthinking: true
   searxng_searxng_web_search: true
   searxng_web_url_read: true
+  todoread: true
+  todowrite: true
+  skill: true
 ---
 
 <!--
@@ -265,7 +268,7 @@ CHECK:
   - [ ] ENV-P0-02: No GUI/interactive operations planned (headless container — all commands scripted)
   - [ ] ENV-P0-RELAY: TASK.md files being created include headless constraints for workers
   - [ ] DEC-P1-DOC: Current/pending tasks include documentation acceptance criteria
-  - [ ] DEC-P1-REVIEW: Current task architect-reviewed (Gate 1)?
+  - [ ] DEC-P1-REVIEW: If creating tasks — has EACH completed task been individually reviewed by architect (Gate 1, not batch)?
   - [ ] No agent assignment: Manager assigns agents, not Decomposer
 
 STOP IF: Compaction prompt received → Signal TASK_INCOMPLETE_0000:context_limit_exceeded
@@ -490,50 +493,62 @@ skill rationalization-defense
 
 ## TODO LIST TRACKING (ITT-01)
 
-**Purpose**: During complex multi-phase PRD decomposition, maintain an internal tracking list to prevent drift and ensure all steps complete. The decomposer manages many tasks and files; this tracking keeps the workflow aligned.
+**Purpose**: Use the `todowrite` tool to maintain a persistent checklist
+that survives context drift. The TODO list lives outside your context
+window — it cannot be rationalized away or forgotten.
+
+### MANDATORY: Use todowrite/todoread Tools
+
+Do NOT track progress mentally or in inline text blocks. Use the actual
+`todowrite` tool to create and update TODO items, and `todoread` to
+check current state. These tools persist outside your context.
 
 ### When to Initialize
-At the start of decomposition (transition to `READING_PRD` state), create an internal tracking list of work items.
+At the start of decomposition (transition to `READING_PRD` state), call
+`todowrite` with the initial workflow items:
 
-### TODO Items by State Machine Phase
+```
+todowrite([
+  { content: "Read PRD and identify requirements", status: "in_progress", priority: "high" },
+  { content: "Ask user for power level", status: "pending", priority: "high" },
+  { content: "Break down requirements into tasks", status: "pending", priority: "high" },
+  { content: "Create task folders and TASK.md files", status: "pending", priority: "high" },
+  { content: "Generate deps-tracker.yaml", status: "pending", priority: "high" },
+  { content: "Post-decomposition architect review (Gate 3)", status: "pending", priority: "high" },
+  { content: "Present to user for approval", status: "pending", priority: "high" }
+])
+```
 
-| State | TODO Items to Track |
-|-------|-------------------|
-| `READING_PRD` | Read PRD file, identify sections, note requirements count, flag ambiguities |
-| `POWER_LEVEL` | Ask user for power level, record selection, calculate context budgets |
-| `DECOMPOSING` | For each requirement: create task definition, estimate context size, validate cohesion |
-| `VALIDATING_TASK` | Run Task Validation Checklist for current task, record pass/fail |
-| `CREATING_FOLDER` | Create folder .ralph/tasks/XXXX/, copy templates, fill TASK.md |
-| `SPEC_REVIEW` | Invoke decomposer-architect for task review, incorporate feedback |
-| `GENERATING_DEPS` | List all tasks in deps-tracker.yaml, map dependencies, run circular check |
-| `FINAL_REVIEW` | Invoke decomposer-architect for full task set review, incorporate feedback |
-| `REVIEWING` | Present summary to user, collect feedback, track change requests |
+### Gate 1 Tracking [CRITICAL]
+When entering the CREATING_FOLDER state, add a TODO item for EACH
+implementation task's architect review:
+
+```
+todowrite([
+  ...existing items...,
+  { content: "Gate 1: Architect review task 0001", status: "pending", priority: "high" },
+  { content: "Gate 1: Architect review task 0002", status: "pending", priority: "high" },
+  { content: "Gate 1: Architect review task 0003", status: "pending", priority: "high" },
+  ...one per implementation task...
+])
+```
+
+Mark each `completed` only AFTER the architect has reviewed that
+specific task and feedback has been incorporated. This creates an
+auditable record that Gate 1 ran for each task individually.
 
 ### When to Update
 - **After each state transition**: Mark completed items, add items for new state
-- **After each task creation**: Track task ID, validation status, folder creation status
-- **After each sub-assistant consultation**: Record question asked, answer received, resolution
-- **After user feedback**: Track requested changes, which have been applied
-- **At periodic reinforcement (every 5 tool calls)**: Review tracking list for missed items
-
-### Tracking Format (Internal)
-```
-[DECOMPOSITION PROGRESS]
-- PRD: [filename] | Requirements: [N] identified
-- Power Level: [level] | Max Context: [Xk]
-- Tasks Created: [N/total] | Validated: [N/total] | Folders: [N/total]
-- Dependencies Mapped: [yes/no] | Circular Check: [pass/fail]
-- Architect Reviews: [N/total] tasks reviewed (Gate 1)
-- Post-Decomposition Review: [pending/complete] (Gate 3)
-- User Review: [pending/in-progress/approved]
-- Current State: [STATE_NAME]
-```
+- **After each task creation**: Add Gate 1 review item for that task
+- **After each architect review**: Mark that task's Gate 1 item completed
+- **After user feedback**: Add items for requested changes
+- **At periodic reinforcement**: Call `todoread` to verify no items skipped
 
 ### Drift Prevention
-If the tracking list shows items stuck or skipped:
-1. Return to the incomplete step before proceeding
-2. Do not advance state until all TODO items for current state are done
-3. If context pressure forces skipping, document what was skipped in the session summary
+Before advancing to GENERATING_DEPS, call `todoread` and verify:
+- All Gate 1 review items show `completed` (not `pending`)
+- If any are still `pending`, you skipped a review — go back and do it
+- Do not advance state until all TODO items for current state are done
 
 ---
 
@@ -800,7 +815,20 @@ The Manager agent assigns agents by matching keywords in TODO.md task titles:
 **ID Order != Execution Order**: Dependencies determine execution order. But when multiple tasks are unblocked simultaneously, the Manager prefers lowest ID. Use this to your advantage by assigning lower IDs to higher-priority tasks within the same dependency tier.
 
 ### Step 6: Create Task Folders
-For each task, create a folder with template-based files:
+For each task, create a folder with template-based files.
+
+**Per-Task Loop (repeat for EACH task):**
+```
+FOR each task:
+  1. Create folder .ralph/tasks/XXXX/
+  2. Copy templates, fill TASK.md
+  3. [HARD GATE] If implementation task: invoke decomposer-architect
+     for Gate 1 spec review BEFORE creating the next task folder
+  4. Incorporate architect feedback into THIS task's TASK.md
+  5. Only THEN proceed to the next task
+```
+**This is NOT a batch operation.** Create one task, review it, fix it,
+then move to the next. See DEC-P1-REVIEW Gate 1.
 
 **Folder Structure:**
 ```
@@ -1017,8 +1045,13 @@ when stuck on ambiguities.
 
 ### Gate 1: Per-Task Spec Review [MANDATORY]
 
-After drafting each TASK.md, invoke decomposer-architect to review the
+After drafting EACH TASK.md, invoke decomposer-architect to review the
 spec for completeness. This is NOT optional.
+
+**"Per-task" means ONE architect invocation PER implementation task.**
+Sending all tasks in a single batch review is Gate 3, not Gate 1.
+If you have 12 implementation tasks, Gate 1 runs 12 times — once after
+each TASK.md is drafted, before creating the next task folder.
 
 **Delegation message MUST include:**
 1. The complete draft TASK.md content
@@ -1605,7 +1638,7 @@ Question: How should auth work?
 - Rule DEC-P0-01: Exactly ONE signal per execution
 - Rule ENV-P0-02: All commands headless/non-interactive; all TASK.md files relay headless constraints to workers
 - Rule DEC-P1-DOC: Every task includes documentation acceptance criteria; at least one dedicated doc task exists
-- Rule DEC-P1-REVIEW: Current task architect-reviewed? [Y/N]
+- Rule DEC-P1-REVIEW: EACH completed task individually architect-reviewed (Gate 1)? [Y/N, reviewed: X of Y]
 - Current state: [STATE_NAME]
 - Compaction received: [no]
 Confirm: [ ] All P0 rules satisfied, [ ] State correct, [ ] Doc criteria included, [ ] Proceed
