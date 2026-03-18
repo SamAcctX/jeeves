@@ -151,10 +151,10 @@ WORKDIR /app/opencode
 #   https://github.com/anomalyco/opencode/issues/12938
 RUN \
     #curl -L https://github.com/anomalyco/opencode/pull/11812.patch -o /tmp/11812.patch && \
-    #curl -L https://github.com/anomalyco/opencode/pull/12623.patch -o /tmp/12623.patch \
+    curl -L https://github.com/anomalyco/opencode/pull/12623.patch -o /tmp/12623.patch \
     #&& git apply /tmp/11812.patch \
-    #&& git apply /tmp/12623.patch \
-    sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    && git apply /tmp/12623.patch \
+    && sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
     && sed -i "s/todowrite: { \"*\": \"deny\" }/todowrite: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
     && sed -i 's/todowrite: false/todowrite: true/g' packages/opencode/src/tool/task.ts \
     && sed -i 's/todoread: false/todoread: true/g' packages/opencode/src/tool/task.ts
@@ -473,9 +473,9 @@ RUN if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then \
         echo "Claude Code installation skipped (INSTALL_CLAUDE_CODE is not 'true')"; \
     fi
 
-#Linux CLI Binary, copied to path location as well since we will use it interactively
-COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/usr/local/bin/opencode"]
+#Linux CLI Binary, linked to path location as well since we will use it interactively
 COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/app/dist/opencode"]
+RUN sudo ln -sf /app/dist/opencode /usr/local/bin/opencode
 # Linux GUI (Debian/Ubuntu Package)
 COPY --from=opencode-builder ["/app/opencode/packages/desktop/src-tauri/target/release/bundle/deb/OpenCode Jeeves*.deb", "/app/dist/"]
 # Linux GUI (RPM/Fedora Package)
