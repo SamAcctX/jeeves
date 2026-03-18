@@ -320,7 +320,8 @@ fi
 exec tmux new-session -A -s "$SESSION_NAME"
 EOF
 
-RUN chmod +x /usr/local/bin/jeeves-shell
+RUN chmod +x /usr/local/bin/jeeves-shell && \
+    sed -i 's/\r$//' /usr/local/bin/jeeves-shell
 
 # Welcome message and tmux hook for bash
 # Can disable tmux with DISABLE_TMUX=1 and message with DISABLE_WELCOME=1
@@ -596,7 +597,8 @@ case "${1:-}" in
 esac
 EOF
 
-RUN chmod +x /usr/local/bin/opencode-web
+RUN chmod +x /usr/local/bin/opencode-web && \
+    sed -i 's/\r$//' /usr/local/bin/opencode-web
 
 # Ensure supervisor log directory is writable by jeeves user
 RUN chown -R jeeves:jeeves /var/log/supervisor
@@ -620,7 +622,8 @@ COPY jeeves/Ralph /opt/jeeves/Ralph/
 
 # Set permissions
 RUN chmod -R +x /usr/local/bin/ && \
-    chown -R jeeves:jeeves /opt/jeeves
+    chown -R jeeves:jeeves /opt/jeeves && \
+    find /usr/local/bin/ -type f | xargs sed -i 's/\r$//'
 
 # ============================================================================
 # Create embedded entrypoint script for config initialization
@@ -883,7 +886,8 @@ else
 fi
 EOF
 
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
 
 # Switch back to runtime user and re-fix home permissions
 USER jeeves
