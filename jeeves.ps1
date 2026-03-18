@@ -492,9 +492,9 @@ services:
       dockerfile: Dockerfile.jeeves
     image: jeeves:latest
     container_name: $($Script:CONTAINER_NAME)
-    runtime: nvidia
+    # runtime: nvidia
     shm_size: "2gb"
-    gpus: all
+    # gpus: all
     labels:
       - "jeeves.managed=true"
       - "jeeves.project=$($Script:PROJECT_SLUG)"

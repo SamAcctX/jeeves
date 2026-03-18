@@ -130,7 +130,7 @@ ENV BUILD_DESKTOP=$BUILD_DESKTOP
 # Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
 # Opencode is a bit finnicky with bun versions, so you may need to do a test build and see which bun version
 # it is expecting and pin it below for the build to work.
-RUN npm install -g bun@latest && \
+RUN npm install -g bun@1.3.10 && \
     npm cache clear --force
 
 RUN git config --global http.postBuffer 524288000 \
@@ -151,10 +151,10 @@ WORKDIR /app/opencode
 #   https://github.com/anomalyco/opencode/issues/12938
 RUN \
     #curl -L https://github.com/anomalyco/opencode/pull/11812.patch -o /tmp/11812.patch && \
-    curl -L https://github.com/anomalyco/opencode/pull/12623.patch -o /tmp/12623.patch \
+    #curl -L https://github.com/anomalyco/opencode/pull/12623.patch -o /tmp/12623.patch \
     #&& git apply /tmp/11812.patch \
-    && git apply /tmp/12623.patch \
-    && sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    #&& git apply /tmp/12623.patch \
+    sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
     && sed -i "s/todowrite: { \"*\": \"deny\" }/todowrite: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
     && sed -i 's/todowrite: false/todowrite: true/g' packages/opencode/src/tool/task.ts \
     && sed -i 's/todoread: false/todoread: true/g' packages/opencode/src/tool/task.ts
@@ -165,8 +165,8 @@ RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app
 RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
 
 # CLI/TUI/WebUI build
-RUN bun install
-RUN ./packages/opencode/script/build.ts
+RUN  set -eux; bun install
+RUN  set -eux; ./packages/opencode/script/build.ts
 
 RUN \
     if [  "$BUILD_DESKTOP" = "true" ]; then \
@@ -511,24 +511,29 @@ RUN sudo chown -R jeeves:jeeves /opt/oob-config
 USER root
 
 # Create supervisord configuration directory structure
-RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor /var/run
+# /var/run/supervisor is a dedicated subdirectory owned by jeeves so the
+# unix socket and pidfile can be created without requiring root at runtime
+RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor /var/run/supervisor && \
+    chown jeeves:jeeves /var/run/supervisor && \
+    chmod 755 /var/run/supervisor
 
 # Main supervisord configuration
 RUN cat << 'EOF' > /etc/supervisor/supervisord.conf
 [supervisord]
 nodaemon=true
 logfile=/var/log/supervisor/supervisord.log
-pidfile=/var/run/supervisord.pid
+pidfile=/var/run/supervisor/supervisord.pid
 
 [unix_http_server]
-file=/var/run/supervisor.sock
-chmod=0777
+file=/var/run/supervisor/supervisor.sock
+chmod=0770
+chown=jeeves:jeeves
 
 [rpcinterface:supervisor]
 supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
 
 [supervisorctl]
-serverurl=unix:///var/run/supervisor.sock
+serverurl=unix:///var/run/supervisor/supervisor.sock
 
 [include]
 files = /etc/supervisor/conf.d/*.conf
@@ -538,7 +543,7 @@ EOF
 RUN cat << 'EOF' > /etc/supervisor/conf.d/opencode-web.conf
 [program:opencode-web]
 command=/usr/local/bin/opencode web --hostname 0.0.0.0 --port 3333
-directory=/proj
+directory=/home/jeeves
 user=jeeves
 autostart=false
 autorestart=unexpected
@@ -548,7 +553,7 @@ stopsignal=TERM
 stopwaitsecs=30
 stdout_logfile=/var/log/supervisor/opencode-web.log
 stderr_logfile=/var/log/supervisor/opencode-web-error.log
-environment=HOME="/home/jeeves",USER="jeeves",PATH="/opt/venv/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+environment=HOME="/home/jeeves",USER="jeeves",PATH="/opt/venv/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",BUN_CONFIG_NO_CLEAR_TERMINAL_ON_EXIT="1",UV_USE_IO_URING="0"
 EOF
 
 # Create opencode-web helper script for service management
@@ -859,14 +864,14 @@ if [ $# -eq 0 ]; then
     # Wait for supervisord socket to exist
     echo "Waiting for supervisord to be ready..."
     for i in $(seq 1 30); do
-        if [ -S /var/run/supervisor.sock ]; then
+        if [ -S /var/run/supervisor/supervisor.sock ]; then
             echo "Supervisord is ready."
             break
         fi
         sleep 1
     done
     
-    if [ ! -S /var/run/supervisor.sock ]; then
+    if [ ! -S /var/run/supervisor/supervisor.sock ]; then
         echo "ERROR: supervisord did not start properly" >&2
         exit 1
     fi
