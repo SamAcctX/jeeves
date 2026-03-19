@@ -40,12 +40,23 @@ implementation must support.]
 - [ ] Criterion 2: [another specific requirement mapped to PRD]
 - [ ] All behavioral spec scenarios have corresponding test coverage
 - [ ] Full project test suite passes (ALL tests, not just this feature's)
+- [ ] All Validation Steps commands pass (unit, build, E2E — see below)
 - [ ] No pre-existing tests broken, skipped, or deleted without justification
 - [ ] Test coverage meets project thresholds (80% line, 70% branch, 90% function)
 - [ ] No scope creep (only what was requested)
 - [ ] Documentation: [specific doc requirement — inline docs, README, API docs, etc.]
 - [ ] If infrastructure was created/modified: AGENTS.md updated with
       exact commands (including working directory) for build, test, and run
+<!-- CONDITIONAL E2E acceptance criteria:
+- Distributed strategy + task HAS user-facing flows: Replace placeholders
+  below with actual E2E criteria for this task's user flows.
+- Distributed strategy + task has NO user-facing flows (data model,
+  utilities, etc.): Delete the placeholders. E2E regression still runs
+  via "All Validation Steps commands pass" above.
+- Concentrated/Grouped strategy: Delete the placeholders entirely.
+  E2E regression runs via Validation Steps; authoring is in another task. -->
+- [ ] E2E test covers [flow 1]: [REMOVE if no user-facing flows or not Distributed]
+- [ ] E2E test covers [flow 2]: [REMOVE if no user-facing flows or not Distributed]
 
 > **Acceptance criteria must be implementation-agnostic** — describe what
 > must be true when done, not how to get there.
@@ -75,16 +86,38 @@ implementation must support.]
 ### Test Traceability
 [The Developer must trace every test to a behavioral specification scenario or acceptance criterion. The Tester will verify this traceability during review.]
 
+### E2E Test Scope
+[Choose ONE:
+- Distributed + has user flows: List the user flows this task E2E-tests.
+- Distributed + no user flows (data model, utilities): "N/A — no
+  user-facing flows. E2E regression runs via Validation Steps."
+- Concentrated/Grouped: "E2E authoring in task XXXX. This task runs
+  E2E tests as regression checks only."
+For net-new projects: after the infrastructure task creates initial E2E
+smoke tests, every subsequent task runs them even if no feature-specific
+E2E tests exist yet.]
+
 ### Validation Approach
 Consider established testing techniques (boundary analysis, equivalence
 partitioning, pairwise testing, state transition testing, etc.) as
 appropriate to ensure comprehensive validation of all specified behaviors.
 
 ### Validation Steps
+[CRITICAL (DEC-P1-TEST-VAL): List commands for ALL test runners from
+the test runner manifest (derived from PRD for net-new projects, or
+from project config for existing projects). Workers execute these
+commands literally — if a runner is omitted, those tests won't run.
+For tasks after infrastructure setup, include ALL runners even if
+only smoke tests exist for some (they serve as regression checks).]
 ```bash
-# Commands to verify implementation
-command1
-command2
+# Unit/component tests
+[unit test command]
+# Type check (if applicable)
+[type check command]
+# Build
+[build command]
+# E2E tests (MANDATORY after infrastructure task per DEC-P1-TEST-VAL)
+[e2e test command]
 ```
 
 ## Version References

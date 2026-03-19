@@ -33,10 +33,11 @@ tools:
 ---
 
 <!--
-version: 3.4.0
-last_updated: 2026-03-17
+version: 3.5.0
+last_updated: 2026-03-19
 dependencies: [shared-manifest.md v2.0.0]
 changelog:
+  3.5.0 (2026-03-19): Added DEC-P1-TEST-VAL (validation steps must cover all test runners), DEC-P1-TEST-E2E (E2E authoring strategy with distribution decision framework), test runner manifest requirement, clarified test levels in Spec-Anchored workflow
   3.4.0 (2026-03-17): Added implied requirement analysis, testing posture (DEC-P1-TEST), mandatory sub-agent review protocol (DEC-P1-REVIEW), compaction exit protocol, AGENTS.md mandate, normalized section order
   3.3.0 (2026-03-13): Migrated from TDD to Hybrid Spec-Anchored workflow
 -->
@@ -981,10 +982,17 @@ When user approves final decomposition:
    - [ ] Review tasks depend on implementation tasks (not the other way)
    - [ ] Task ordering in deps-tracker.yaml reflects: implement -> review -> refactor -> final_review
    - **If any check fails: DO NOT emit signal. Fix task structure first.**
-6.5. **Testing posture check (DEC-P1-TEST)**:
+6.5. **Testing posture check (DEC-P1-TEST) [MANDATORY GATE]**:
    - [ ] Every implementation TASK.md mandates full test suite (not subset)
    - [ ] Every implementation TASK.md includes validation approach directive
    - [ ] Test infrastructure task exists if the project needs one
+   - [ ] If E2E framework in manifest: infrastructure task's acceptance criteria include creating initial E2E smoke tests
+   - [ ] Every implementation TASK.md's Validation Steps include ALL test runners from manifest (DEC-P1-TEST-VAL)
+   - [ ] If E2E framework configured: E2E command present in all implementation Validation Steps
+   - [ ] E2E authoring strategy chosen and documented (DEC-P1-TEST-E2E)
+   - [ ] If Distributed: implementation tasks have E2E acceptance criteria for their user flows (not just Implementation Notes)
+   - [ ] If Concentrated: E2E task is followed by a review task AND at least one fix cycle opportunity
+   - **If any check fails: DO NOT emit signal. Fix testing gaps first.**
 7. **Verify spec-anchored structure (DEC-P1-SPEC)**: Implementation tasks have behavioral specs; review tasks exist for complex features; acceptance criteria are implementation-agnostic
 8. **Verify documentation (DEC-P1-DOC) [MANDATORY GATE]**:
    - [ ] Every TASK.md has at least one documentation acceptance criterion
@@ -1175,6 +1183,118 @@ Every implementation TASK.md MUST include these acceptance criteria:
 (e.g., "run auth tests", "run tests in src/auth/"). Always mandate
 the full suite.
 
+### Validation Steps Must Cover All Test Runners (DEC-P1-TEST-VAL) [CRITICAL]
+
+The `## Validation Steps` in each TASK.md defines the exact commands
+the worker agent will run. **Workers execute these commands literally.
+If a test runner is not listed, it will not be run.**
+
+During READING_PRD, identify ALL test runners the project will have
+after infrastructure setup (e.g., Vitest + Playwright, Jest + Cypress,
+pytest + Selenium). Record this as the **test runner manifest** by
+adding a `todowrite` item (e.g., "Test runner manifest: Vitest,
+Playwright, tsc, build") so it persists across context windows.
+
+**For net-new projects:** The manifest is derived from the PRD, not
+from inspecting existing files (which don't exist yet). The
+infrastructure task (typically 0001) creates these runners. Every
+task that depends on the infrastructure task — i.e., every subsequent
+implementation task — MUST include all manifest runners in its
+Validation Steps.
+
+**For existing projects:** The manifest is derived from the project's
+actual configuration files (package.json scripts, CI config, etc.).
+
+**Rules:**
+1. Every implementation TASK.md's Validation Steps MUST include
+   commands for ALL test runners in the manifest
+2. The acceptance criterion "Full project test suite passes" is
+   necessary but INSUFFICIENT — workers follow Validation Steps
+   literally. If `npm run e2e` is missing, E2E tests won't run.
+3. The infrastructure task's Validation Steps only include its own
+   runners (it creates them). Every task AFTER infrastructure must
+   include all runners from the manifest.
+
+**Example — net-new project, PRD specifies Vitest + Playwright:**
+
+Infrastructure task (0001) Validation Steps:
+```bash
+# Unit tests (this task creates the framework)
+npx vitest run
+# Type check
+npx tsc --noEmit
+# Build
+npm run build
+# E2E tests (this task creates smoke tests)
+npx playwright test
+```
+
+Every subsequent implementation task's Validation Steps:
+```bash
+# Unit/component tests
+npx vitest run
+# Type check
+npx tsc --noEmit
+# Build
+npm run build
+# E2E tests (run whatever exists — even if just infra smoke tests)
+npm run e2e
+```
+
+**Anti-pattern (REJECT):**
+```bash
+npx vitest run
+npx tsc --noEmit
+npm run build
+# E2E omitted — workers will never run it
+```
+
+### E2E Test Authoring Strategy (DEC-P1-TEST-E2E)
+
+When a project includes an E2E framework (Playwright, Cypress, etc.),
+the decomposer MUST make an explicit decision about where E2E tests
+are authored. **Do not let this happen by default — evaluate and
+document the choice.**
+
+**Rule 1: Running E2E tests is always mandatory after infrastructure.**
+Every implementation task that depends on the infrastructure task
+must run E2E tests via Validation Steps (see DEC-P1-TEST-VAL). For
+net-new projects, the infrastructure task creates initial E2E smoke
+tests — every subsequent task runs at least those as regression
+checks, even if no feature-specific E2E tests have been written yet.
+This is non-negotiable regardless of authoring strategy.
+
+**Rule 2: Evaluate E2E authoring distribution during READING_PRD.**
+Choose one of these strategies and document the choice in TODO.md:
+
+| Strategy | When to Use (ANY of these indicators) | Example |
+|----------|-------------|---------|
+| **Distributed** | Features have independent user flows testable in isolation, OR project has 10+ tasks, OR features span distinct pages/views | E2E tests for card CRUD written alongside card implementation task |
+| **Concentrated** | Features are tightly coupled AND hard to test in isolation, OR project is small (< 10 tasks) with features that naturally exercise multiple features at once | Single E2E task after all features complete |
+| **Grouped** | Mix of independent and coupled features; some flows are independent, others share state/UI | E2E task per feature group (e.g., one for CRUD flows, one for DnD flows) |
+
+**These are indicators, not hard requirements.** If ANY indicator for a
+strategy applies, that strategy is a candidate. Evaluate which strategy
+best fits the project — don't require all indicators to match.
+
+**Default is Distributed.** Concentrated or Grouped requires explicit
+justification. Record the strategy choice and justification in
+TODO.md (as a header note) so it persists across context windows.
+
+**Rule 3: Concentrated E2E must not be the last task before docs.**
+If using Concentrated strategy, the E2E authoring task MUST be
+followed by: (1) a review task to verify E2E test quality, and
+(2) at least one developer fix cycle (the review task can hand off
+defects back to a developer task). Do NOT place the E2E task so
+late that there are no remaining tasks to fix issues it discovers.
+
+**Anti-patterns (REJECT):**
+- E2E authoring deferred to end with no justification
+- PRD says "Phase N: Testing" and decomposer blindly follows the
+  phasing without evaluating distribution
+- E2E authoring task placed last (or second-to-last before docs only)
+  with no review task or fix cycle after it — regardless of strategy
+
 ### Validation Guidance Directive
 
 Each implementation task SHOULD include a brief directive in the
@@ -1185,10 +1305,6 @@ partitioning, pairwise testing, state transition testing, etc.) as
 appropriate to ensure comprehensive validation of all specified
 behaviors."
 
-This directive points the developer toward thorough validation without
-prescribing specific test cases, which is the developer's and tester's
-domain.
-
 ### Test Infrastructure Awareness
 
 During the READING_PRD phase, evaluate the project's test infrastructure:
@@ -1196,9 +1312,21 @@ During the READING_PRD phase, evaluate the project's test infrastructure:
 - Are there existing tests? If yes, every task's acceptance criteria
   must mandate preserving them.
 - Is CI configured? If so, tasks should validate against CI config.
+- **What test runners will exist?** For net-new projects, derive
+  this from the PRD (e.g., PRD specifies Playwright → E2E runner).
+  For existing projects, read package.json/CI config. Enumerate ALL
+  runners (unit, integration, E2E) as the **test runner manifest**.
+  This manifest determines what commands appear in every subsequent
+  task's Validation Steps.
+- **E2E authoring strategy**: If E2E framework will exist, evaluate
+  whether features have independent user flows (→ Distributed) or
+  are tightly coupled (→ Concentrated/Grouped). Document the decision.
+  See DEC-P1-TEST-E2E.
 
 Include test infrastructure setup as an early task (no implementation
-dependencies) when needed.
+dependencies) when needed. For net-new projects, the infrastructure
+task should create initial smoke/scaffold E2E tests so that subsequent
+tasks have something to run as regression checks.
 
 ---
 
@@ -1210,7 +1338,7 @@ The decomposer MUST structure task decomposition to embed spec-driven developmen
 
 | Phase | Description | Agent (via title keywords) | Task Characteristics | TASK.md Must Include |
 |-------|-------------|---------------------------|---------------------|---------------------|
-| **Implement+Test** | Write production code and tests together | Developer (title: "Implement...") | Production code + test code, all tests pass, coverage meets thresholds | Behavioral specs (Given/When/Then), acceptance criteria, test traceability requirements, coverage thresholds |
+| **Implement+Test** | Write production code and tests together | Developer (title: "Implement...") | Production code + unit/component tests (and E2E tests if Distributed strategy), all test runners pass, coverage meets thresholds | Behavioral specs (Given/When/Then), acceptance criteria, test traceability requirements, coverage thresholds |
 | **Review** | Review test quality, add adversarial tests | Tester (title: "Review tests for...") | Test review, edge case tests added, mutation testing run | Test quality checklist, adversarial test expectations, coverage verification |
 | **Refactor** | Improve code quality while keeping tests green | Developer (title: "Refactor...") | Code restructuring, no new functionality | "Improve quality. All tests must still pass." |
 | **Final Review** | Confirm refactor didn't break anything | Tester (title: "Final review...") | All tests pass post-refactor | "Run all tests. Confirm no regressions." |
@@ -1234,8 +1362,10 @@ Task A: Implement [feature] with test coverage
     - Behavioral specification (Given/When/Then scenarios)
     - Implementation-agnostic acceptance criteria
     - Test traceability requirement: "Every acceptance criterion must have corresponding test coverage"
-    - Coverage thresholds: 80% line, 70% branch, 90% function
+    - Coverage thresholds: 80% line, 70% branch, 90% function (unit/component tests)
     - Static analysis requirements (linting, complexity limits)
+    - If E2E Distributed strategy: E2E test scenarios for this feature's user flows
+    - Validation Steps covering ALL test runners (DEC-P1-TEST-VAL)
 
 Task B: Review tests for [feature] (ONLY for complex features)
   -> depends_on: [Task A]
@@ -1288,6 +1418,9 @@ Every TASK.md for an implementation-related task MUST include a `## Workflow Con
 
 ### Example: Decomposing a "User Authentication" Feature
 
+**E2E strategy for this example: Distributed** — registration and
+login are independent user flows testable in isolation.
+
 ```
 0001: Set up test framework and test infrastructure
       -> depends_on: [] | Phase: FOUNDATION | Routes to: developer
@@ -1295,14 +1428,19 @@ Every TASK.md for an implementation-related task MUST include a `## Workflow Con
 0002: Implement user registration with test coverage
       -> depends_on: [0001] | Phase: IMPLEMENT+TEST | Routes to: developer
       -> TASK.md includes behavioral specs, acceptance criteria, test traceability, coverage thresholds
+      -> TASK.md includes E2E scenarios for registration flow (Distributed strategy)
+      -> Validation Steps: unit tests + E2E tests
 
 0003: Implement user login with test coverage
       -> depends_on: [0001] | Phase: IMPLEMENT+TEST | Routes to: developer
       -> TASK.md includes behavioral specs, acceptance criteria, test traceability, coverage thresholds
+      -> TASK.md includes E2E scenarios for login flow (Distributed strategy)
+      -> Validation Steps: unit tests + E2E tests
 
 0004: Review tests for user registration and login
       -> depends_on: [0002, 0003] | Phase: REVIEW | Routes to: tester
       -> TASK.md includes test quality checklist, adversarial test requirements, mutation testing
+      -> Tester reviews BOTH unit and E2E tests
 
 0005: Refactor authentication module
       -> depends_on: [0004] | Phase: REFACTOR | Routes to: developer
@@ -1317,8 +1455,9 @@ Every TASK.md for an implementation-related task MUST include a `## Workflow Con
 **Why this ordering works with the Manager:**
 - Manager picks highest unblocked task -> 0001 first (no deps)
 - After 0001 -> 0002 and 0003 unblocked (both "Implement" -> developer)
+- Each implementation task writes unit + E2E tests (Distributed strategy)
 - After both complete -> 0004 unblocked ("Review" -> tester)
-- Tester reviews quality, adds adversarial tests
+- Tester reviews quality of both unit and E2E tests, adds adversarial tests
 - If defects found -> handoff back to developer for fixes
 - Dependencies enforce implement -> review -> refactor -> final_review flow
 
@@ -1397,8 +1536,15 @@ For each created task, verify:
 - [ ] Acceptance criteria mandate full project test suite (not a subset)
 - [ ] Acceptance criteria require coverage thresholds
 - [ ] Acceptance criteria require all behavioral spec scenarios to have test coverage
+- [ ] Acceptance criteria include "All Validation Steps commands pass"
 - [ ] Implementation notes include validation approach directive
 - [ ] Test infrastructure task exists (if project lacks test framework)
+- [ ] If E2E framework in manifest: infrastructure task requires creating initial E2E smoke tests in its acceptance criteria
+- [ ] Validation Steps include ALL test runners from manifest (DEC-P1-TEST-VAL)
+- [ ] If E2E framework exists: E2E run command appears in Validation Steps
+- [ ] E2E authoring strategy documented (Distributed/Concentrated/Grouped) with justification (DEC-P1-TEST-E2E)
+- [ ] If Distributed: E2E user flow criteria in Acceptance Criteria (not just Implementation Notes)
+- [ ] If Concentrated: E2E task is followed by a review task AND at least one fix cycle opportunity
 
 **Documentation Check (DEC-P1-DOC):**
 - [ ] EVERY task includes documentation acceptance criteria (not just dedicated doc tasks)
@@ -1413,6 +1559,7 @@ For each created task, verify:
 - [ ] TASK.md includes `## Workflow Context` with task type and review task reference
 - [ ] TASK.md includes `## Version References` with validated versions
 - [ ] TASK.md includes `## Validation Steps` with non-interactive bash commands to verify completion
+- [ ] Validation Steps cover ALL configured test runners, not just unit tests (DEC-P1-TEST-VAL)
 - [ ] TASK.md is self-contained — worker does not need to read PRD or other tasks
 - [ ] TASK.md `## Acceptance Criteria` includes at least one documentation criterion (DEC-P1-DOC)
 

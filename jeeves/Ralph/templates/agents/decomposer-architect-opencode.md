@@ -32,10 +32,11 @@ tools:
 ---
 
 <!--
-version: 2.2.0
-last_updated: 2026-03-17
+version: 2.3.0
+last_updated: 2026-03-19
 dependencies: [shared/secrets.md v1.2.0]
 changelog:
+  2.3.0 (2026-03-19): Added test runner coverage check to Gate 1 and Gate 3 review protocols, E2E authoring distribution check in Gate 3
   2.2.0 (2026-03-17): Added Spec Review Protocol, replaced context-percentage monitoring with compaction exit protocol, normalized section order
   2.1.0 (2026-03-13): Replaced TDD loop reference with Worker loop for spec-anchored migration
   2.0.0: Strengthened role boundaries, added forbidden actions protocol, structured output format, drift mitigation, context management, edge case handling, lightweight TODO tracking, expanded state machine and compliance checkpoints
@@ -353,6 +354,17 @@ without guessing.
 - Are there hidden dependencies on other tasks or external systems?
 - Are there integration points that should be called out?
 
+**Test Validation Coverage:**
+- Do the Validation Steps include commands for ALL configured test
+  runners (unit, E2E, etc.), not just one?
+- If an E2E framework is part of the project infrastructure, does
+  the Validation Steps section include the E2E run command?
+- Is there a gap between the acceptance criterion "Full project test
+  suite passes" and what the Validation Steps actually execute?
+- If using Distributed E2E strategy: does the Acceptance Criteria
+  section contain explicit E2E test criteria for this task's user
+  flows (not just E2E guidance in Implementation Notes/E2E Test Scope)?
+
 ### Post-Decomposition Review (Gate 3)
 
 **PRD Coverage:**
@@ -371,6 +383,20 @@ without guessing.
   (should be consolidated)?
 - Any tasks that are too large for a single agent session?
 - Any missing integration or regression tasks?
+- Any tasks with Validation Steps that omit configured test runners
+  (e.g., unit tests listed but E2E tests missing)?
+- If E2E framework is configured: does the infrastructure task's
+  acceptance criteria require creating initial E2E smoke tests?
+
+**E2E Authoring Distribution:**
+- Is all E2E test authoring concentrated in a single task? If so,
+  is this justified by project size or feature coupling?
+- If features have independent user flows, should E2E tests be
+  distributed across implementation tasks instead?
+- If Concentrated strategy: does the E2E task have a review task
+  after it with room for defect fix cycles?
+- Has the decomposer documented its E2E strategy choice with
+  justification?
 
 ### Response Format
 
