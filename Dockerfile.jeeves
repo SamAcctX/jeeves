@@ -543,7 +543,7 @@ EOF
 RUN cat << 'EOF' > /etc/supervisor/conf.d/opencode-web.conf
 [program:opencode-web]
 command=/usr/local/bin/opencode web --hostname 0.0.0.0 --port 3333
-directory=/home/jeeves
+directory=/proj
 user=jeeves
 autostart=false
 autorestart=unexpected
