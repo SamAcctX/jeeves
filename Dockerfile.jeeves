@@ -466,9 +466,8 @@ RUN if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then \
         echo "Installing Claude Code..."; \
         curl -fsSL https://claude.ai/install.sh | bash -s -- latest; \
         # Add ~/.local/bin to path, since this is where claude installs and we can't change that, \
-        # we'll manually move the bin ourselves to a more standard location... \
-        sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
-        sudo chmod 755 /usr/local/bin/claude; \
+        # we'll symlink the bin ourselves to a more standard location... \
+        sudo ln -sf $HOME/.local/bin/claude /usr/local/bin/claude; \
     else \
         echo "Claude Code installation skipped (INSTALL_CLAUDE_CODE is not 'true')"; \
     fi
