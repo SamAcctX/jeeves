@@ -784,6 +784,14 @@ echo "Installing using-superpowers for opencode and claude code..."
 npx skills-installer install @obra/superpowers/using-superpowers --client opencode
 npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
 
+# Due to https://github.com/anomalyco/opencode/pull/18186, Claude Code OAuth was officially
+# removed from Opencode.  However, community-maintained plugins have replaced this loss of this
+# once-OOB provider, so manually install that specific community plugin.
+# Repo link:  https://github.com/griffinmartin/opencode-claude-auth
+# Note: This plugin is dependent on Claude Code being installed and authenticated,
+# and updating the opencode config to include this plugin.  See the repo's README
+RUN sudo npm install -g opencode-claude-auth
+
 # Additional setup - tool preferences and amplify skill usage
 echo "Configuring agent preferences and tool settings..."
 
