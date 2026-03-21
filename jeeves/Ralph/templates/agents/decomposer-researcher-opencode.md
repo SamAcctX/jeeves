@@ -11,6 +11,7 @@ permission:
   webfetch: allow
   edit: allow
   question: allow
+  doom_loop: deny
   external_directory:
     "/tmp/**": allow
     "/opt/jeeves/**": allow
