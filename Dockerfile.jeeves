@@ -805,18 +805,17 @@ if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
         temp_file=$(mktemp)
         jq '
           # Ensure plugin field exists and is an array
-          .plugin = (if has("plugin") then .plugin else [] end)
-          | if (type(.plugin) == "array") then
-              # Check if plugin is already installed
-              if (.plugin | index("opencode-claude-auth")) then
-                .
-              else
-                # Add the plugin to the array
-                .plugin |= . + ["opencode-claude-auth"]
-              end
+          .plugin = (if has("plugin") then 
+                      # Check if plugin is an array using try/catch (compatible with jq 1.7)
+                      try (if (.plugin | type == "array") then .plugin else [] end) catch []
+                    else 
+                      [] 
+                    end)
+          # Check if plugin is already installed
+          | if (.plugin | index("opencode-claude-auth")) then
+              .
             else
-              # If plugin field is not an array, replace it with an array containing the plugin
-              .plugin = ["opencode-claude-auth"]
+              .plugin |= . + ["opencode-claude-auth"]
             end
         ' "$OPENCODE_CONFIG" > "$temp_file" && mv "$temp_file" "$OPENCODE_CONFIG"
         sudo chown jeeves:jeeves "$OPENCODE_CONFIG"

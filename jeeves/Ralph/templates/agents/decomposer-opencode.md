@@ -821,16 +821,15 @@ For each task, create a folder with template-based files.
 
 **Per-Task Loop (repeat for EACH task):**
 ```
-FOR each task:
+FOR each task (STRICTLY SEQUENTIAL — no parallel task creation):
   1. Create folder .ralph/tasks/XXXX/
   2. Copy templates, fill TASK.md
-  3. [HARD GATE] If implementation task: invoke decomposer-architect
-     for Gate 1 spec review BEFORE creating the next task folder
+  3. [HARD GATE] If implementation task: invoke decomposer-architect for Gate 1 spec review BEFORE creating the next task folder
   4. Incorporate architect feedback into THIS task's TASK.md
   5. Only THEN proceed to the next task
+Do NOT create multiple task folders, write multiple TASK.md files, or invoke multiple Gate 1 reviews in parallel. Each task must be fully created, reviewed, and revised before starting the next.
 ```
-**This is NOT a batch operation.** Create one task, review it, fix it,
-then move to the next. See DEC-P1-REVIEW Gate 1.
+**This is NOT a batch operation.** Create one task, review it, fix it, then move to the next. See DEC-P1-REVIEW Gate 1.
 
 **Folder Structure:**
 ```
@@ -1064,19 +1063,14 @@ each TASK.md is drafted, before creating the next task folder.
 
 **Delegation message MUST include:**
 1. The complete draft TASK.md content
-2. The relevant PRD section(s) this task traces to
+2. A directive to read the PRD file for full requirements context (e.g., "Read the PRD at <path> for the complete requirements this task must satisfy"). Do NOT summarize or cherry-pick PRD sections — the architect must independently determine which requirements are relevant to this task.
 3. Request to evaluate:
-   - Does the spec capture all requirements from the PRD section
-     (explicit AND implied)?
-   - Are there situations that naturally arise from this feature that
-     the spec doesn't address?
-   - Are acceptance criteria specific enough for an implementation
-     agent to work from without guessing?
-   - Are there architectural concerns, hidden dependencies, or
-     integration risks?
+   - Does the spec capture all requirements from the PRD (explicit AND implied)?
+   - Are there situations that naturally arise from this feature that the spec doesn't address?
+   - Are acceptance criteria specific enough for an implementation agent to work from without guessing?
+   - Are there architectural concerns, hidden dependencies, or integration risks?
    - Is the task appropriately scoped (achievable in one agent session)?
-4. The standalone consultation instructions (see DEC-P0-03 invocation
-   template)
+4. The standalone consultation instructions (see DEC-P0-03 invocation template)
 
 **After receiving architect feedback:**
 - Incorporate flagged gaps — add missing spec scenarios for implied
