@@ -790,7 +790,44 @@ npx skills-installer install @obra/superpowers/using-superpowers --client claude
 # Repo link:  https://github.com/griffinmartin/opencode-claude-auth
 # Note: This plugin is dependent on Claude Code being installed and authenticated,
 # and updating the opencode config to include this plugin.  See the repo's README
-RUN sudo npm install -g opencode-claude-auth
+if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
+    echo "Installing opencode-claude-auth plugin..."
+    sudo npm install -g opencode-claude-auth
+    
+    # Update opencode.jsonc to include the claude-auth plugin
+    OPENCODE_CONFIG="/home/jeeves/.config/opencode/opencode.jsonc"
+    
+    # Check if config file exists
+    if [ -f "$OPENCODE_CONFIG" ]; then
+        echo "Updating existing opencode configuration..."
+        # Use jq to add the plugin to the config file
+        # Handle all edge cases: plugin key missing, empty, already exists, etc.
+        temp_file=$(mktemp)
+        jq '
+          # Ensure plugin field exists and is an array
+          .plugin = (if has("plugin") then .plugin else [] end)
+          | if (type(.plugin) == "array") then
+              # Check if plugin is already installed
+              if (.plugin | index("opencode-claude-auth")) then
+                .
+              else
+                # Add the plugin to the array
+                .plugin |= . + ["opencode-claude-auth"]
+              end
+            else
+              # If plugin field is not an array, replace it with an array containing the plugin
+              .plugin = ["opencode-claude-auth"]
+            end
+        ' "$OPENCODE_CONFIG" > "$temp_file" && mv "$temp_file" "$OPENCODE_CONFIG"
+        sudo chown jeeves:jeeves "$OPENCODE_CONFIG"
+        echo "✅ opencode-claude-auth plugin added to configuration"
+    else
+        echo "Warning: opencode.jsonc not found at $OPENCODE_CONFIG"
+        echo "Plugin configuration will not be updated"
+    fi
+else
+    echo "opencode-claude-auth installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
+fi
 
 # Additional setup - tool preferences and amplify skill usage
 echo "Configuring agent preferences and tool settings..."
