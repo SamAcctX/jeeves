@@ -97,6 +97,9 @@ fi
 OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-creator-opencode-template.md"
 CLAUDE_TEMPLATE="/opt/jeeves/PRD/prd-creator-claude-template.md"
 
+# PRD Researcher template paths
+PRD_RESEARCHER_OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-researcher-opencode-template.md"
+
 # Deepest-Thinking template paths
 DEEPEST_OPENCODE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md"
 DEEPEST_CLAUDE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md"
@@ -112,6 +115,10 @@ install_agents() {
     
     if [ ! -f "$CLAUDE_TEMPLATE" ]; then
         error_exit "Claude Code template not found at: $CLAUDE_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_RESEARCHER_OPENCODE_TEMPLATE" ]; then
+        error_exit "PRD Researcher OpenCode template not found at: $PRD_RESEARCHER_OPENCODE_TEMPLATE"
     fi
     
     # Create directories if they don't exist
@@ -147,6 +154,14 @@ install_agents() {
         error_exit "Failed to install Claude Code PRD agent"
     fi
     
+    # Install PRD Researcher OpenCode agent
+    info_msg "Installing PRD Researcher OpenCode agent..."
+    if cp "$PRD_RESEARCHER_OPENCODE_TEMPLATE" "$OPENCODE_DIR/prd-researcher.md"; then
+        success_msg "PRD Researcher OpenCode agent installed to: $OPENCODE_DIR/prd-researcher.md"
+    else
+        error_exit "Failed to install PRD Researcher OpenCode agent"
+    fi
+    
     # Verify installations
     info_msg "Verifying installations..."
     
@@ -160,6 +175,12 @@ install_agents() {
         success_msg "Claude Code agent verification: PASSED"
     else
         warning_msg "Claude Code agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-researcher.md" ]; then
+        success_msg "PRD Researcher OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Researcher OpenCode agent verification: FAILED"
     fi
     
     info_msg "PRD agents installation completed successfully!"

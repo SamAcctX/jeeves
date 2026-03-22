@@ -2,7 +2,6 @@
 name: decomposer-researcher
 description: "Decomposer Researcher Agent - Specialized for investigation, documentation analysis, and knowledge synthesis for PRD decomposition"
 mode: subagent
-
 permission:
   "*": allow
   read: allow
@@ -33,6 +32,8 @@ tools:
   todowrite: true
   skill: true
 ---
+
+
 
 <!--
 version: 1.3.0

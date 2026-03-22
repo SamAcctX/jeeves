@@ -2,7 +2,6 @@
 name: decomposer-architect
 description: "Decomposer Architect Agent - Specialized for system design, patterns, best practices, integration design, verification and validation for PRD decomposition"
 mode: subagent
-
 permission:
   "*": allow
   read: allow
@@ -32,11 +31,14 @@ tools:
   skill: true
 ---
 
+
+
 <!--
-version: 2.3.0
-last_updated: 2026-03-19
+version: 2.4.0
+last_updated: 2026-03-22
 dependencies: [shared/secrets.md v1.2.0]
 changelog:
+  2.4.0 (2026-03-22): Added interaction quality review to Gate 1 (per-task) and Gate 3 (post-decomposition) spec review protocols
   2.3.0 (2026-03-19): Added test runner coverage check to Gate 1 and Gate 3 review protocols, E2E authoring distribution check in Gate 3
   2.2.0 (2026-03-17): Added Spec Review Protocol, replaced context-percentage monitoring with compaction exit protocol, normalized section order
   2.1.0 (2026-03-13): Replaced TDD loop reference with Worker loop for spec-anchored migration
@@ -366,6 +368,17 @@ without guessing.
   section contain explicit E2E test criteria for this task's user
   flows (not just E2E guidance in Implementation Notes/E2E Test Scope)?
 
+**Interaction Quality (for tasks with interactive UI elements):**
+- If the task involves elements that are both clickable and draggable
+  (or otherwise respond to multiple gestures), does the spec disambiguate
+  user intent? (e.g., dedicated drag handle vs full-surface drag)
+- If touch interaction is supported, does the spec address finger jitter
+  tolerance and activation thresholds?
+- If keyboard and pointer interactions coexist on the same element,
+  does the spec resolve potential conflicts?
+- Does the spec describe visual feedback for gesture recognition
+  (what the user sees when a gesture is accepted)?
+
 ### Post-Decomposition Review (Gate 3)
 
 **PRD Coverage:**
@@ -398,6 +411,12 @@ without guessing.
   after it with room for defect fix cycles?
 - Has the decomposer documented its E2E strategy choice with
   justification?
+
+**Interaction Quality (for projects with interactive UI):**
+- Do tasks that compose competing interactions on the same UI element
+  (e.g., one task adds click behavior, another adds drag behavior)
+  explicitly reconcile the conflict in their specs?
+- Does a UX playtest task exist after feature implementation?
 
 ### Response Format
 
