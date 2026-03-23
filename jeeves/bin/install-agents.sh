@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PRD Agents Installation Script
-# Installs PRD agents for both Claude Code and OpenCode platforms
+# Installs PRD agents for OpenCode platform
 
 set -e  # Exit on error
 
@@ -14,7 +14,7 @@ INSTALL_ALL=false
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install PRD agents for Claude Code and OpenCode platforms."
+    echo "Install PRD agents for OpenCode platform."
     echo ""
     echo "OPTIONS:"
     echo "  -g, --global    Install agents globally (user home directory)"
@@ -23,8 +23,8 @@ usage() {
     echo "  -h, --help      Display this help message"
     echo ""
     echo "SCOPE:"
-    echo "  By default: Project scope (/proj/.claude/ and /proj/.opencode/)"
-    echo "  With --global: User scope (~/.claude/ and ~/.opencode/)"
+    echo "  By default: Project scope (/proj/.opencode/)"
+    echo "  With --global: User scope (~/.opencode/)"
     echo ""
     echo "EXAMPLES:"
     echo "  $0                    # Install to project scope"
@@ -84,25 +84,21 @@ done
 if [ "$GLOBAL_SCOPE" = true ]; then
     # Global scope (user home directory)
     OPENCODE_DIR="$HOME/.opencode/agents"
-    CLAUDE_DIR="$HOME/.claude/agents"
     SCOPE_DESCRIPTION="global (user home directory)"
 else
     # Project scope (workspace directory)
     OPENCODE_DIR="/proj/.opencode/agents"
-    CLAUDE_DIR="/proj/.claude/agents"
     SCOPE_DESCRIPTION="project (/proj)"
 fi
 
-# Template source paths
+# PRD Creator OpenCode template path
 OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-creator-opencode-template.md"
-CLAUDE_TEMPLATE="/opt/jeeves/PRD/prd-creator-claude-template.md"
 
 # PRD Researcher template paths
 PRD_RESEARCHER_OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-researcher-opencode-template.md"
 
-# Deepest-Thinking template paths
+# Deepest-Thinking template path
 DEEPEST_OPENCODE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md"
-DEEPEST_CLAUDE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md"
 
 # Main installation function
 install_agents() {
@@ -111,10 +107,6 @@ install_agents() {
     # Check if template files exist
     if [ ! -f "$OPENCODE_TEMPLATE" ]; then
         error_exit "OpenCode template not found at: $OPENCODE_TEMPLATE"
-    fi
-    
-    if [ ! -f "$CLAUDE_TEMPLATE" ]; then
-        error_exit "Claude Code template not found at: $CLAUDE_TEMPLATE"
     fi
     
     if [ ! -f "$PRD_RESEARCHER_OPENCODE_TEMPLATE" ]; then
@@ -131,27 +123,12 @@ install_agents() {
         info_msg "Directory already exists: $OPENCODE_DIR"
     fi
     
-    if [ ! -d "$CLAUDE_DIR" ]; then
-        mkdir -p "$CLAUDE_DIR" || error_exit "Failed to create directory: $CLAUDE_DIR"
-        success_msg "Created directory: $CLAUDE_DIR"
-    else
-        info_msg "Directory already exists: $CLAUDE_DIR"
-    fi
-    
-    # Install OpenCode agent
+    # Install OpenCode PRD agent
     info_msg "Installing OpenCode PRD agent..."
     if cp "$OPENCODE_TEMPLATE" "$OPENCODE_DIR/prd-creator.md"; then
         success_msg "OpenCode PRD agent installed to: $OPENCODE_DIR/prd-creator.md"
     else
         error_exit "Failed to install OpenCode PRD agent"
-    fi
-    
-    # Install Claude Code agent
-    info_msg "Installing Claude Code PRD agent..."
-    if cp "$CLAUDE_TEMPLATE" "$CLAUDE_DIR/prd-creator.md"; then
-        success_msg "Claude Code PRD agent installed to: $CLAUDE_DIR/prd-creator.md"
-    else
-        error_exit "Failed to install Claude Code PRD agent"
     fi
     
     # Install PRD Researcher OpenCode agent
@@ -166,15 +143,9 @@ install_agents() {
     info_msg "Verifying installations..."
     
     if [ -f "$OPENCODE_DIR/prd-creator.md" ]; then
-        success_msg "OpenCode agent verification: PASSED"
+        success_msg "OpenCode PRD agent verification: PASSED"
     else
-        warning_msg "OpenCode agent verification: FAILED"
-    fi
-    
-    if [ -f "$CLAUDE_DIR/prd-creator.md" ]; then
-        success_msg "Claude Code agent verification: PASSED"
-    else
-        warning_msg "Claude Code agent verification: FAILED"
+        warning_msg "OpenCode PRD agent verification: FAILED"
     fi
     
     if [ -f "$OPENCODE_DIR/prd-researcher.md" ]; then
@@ -193,27 +164,13 @@ install_agents() {
         error_exit "Failed to install Deepest-Thinking OpenCode agent"
     fi
     
-    # Install Deepest-Thinking Claude Code agent
-    info_msg "Installing Deepest-Thinking Claude Code agent..."
-    if cp "$DEEPEST_CLAUDE_TEMPLATE" "$CLAUDE_DIR/deepest-thinking.md"; then
-        success_msg "Deepest-Thinking Claude Code agent installed to: $CLAUDE_DIR/deepest-thinking.md"
-    else
-        error_exit "Failed to install Deepest-Thinking Claude Code agent"
-    fi
-    
-    # Verify Deepest-Thinking installations
-    info_msg "Verifying Deepest-Thinking installations..."
+    # Verify Deepest-Thinking installation
+    info_msg "Verifying Deepest-Thinking installation..."
     
     if [ -f "$OPENCODE_DIR/deepest-thinking.md" ]; then
         success_msg "Deepest-Thinking OpenCode agent verification: PASSED"
     else
         warning_msg "Deepest-Thinking OpenCode agent verification: FAILED"
-    fi
-    
-    if [ -f "$CLAUDE_DIR/deepest-thinking.md" ]; then
-        success_msg "Deepest-Thinking Claude Code agent verification: PASSED"
-    else
-        warning_msg "Deepest-Thinking Claude Code agent verification: FAILED"
     fi
 }
 
@@ -226,10 +183,6 @@ install_deepest_agents() {
         error_exit "Deepest-Thinking OpenCode template not found at: $DEEPEST_OPENCODE_TEMPLATE"
     fi
     
-    if [ ! -f "$DEEPEST_CLAUDE_TEMPLATE" ]; then
-        error_exit "Deepest-Thinking Claude Code template not found at: $DEEPEST_CLAUDE_TEMPLATE"
-    fi
-    
     # Create directories if they don't exist
     info_msg "Creating directories..."
     
@@ -240,13 +193,6 @@ install_deepest_agents() {
         info_msg "Directory already exists: $OPENCODE_DIR"
     fi
     
-    if [ ! -d "$CLAUDE_DIR" ]; then
-        mkdir -p "$CLAUDE_DIR" || error_exit "Failed to create directory: $CLAUDE_DIR"
-        success_msg "Created directory: $CLAUDE_DIR"
-    else
-        info_msg "Directory already exists: $CLAUDE_DIR"
-    fi
-    
     # Install Deepest-Thinking OpenCode agent
     info_msg "Installing Deepest-Thinking OpenCode agent..."
     if cp "$DEEPEST_OPENCODE_TEMPLATE" "$OPENCODE_DIR/deepest-thinking.md"; then
@@ -255,16 +201,8 @@ install_deepest_agents() {
         error_exit "Failed to install Deepest-Thinking OpenCode agent"
     fi
     
-    # Install Deepest-Thinking Claude Code agent
-    info_msg "Installing Deepest-Thinking Claude Code agent..."
-    if cp "$DEEPEST_CLAUDE_TEMPLATE" "$CLAUDE_DIR/deepest-thinking.md"; then
-        success_msg "Deepest-Thinking Claude Code agent installed to: $CLAUDE_DIR/deepest-thinking.md"
-    else
-        error_exit "Failed to install Deepest-Thinking Claude Code agent"
-    fi
-    
-    # Verify installations
-    info_msg "Verifying installations..."
+    # Verify installation
+    info_msg "Verifying Deepest-Thinking installation..."
     
     if [ -f "$OPENCODE_DIR/deepest-thinking.md" ]; then
         success_msg "Deepest-Thinking OpenCode agent verification: PASSED"
@@ -272,13 +210,7 @@ install_deepest_agents() {
         warning_msg "Deepest-Thinking OpenCode agent verification: FAILED"
     fi
     
-    if [ -f "$CLAUDE_DIR/deepest-thinking.md" ]; then
-        success_msg "Deepest-Thinking Claude Code agent verification: PASSED"
-    else
-        warning_msg "Deepest-Thinking Claude Code agent verification: FAILED"
-    fi
-    
-    info_msg "Deepest-Thinking agents installation completed successfully!"
+    info_msg "Deepest-Thinking agent installation completed successfully!"
 }
 
 # Check if running as root (for global installations)
