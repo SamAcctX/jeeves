@@ -287,7 +287,6 @@ todowrite([
   { content: "COVERAGE: Documentation Requirements — specified", status: "pending", priority: "medium" },
   { content: "COVERAGE: Development Phases — milestones defined", status: "pending", priority: "medium" },
   { content: "COVERAGE: Constraints & Costs — specified or N/A", status: "pending", priority: "medium" },
-  { content: "COVERAGE: Performance & Limits — limits, optimization, targets", status: "pending", priority: "medium" },
 
   // TYPE-SPECIFIC — from prd-advisor-api
   { content: "COVERAGE: API Design — meets REF-API minimums", status: "pending", priority: "high" },
