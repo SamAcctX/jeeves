@@ -287,6 +287,7 @@ todowrite([
   { content: "COVERAGE: Documentation Requirements — specified", status: "pending", priority: "medium" },
   { content: "COVERAGE: Development Phases — milestones defined", status: "pending", priority: "medium" },
   { content: "COVERAGE: Constraints & Costs — specified or N/A", status: "pending", priority: "medium" },
+  { content: "COVERAGE: Performance & Limits — limits, optimization, targets", status: "pending", priority: "medium" },
 
   // TYPE-SPECIFIC — from prd-advisor-api
   { content: "COVERAGE: API Design — meets REF-API minimums", status: "pending", priority: "high" },
@@ -402,7 +403,7 @@ Each advisor returns additional downstream contract requirements specific to its
 
 ### CORE Triggers (All Project Types)
 
-The **prd-researcher** sub-agent MUST be invoked when ANY of these conditions are true during SPECIFY:
+The **prd-researcher** sub-agent MUST be invoked when ANY of these conditions are true during SPECIFY. These triggers are NOT satisfiable by direct web search or fetch tool usage — the structured analysis prd-researcher produces (compatibility validation, breaking change detection, deprecation assessment) is the requirement, not just the raw data:
 
 | Condition | Research Request |
 |-----------|-----------------|
@@ -706,7 +707,7 @@ IMPORTANT: You are NOT currently running via the Ralph Loop. This is a standalon
 **MANDATORY for complex tasks**: Use for planning PRD structure, analyzing features, evaluating technical decisions, synthesizing research findings, and running the VALIDATE check.
 
 ### SearXNG Web Search Tool
-**MANDATORY for technology decisions**: Use to research patterns, validate technology recommendations, check best practices, find reference products, verify maintenance status. Always verify recommendations with at least 2 sources.
+Use for quick in-conversation fact checks — confirming a URL, checking a single detail, verifying a name or status. Always verify recommendations with at least 2 sources. **When a Mandatory Research Trigger condition is met (see above), delegate to prd-researcher instead — direct search tool usage does not satisfy research triggers.** The researcher produces structured analysis (maintenance status, breaking changes, compatibility, deprecation risk) that raw registry/search lookups miss.
 
 ### todowrite / todoread Tools
 **Preferred for coverage tracking**: Initialize at SCOPE → SPECIFY transition (after advisor invocation). Update throughout SPECIFY. Check at SPECIFY → VALIDATE transition. If todowrite/todoread are unavailable, track coverage mentally using the CORE Done Criteria table and advisor output as your reference — the process still applies, just without persistent external tracking.
