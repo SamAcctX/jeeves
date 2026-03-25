@@ -19,7 +19,7 @@
 | `dependency.md` | Dependency discovery, circular detection, blocking rules | P0/P1 | DEP-P0-01, DEP-P1-01 |
 | `loop-detection.md` | Error loop limits, warning signs, exit sequence | P1 | LPD-P1-01, LPD-P1-02, LPD-P2-01 |
 | `activity-format.md` | Activity.md structure, attempt headers, handoff records | P1 | ACT-P1-12 |
-| `rules-lookup.md` | RULES.md discovery hierarchy, precedence rules | P1 | RUL-P1-01, RUL-P1-02 |
+| `rules-lookup.md` | RULES.md discovery hierarchy, precedence rules, gotcha capture | P1 | RUL-P1-01, RUL-P1-02, RUL-P1-03 |
 
 ---
 
@@ -65,6 +65,7 @@
 | ACT-P1-12 | activity-format.md | Activity.md update requirements — attempt headers, handoff records |
 | RUL-P1-01 | rules-lookup.md | Hierarchical RULES.md discovery — walk directory tree |
 | RUL-P1-02 | rules-lookup.md | Document applied rules in activity.md |
+| RUL-P1-03 | rules-lookup.md | Capture repeatable gotchas and anti-patterns to RULES.md before signaling |
 
 ### P2/P3 Rules (Should/Guidance)
 

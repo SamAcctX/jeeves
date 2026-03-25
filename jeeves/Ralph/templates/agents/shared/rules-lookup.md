@@ -1,6 +1,6 @@
 # RULES.md Lookup (DUP-03)
 
-<!-- version: 1.2.0 | last_updated: 2026-02-25 | canonical: YES -->
+<!-- version: 1.3.0 | last_updated: 2026-03-25 | canonical: YES -->
 
 **File ID**: RUL-LOOKUP-01
 **Priority**: P1 (Must-follow)
@@ -57,6 +57,56 @@ RULES.md Applied:
 
 ---
 
+## Gotcha and Anti-Pattern Capture
+
+<rule id="RUL-P1-03" priority="P1" scope="universal" enforcement="checkpoint">
+<name>Capture Learned Rules to RULES.md</name>
+
+**When to Capture**: Any time you encounter a repeatable problem, anti-pattern, or non-obvious gotcha during implementation, testing, or debugging that would waste time if hit again.
+
+**Trigger Conditions**:
+- A test fails repeatedly for a non-obvious, environment-specific reason
+- A tool or framework has undocumented behavior that caused wasted effort
+- A workaround was needed for a known limitation
+- A configuration choice prevents a class of errors
+- A dependency has version-specific quirks
+- An anti-pattern caused flaky tests, timeouts, or silent failures
+
+**Capture Format** (append to nearest RULES.md, or create one):
+```markdown
+## Rule: [short-name]
+**Problem**: What goes wrong (1-2 sentences, concrete symptom)
+**Root Cause**: Why it happens (technical explanation)
+**Detection**: How to recognize this issue is occurring
+**Prevention**: Correct pattern to use instead (with code example if applicable)
+**Severity**: Critical | High | Medium
+```
+
+**Example**:
+```markdown
+## Rule: no-networkidle-with-vite
+**Problem**: `waitForLoadState('networkidle')` hangs for 30-60s then times out in Playwright tests
+**Root Cause**: Vite HMR keeps a WebSocket connection open permanently, which Playwright interprets as ongoing network activity
+**Detection**: E2E tests timeout on page load despite the page being visually ready
+**Prevention**: Use `waitForSelector('[data-testid="..."]', { timeout: 5000 })` instead of `waitForLoadState('networkidle')`
+**Severity**: Critical
+```
+
+**Where to Write**:
+1. If a RULES.md exists in the working directory or a parent, append to the most specific (deepest) one
+2. If no RULES.md exists, create one at the project root (`/proj/RULES.md`)
+3. If the rule is specific to a subdirectory (e.g., `tests/e2e/`), create RULES.md there
+
+**What NOT to Capture**:
+- One-off bugs specific to this task (use activity.md instead)
+- General programming best practices (only project/stack-specific gotchas)
+- Rules that duplicate what is already in RULES.md
+
+**Enforcement**: Before emitting any completion signal, check whether any repeatable gotchas were encountered during this session. If yes, capture them per this rule before signaling.
+</rule>
+
+---
+
 ## Compliance Checkpoint (RUL-CP-01)
 
 **Invoke at**: reference (when starting work in a new directory context)
@@ -68,6 +118,7 @@ RULES.md Applied:
 - [ ] RUL-P1-01: Read files in root-to-leaf order (parent first, child overrides)
 - [ ] RUL-P1-01: Applied rules with deeper files overriding shallower files
 - [ ] RUL-P1-02: Documented applied rules in activity.md
+- [ ] RUL-P1-03: Any repeatable gotchas encountered this session? If yes, captured in RULES.md
 </checkpoint>
 
 ---
@@ -88,7 +139,11 @@ This file provides centralized lookup rules for RULES.md discovery and applicati
 - [ ] Ensure rules documentation is up-to-date in activity.md
 
 **Before Response**:
-- [ ] Run compliance checkpoint (RUL-CP-01) — all 6 items
+- [ ] Run compliance checkpoint (RUL-CP-01) — all 7 items
+
+**Pre-Signal (before emitting any completion signal)**:
+- [ ] RUL-P1-03: Were any repeatable gotchas or anti-patterns encountered?
+- [ ] RUL-P1-03: If yes, captured in RULES.md before signaling
 
 ### Example TODO Items
 
@@ -98,6 +153,7 @@ TODO:
 - [ ] RUL-P1-01: Stop if IGNORE_PARENT_RULES found
 - [ ] RUL-P1-01: Read RULES.md files in precedence order (root → leaf)
 - [ ] RUL-P1-02: Document applied rules in activity.md
+- [ ] RUL-P1-03: Capture any gotchas/anti-patterns to RULES.md before signal
 - [ ] RUL-CP-01: Run compliance checkpoint before response
 ```
 
