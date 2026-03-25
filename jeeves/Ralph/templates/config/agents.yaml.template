@@ -62,3 +62,46 @@ agents:
     preferred:
       opencode: ""
       claude: claude-opus-4.5
+
+  prd-creator:
+    description: "PRD Creator - Professional product manager that helps developers create comprehensive PRDs through structured questioning"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-api:
+    description: "PRD API Advisor - Provides API design, error handling, rate limiting, and backend service guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-cli:
+    description: "PRD CLI Advisor - Provides command grammar, output formatting, configuration, and shell integration guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-data:
+    description: "PRD Data Advisor - Provides data pipeline, ETL, ML pipeline, schema design, and observability guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-library:
+    description: "PRD Library Advisor - Provides public API design, packaging, versioning, and distribution guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+
+  prd-advisor-ui:
+    description: "PRD UI Advisor - Provides visual design, interaction, accessibility, and layout guidance for UI-based projects"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-researcher:
+    description: "PRD Researcher - Specialized for design pattern research, competitive analysis, and technology validation"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
