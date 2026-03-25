@@ -27,8 +27,8 @@ tools:
 ---
 
 <!--
-version: 4.0.0
-last_updated: 2026-03-23
+version: 4.1.0
+last_updated: 2026-03-25
 dependencies:
   - prd-advisor-ui v1.0.0
   - prd-advisor-api v1.0.0
@@ -37,6 +37,7 @@ dependencies:
   - prd-advisor-data v1.0.0
   - prd-researcher v3.0.0
 changelog:
+  4.1.0 (2026-03-25): Added mandatory technology integration gotchas research trigger (CORE). Expanded Testing Strategy coverage done criteria to require researched framework-specific gotchas.
   4.0.0 (2026-03-23): Multi-project-type support via advisor sub-agents. Added project type detection, advisor invocation protocol, merge protocol for hybrid projects. Moved UI-specific REF-* sections to prd-advisor-ui. Added forward-skip, compaction exit, complexity-adaptive process. Coverage areas split into CORE (inline) + type-specific (from advisors).
   3.0.0 (2026-03-23): Major rewrite — added invisible-scaffolding state machine, todowrite-tracked coverage, downstream contracts, mandatory research triggers, REF-* reference sections, visible VALIDATE gap summary.
   2.0.0 (2026-03-22): Added visual design system guidance, interaction quality, accessibility, design research protocol, PRD quality gate, session management, conditional sections by project type
@@ -263,7 +264,7 @@ These apply regardless of project type:
 | Data Model & Storage | Entities with field names, types, and relationships |
 | Security & Auth | Auth method specified, or explicitly "not applicable" |
 | Technical Stack | Technology choices following Version Policy |
-| Testing Strategy | Test types, coverage expectations, frameworks |
+| Testing Strategy | Test types, coverage expectations, frameworks, and known framework-specific gotchas/configuration requirements (researched via prd-researcher, not assumed) |
 | Documentation Requirements | What documentation the project must produce |
 | Development Phases | MVP scope, milestones, delivery sequence |
 | Constraints & Costs | Budget, timeline, API costs, known limitations — or explicitly "N/A" |
@@ -383,7 +384,7 @@ The PRD's primary consumer is the **Decomposer** agent (breaks it into tasks). F
 | Technical stack specified | Decomposer validates versions, plans infrastructure tasks | First task blocked on tech decision |
 | Data model with entities, fields, types, relationships | Decomposer creates schema tasks from this | Developer invents schema, may conflict with other tasks |
 | Security/auth approach specified | Decomposer creates auth tasks | Auth deferred, becomes integration nightmare |
-| Testing strategy present | Decomposer determines test infrastructure task | No test framework setup; all tasks lack test guidance |
+| Testing strategy present (including technology integration gotchas) | Decomposer determines test infrastructure task and relays gotchas to worker constraints | No test framework setup; workers walk into known anti-patterns (e.g., using `networkidle` with Vite HMR) |
 | Development phases defined | Decomposer uses for task grouping | Flat task list with unclear priorities |
 | No unresolved TBDs or placeholders | Decomposer signals TASK_BLOCKED on ambiguity | Decomposition stalls |
 
@@ -408,6 +409,7 @@ The **prd-researcher** sub-agent MUST be invoked when ANY of these conditions ar
 | Condition | Research Request |
 |-----------|-----------------|
 | Net-new project with technology recommendations (unconditional) | Validate ALL primary technology choices via web search — current stable version, maintenance status, known deprecations. Do not rely on self-assessment of training data currency. |
+| PRD specifies 2+ technologies that will interact at runtime (unconditional) | Research known integration gotchas, anti-patterns, and required configuration for each technology pairing — especially test framework + build tool/dev server (e.g., Playwright + Vite), UI library + DnD/animation library, ORM + database. Search for "[A] [B] known issues", "[A] with [B] gotchas", "[A] [B] configuration". Document findings as constraints in the PRD. |
 | App/tool category is unfamiliar to you | Research top 3-5 products in the category for patterns and conventions |
 | User names specific reference products to emulate | Research those products. Return concrete patterns, conventions, values. |
 | Competitive landscape is sparse or unclear | Research competitors for feature expectations, UX patterns, and gaps |

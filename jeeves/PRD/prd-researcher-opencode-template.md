@@ -31,10 +31,11 @@ tools:
 ---
 
 <!--
-version: 3.0.0
-last_updated: 2026-03-23
+version: 3.1.0
+last_updated: 2026-03-25
 dependencies: []
 changelog:
+  3.1.0 (2026-03-25): Added Technology Integration Gotcha Research domain, response template, and search query guidance for technology pairing issues.
   3.0.0 (2026-03-23): Added API Design Pattern Research, CLI Convention Research, Library Design Pattern Research, Data Architecture Research domains. Added response templates for each. Updated search query guidance for new domains.
   2.0.0 (2026-03-23): Added Component State Research domain, Spacing & Layout Research domain, enhanced Interaction Pattern Research with structured fields, added Component State Findings and Spacing & Layout Findings tables to Design Research template, added structured interaction pattern fields to template
   1.0.0 (2026-03-22): Initial version — design research, competitive analysis, technology validation for PRD creation
@@ -184,6 +185,41 @@ When validating technology choices:
 4. Check for known security vulnerabilities
 5. Verify compatibility between recommended technologies
 6. Look for migration guides if upgrading from older versions
+
+### Technology Integration Gotcha Research
+
+When researching known issues between specific technology pairings (e.g., test framework + build tool, UI library + DnD library, ORM + database):
+
+1. **Search for pairing-specific issues**: "[A] [B] known issues", "[A] with [B] gotchas", "[A] [B] configuration best practices", "[A] [B] troubleshooting"
+2. **Search for configuration requirements**: "[A] [B] config", "[A] [B] setup guide", "[A] [B] recommended configuration"
+3. **Investigate common failure modes:**
+   - Runtime behavioral conflicts (e.g., HMR WebSockets breaking network-idle detection)
+   - Port/process management issues (e.g., stale dev servers blocking test runners)
+   - Default configuration values that silently cause failures with the paired tool
+   - Silent failure modes where one tool masks errors from the other (e.g., framework crashes producing opaque test timeouts)
+   - Event system or lifecycle conflicts between libraries
+4. **Check official documentation** of both tools for integration/compatibility notes
+5. **Search GitHub issues** for the specific pairing: "site:github.com [A] [B] issue"
+6. **Extract actionable constraints**: For each gotcha found, document:
+   - What breaks and why
+   - The anti-pattern to avoid (with code example if applicable)
+   - The correct approach (with code example if applicable)
+   - Required configuration changes
+
+**Source priority for integration gotcha research:**
+| Rating | Source Type | Examples |
+|--------|-----------|---------|
+| 5 | Official integration/migration guides | Playwright + Vite guide, framework compatibility docs |
+| 4 | GitHub issues with maintainer responses | Confirmed bugs, documented workarounds |
+| 3 | Stack Overflow answers with high votes | Community-verified solutions |
+| 2 | Blog posts and tutorials | Individual experience reports |
+
+**Common high-risk pairings to investigate thoroughly:**
+- Test framework + dev server/build tool (Playwright+Vite, Cypress+Webpack, etc.)
+- UI framework + drag-and-drop library (React+dnd-kit, Vue+vuedraggable, etc.)
+- UI framework + animation library (React+Framer Motion, etc.)
+- State management + server framework (Redux+Next.js SSR, etc.)
+- ORM + database (Prisma+SQLite, Drizzle+PostgreSQL, etc.)
 
 ### Interaction Pattern Research
 
@@ -599,6 +635,46 @@ Structure every response using the appropriate template. Choose the template tha
 - [source: URL, rating: N/5] [brief description]
 ```
 
+### Technology Integration Gotcha Findings
+
+```markdown
+## Integration Gotcha Research: [Technology A] + [Technology B]
+
+### Status: [COMPLETE | PARTIAL]
+
+### Summary
+[2-3 sentence executive summary of integration risks found]
+
+### Gotchas Found
+#### Gotcha 1: [Short description]
+- **What breaks**: [Specific failure mode]
+- **Why**: [Root cause — why these two tools conflict]
+- **Anti-pattern (DO NOT)**:
+  ```[language]
+  // Example of what NOT to do
+  ```
+- **Correct approach (DO)**:
+  ```[language]
+  // Example of the correct approach
+  ```
+- **Required configuration**: [Config changes needed, if any]
+- **Sources**: [source: URL, rating: N/5]
+
+#### Gotcha 2: [Short description]
+...
+
+### Required Configuration
+| Setting | Value | Why |
+|---------|-------|-----|
+| [config key] | [value] | [what it prevents] |
+
+### Recommended Constraints for PRD
+[Ready-to-paste constraint text for the PRD's testing strategy or constraints section]
+
+### Sources
+- [source: URL, rating: N/5] [brief description]
+```
+
 ### Technology Research Findings
 
 ```markdown
@@ -674,6 +750,13 @@ Structure every response using the appropriate template. Choose the template tha
 | Read/Grep/Glob | Existing codebase analysis | Primary (for existing projects) |
 
 ### Search Query Guidance
+
+**Technology Integration Gotchas:**
+- For test+build pairings: "[test framework] [build tool] known issues", "[test framework] [dev server] configuration", "[test framework] [build tool] gotchas [year]"
+- For library pairings: "[library A] [library B] compatibility", "[library A] with [library B] issues"
+- For framework+tool pairings: "[framework] [tool] setup guide", "[framework] [tool] troubleshooting"
+- Check GitHub issues: "site:github.com [repo A] [tool B]"
+- Search for anti-pattern guides: "[tool] anti-patterns", "[tool] common mistakes [year]"
 
 **Design & UI:**
 - Use specific terms: "[app name] design system colors" not "good colors for apps"

@@ -35,10 +35,11 @@ tools:
 
 
 <!--
-version: 3.6.0
-last_updated: 2026-03-22
+version: 3.7.0
+last_updated: 2026-03-25
 dependencies: [shared-manifest.md v2.0.0]
 changelog:
+  3.7.0 (2026-03-25): Added technology integration gotcha extraction from PRD, existing project gotcha doc check (AGENTS.md/rules.md), gotcha relay to test infrastructure and implementation task constraints, testing posture checklist item for gotcha propagation.
   3.6.0 (2026-03-22): Added DEC-P1-UX (interaction quality gate), UX playtest task category, interaction-level implied requirement analysis, Gate 1 interaction quality delegation
   3.5.0 (2026-03-19): Added DEC-P1-TEST-VAL (validation steps must cover all test runners), DEC-P1-TEST-E2E (E2E authoring strategy with distribution decision framework), test runner manifest requirement, clarified test levels in Spec-Anchored workflow
   3.4.0 (2026-03-17): Added implied requirement analysis, testing posture (DEC-P1-TEST), mandatory sub-agent review protocol (DEC-P1-REVIEW), compaction exit protocol, AGENTS.md mandate, normalized section order
@@ -581,6 +582,8 @@ Read the Product Requirements Document:
 - Identify deliverables
 - **Determine project type**: Is this a net-new project or work on an existing codebase?
 - **Flag version references**: Note any specific package/framework versions mentioned in the PRD
+- **Extract technology integration gotchas**: If the PRD documents known gotchas, anti-patterns, or required configuration for technology pairings (e.g., test framework + build tool constraints, library compatibility notes), extract these for inclusion in relevant TASK.md `## Constraints` sections — especially the test infrastructure task. These are PRD-level constraints that workers cannot derive on their own.
+- **Check for existing project gotcha documentation**: Search the project root for AGENTS.md, rules.md, .cursorrules, CONTRIBUTING.md, or similar files that may document technology-specific constraints, gotchas, or required configuration. For existing projects these often contain hard-won lessons (e.g., "always use `workers: 1` for Playwright tests" or "never use `networkidle` with Vite"). Include any findings in the relevant TASK.md constraints.
 
 ### Step 1.1: Validate Versions and Dependencies (DEC-P1-VER)
 
@@ -1334,6 +1337,16 @@ During the READING_PRD phase, evaluate the project's test infrastructure:
   are tightly coupled (→ Concentrated/Grouped). Document the decision.
   See DEC-P1-TEST-E2E.
 
+- **Technology integration gotchas**: If the PRD documents known gotchas
+  or required configuration for the test framework + build tool/dev
+  server pairing (e.g., "Playwright + Vite: never use
+  `waitForLoadState('networkidle')` — HMR WebSocket keeps it pending
+  forever"), these MUST be included in the test infrastructure task's
+  `## Constraints` section AND propagated to every implementation
+  task that writes or runs tests. Workers cannot derive these from the
+  tech stack description alone — they will walk into the anti-pattern
+  blind if the constraint is not explicitly stated.
+
 Include test infrastructure setup as an early task (no implementation
 dependencies) when needed. For net-new projects, the infrastructure
 task should create initial smoke/scaffold E2E tests so that subsequent
@@ -1552,6 +1565,7 @@ For each created task, verify:
 - [ ] Test infrastructure task exists (if project lacks test framework)
 - [ ] If E2E framework in manifest: infrastructure task requires creating initial E2E smoke tests in its acceptance criteria
 - [ ] Validation Steps include ALL test runners from manifest (DEC-P1-TEST-VAL)
+- [ ] If PRD documents technology integration gotchas: constraints section includes them (test infra task + relevant implementation tasks)
 - [ ] If E2E framework exists: E2E run command appears in Validation Steps
 - [ ] E2E authoring strategy documented (Distributed/Concentrated/Grouped) with justification (DEC-P1-TEST-E2E)
 - [ ] If Distributed: E2E user flow criteria in Acceptance Criteria (not just Implementation Notes)
