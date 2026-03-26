@@ -42,7 +42,9 @@ implementation must support.]
 - [ ] Full project test suite passes (ALL tests, not just this feature's)
 - [ ] All Validation Steps commands pass (unit, build, E2E — see below)
 - [ ] No pre-existing tests broken, skipped, or deleted without justification
-- [ ] Test coverage meets project thresholds (80% line, 70% branch, 90% function)
+- [ ] Test coverage meets project thresholds (>=80% line, >=70% branch, >=90% function) — EXACT minimums, no rounding (89.99% function = FAIL)
+- [ ] Per-file coverage: Every file created/modified in this task has >=50% branch and >=60% function coverage
+- [ ] Coverage regression: No modified file has lower coverage than before this task
 - [ ] No scope creep (only what was requested)
 - [ ] Documentation: [specific doc requirement — inline docs, README, API docs, etc.]
 - [ ] If infrastructure was created/modified: AGENTS.md updated with

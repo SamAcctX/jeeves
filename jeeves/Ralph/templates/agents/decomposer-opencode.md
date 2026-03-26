@@ -32,14 +32,11 @@ tools:
   skill: true
 ---
 
-
-
 <!--
-version: 3.7.0
-last_updated: 2026-03-25
-dependencies: [shared-manifest.md v2.0.0, skill/git-automation v2.0.0]
+version: 3.6.0
+last_updated: 2026-03-22
+dependencies: [shared-manifest.md v2.0.0]
 changelog:
-  3.7.0 (2026-03-25): Added technology integration gotcha extraction from PRD, existing project gotcha doc check (AGENTS.md/rules.md), gotcha relay to test infrastructure and implementation task constraints, testing posture checklist item for gotcha propagation.
   3.6.0 (2026-03-22): Added DEC-P1-UX (interaction quality gate), UX playtest task category, interaction-level implied requirement analysis, Gate 1 interaction quality delegation
   3.5.0 (2026-03-19): Added DEC-P1-TEST-VAL (validation steps must cover all test runners), DEC-P1-TEST-E2E (E2E authoring strategy with distribution decision framework), test runner manifest requirement, clarified test levels in Spec-Anchored workflow
   3.4.0 (2026-03-17): Added implied requirement analysis, testing posture (DEC-P1-TEST), mandatory sub-agent review protocol (DEC-P1-REVIEW), compaction exit protocol, AGENTS.md mandate, normalized section order
@@ -304,7 +301,6 @@ CHECK:
   - [ ] SIG-P0-02: Task ID is exactly 4 digits with leading zeros (regex: \d{4})
   - [ ] DEC-P0-01: Signal type is in Decomposer-allowed set (not TASK_COMPLETE, not TASK_FAILED)
   - [ ] SIG-P0-04: Exactly ONE signal in entire response
-  - [ ] GIT-P1-01/02: Final commit done (ALL_TASKS_COMPLETE) or reset + logged attempt (incomplete exit)
 FIX IF: Any P0 check fails. Correct and re-run checkpoint.
 ```
 
@@ -411,39 +407,6 @@ Each state requires these inputs to transition:
 
 ---
 
-## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
-
-Loaded via `skill git-automation` at startup.
-
-The decomposer creates many files over a long session with high
-compaction risk. Commit incrementally so completed work survives:
-
-**After each task folder is created and architect-reviewed (Gate 1):**
-```bash
-git add .ralph/tasks/{{id}}/
-git commit -m "chore(ralph): add task {{id}} spec"
-```
-
-**After TODO.md and deps-tracker.yaml finalized:**
-```bash
-git add -A
-git commit -m "chore(ralph): decompose PRD into N tasks"
-# then emit ALL_TASKS_COMPLETE, EXIT LOOP
-```
-
-**On compaction or TASK_BLOCKED** — follow GIT-P1-02:
-```bash
-git reset --hard HEAD && git clean -fd
-# write session summary (see Compaction Exit Protocol below)
-git add -- '**/activity.md' '**/attempts.md'
-git commit -m "chore(ralph): log incomplete decomposition (<reason>)"
-# then emit signal
-```
-
-Already-committed task folders from earlier Gate 1 commits survive the reset.
-
----
-
 ## COMPACTION EXIT PROTOCOL [CRITICAL]
 
 If the platform injects a compaction/summarization prompt (a system
@@ -460,9 +423,8 @@ your context window is nearly full.
    - Which tasks have been architect-reviewed vs pending
    - Unresolved ambiguities or pending user questions
    - Specific next steps for resuming
-3. Follow GIT-P1-02: reset, commit state files (see GIT COMMIT PROTOCOL above)
-4. Emit: `TASK_INCOMPLETE_0000:context_limit_exceeded`
-5. NO further tool calls after signal emission
+3. Emit: `TASK_INCOMPLETE_0000:context_limit_exceeded`
+4. NO further tool calls after signal emission
 
 ---
 
@@ -477,7 +439,6 @@ At the start of your work, invoke these skills:
 skill using-superpowers
 skill system-prompt-compliance
 skill rationalization-defense
-skill git-automation
 ```
 
 ### Standard Sections
@@ -618,8 +579,6 @@ Read the Product Requirements Document:
 - Identify deliverables
 - **Determine project type**: Is this a net-new project or work on an existing codebase?
 - **Flag version references**: Note any specific package/framework versions mentioned in the PRD
-- **Extract technology integration gotchas**: If the PRD documents known gotchas, anti-patterns, or required configuration for technology pairings (e.g., test framework + build tool constraints, library compatibility notes), extract these for inclusion in relevant TASK.md `## Constraints` sections — especially the test infrastructure task. These are PRD-level constraints that workers cannot derive on their own.
-- **Check for existing project gotcha documentation**: Search the project root for AGENTS.md, rules.md, .cursorrules, CONTRIBUTING.md, or similar files that may document technology-specific constraints, gotchas, or required configuration. For existing projects these often contain hard-won lessons (e.g., "always use `workers: 1` for Playwright tests" or "never use `networkidle` with Vite"). Include any findings in the relevant TASK.md constraints.
 
 ### Step 1.1: Validate Versions and Dependencies (DEC-P1-VER)
 
@@ -1226,8 +1185,16 @@ Every implementation TASK.md MUST include these acceptance criteria:
 - "All behavioral spec scenarios have corresponding test coverage"
 - "Full project test suite passes (run ALL tests, not just tests for
   this feature — no regressions permitted)"
-- "Test coverage meets project thresholds (80% line, 70% branch,
-  90% function) or documents justification for exceptions"
+- "**Aggregate** test coverage meets project thresholds: **>=80% line,
+  >=70% branch, >=90% function**. These are **EXACT minimums** — 89.99%
+  function coverage is a **FAIL**. No rounding. No 'close enough'."
+- "**Per-file** coverage: Every file **created or modified** in this task
+  must have **>=50% branch coverage** and **>=60% function coverage**.
+  High-coverage utility files do NOT compensate for undertested core files.
+  Example: If Card.tsx has 52% branch coverage, that is a FAIL even if
+  the project aggregate is 85%."
+- "**Coverage regression**: No file modified in this task may have **lower**
+  coverage than before the task started (where a pre-task baseline exists)."
 
 **Do NOT write acceptance criteria that reference a subset of tests**
 (e.g., "run auth tests", "run tests in src/auth/"). Always mandate
@@ -1314,6 +1281,32 @@ tests — every subsequent task runs at least those as regression
 checks, even if no feature-specific E2E tests have been written yet.
 This is non-negotiable regardless of authoring strategy.
 
+**Rule 1b: E2E test quality requirements (DEC-P1-TEST-E2E-QUALITY).**
+Every TASK.md that includes E2E test acceptance criteria MUST also
+include these E2E quality constraints in its `## Constraints` or
+`## Implementation Notes` section:
+
+```
+E2E Test Quality Requirements:
+- Every E2E test MUST await all async operations (page loads, API
+  calls, animations) before asserting. Never assert on elements
+  that may not have rendered yet.
+- Every E2E test MUST verify its test data actually exists before
+  interacting with UI elements. If beforeEach creates data, confirm
+  the data rendered before proceeding.
+- Never click on elements that are disabled (aria-disabled="true")
+  or outside the viewport. Use scrollIntoView or equivalent before
+  interacting with off-screen elements.
+- E2E test failures MUST be diagnosed to root cause. "Environmental
+  issue" or "timing issue" is NOT an acceptable diagnosis for test
+  logic bugs like missing awaits, empty test data, or wrong selectors.
+```
+
+**Anti-pattern (REJECT):**
+- TASK.md says "E2E tests cover card deletion flow" but does NOT
+  include the E2E quality requirements above. Workers will write
+  brittle E2E tests that fail for preventable reasons.
+
 **Rule 2: Evaluate E2E authoring distribution during READING_PRD.**
 Choose one of these strategies and document the choice in TODO.md:
 
@@ -1373,16 +1366,6 @@ During the READING_PRD phase, evaluate the project's test infrastructure:
   are tightly coupled (→ Concentrated/Grouped). Document the decision.
   See DEC-P1-TEST-E2E.
 
-- **Technology integration gotchas**: If the PRD documents known gotchas
-  or required configuration for the test framework + build tool/dev
-  server pairing (e.g., "Playwright + Vite: never use
-  `waitForLoadState('networkidle')` — HMR WebSocket keeps it pending
-  forever"), these MUST be included in the test infrastructure task's
-  `## Constraints` section AND propagated to every implementation
-  task that writes or runs tests. Workers cannot derive these from the
-  tech stack description alone — they will walk into the anti-pattern
-  blind if the constraint is not explicitly stated.
-
 Include test infrastructure setup as an early task (no implementation
 dependencies) when needed. For net-new projects, the infrastructure
 task should create initial smoke/scaffold E2E tests so that subsequent
@@ -1422,7 +1405,9 @@ Task A: Implement [feature] with test coverage
     - Behavioral specification (Given/When/Then scenarios)
     - Implementation-agnostic acceptance criteria
     - Test traceability requirement: "Every acceptance criterion must have corresponding test coverage"
-    - Coverage thresholds: 80% line, 70% branch, 90% function (unit/component tests)
+    - Coverage thresholds: >=80% line, >=70% branch, >=90% function (EXACT minimums, no rounding)
+    - Per-file minimums: Every created/modified file must have >=50% branch and >=60% function coverage
+    - Coverage regression: No modified file may have lower coverage than before this task
     - Static analysis requirements (linting, complexity limits)
     - If E2E Distributed strategy: E2E test scenarios for this feature's user flows
     - Validation Steps covering ALL test runners (DEC-P1-TEST-VAL)
@@ -1594,18 +1579,20 @@ For each created task, verify:
 
 **Testing Posture Check (DEC-P1-TEST):**
 - [ ] Acceptance criteria mandate full project test suite (not a subset)
-- [ ] Acceptance criteria require coverage thresholds
+- [ ] Acceptance criteria require EXACT aggregate coverage thresholds (>=80% line, >=70% branch, >=90% function — no rounding)
+- [ ] Acceptance criteria require per-file coverage minimums (>=50% branch, >=60% function per modified file)
+- [ ] Acceptance criteria require coverage regression check (no modified file regresses)
 - [ ] Acceptance criteria require all behavioral spec scenarios to have test coverage
 - [ ] Acceptance criteria include "All Validation Steps commands pass"
 - [ ] Implementation notes include validation approach directive
 - [ ] Test infrastructure task exists (if project lacks test framework)
 - [ ] If E2E framework in manifest: infrastructure task requires creating initial E2E smoke tests in its acceptance criteria
 - [ ] Validation Steps include ALL test runners from manifest (DEC-P1-TEST-VAL)
-- [ ] If PRD documents technology integration gotchas: constraints section includes them (test infra task + relevant implementation tasks)
 - [ ] If E2E framework exists: E2E run command appears in Validation Steps
 - [ ] E2E authoring strategy documented (Distributed/Concentrated/Grouped) with justification (DEC-P1-TEST-E2E)
 - [ ] If Distributed: E2E user flow criteria in Acceptance Criteria (not just Implementation Notes)
 - [ ] If Concentrated: E2E task is followed by a review task AND at least one fix cycle opportunity
+- [ ] If E2E tests exist: TASK.md includes E2E quality requirements (DEC-P1-TEST-E2E-QUALITY)
 
 **Documentation Check (DEC-P1-DOC):**
 - [ ] EVERY task includes documentation acceptance criteria (not just dedicated doc tasks)
@@ -1891,7 +1878,6 @@ Before emitting response:
 | Signal System | [signals.md](shared/signals.md) | SIG-P0-01, SIG-P0-02, SIG-P0-04 |
 | Secrets Protection | [secrets.md](shared/secrets.md) | SEC-P0-01 |
 | Dependency Discovery | [dependency.md](shared/dependency.md) | DEP-P0-01 |
-
 
 ### Not Applicable to Decomposer
 

@@ -447,12 +447,40 @@ Research reveals that phrases like "I apologize," "Wait," "Hmm," and "Therefore"
 
 ---
 
+## CATEGORY 11: HANDOFF PRESSURE (1 pattern)
+
+*Lowering quality standards because of handoff count pressure.*
+
+### Pattern 21: Handoff Pressure Approval
+
+**How it sounds in your thinking**:
+- "We're at handoff 6 of 8, I should just approve this"
+- "If I send it back, we'll hit the limit and it'll be worse"
+- "Better to approve with a caveat than to block entirely"
+- "The handoff limit means I should be lenient on this threshold"
+- "This is good enough given how many handoffs we've used"
+- "I'll note the issue for a future task instead of blocking"
+
+**Why it's wrong**: The handoff limit (HOF-P0-01, max 8) exists to prevent infinite loops — NOT to create deadline pressure for premature approval. A task that does not meet its acceptance criteria is INCOMPLETE regardless of handoff count. Approving with caveats creates technical debt that compounds across downstream tasks. The CORRECT outcome for unfinished work is TASK_INCOMPLETE — that is accurate, not a failure.
+
+**Real case**: A Tester measured 89.81% function coverage (threshold: 90%) and approved because "0.19% is negligible" and the task was approaching the handoff limit. The Manager accepted it. This rationalization cascaded — downstream tasks inherited the coverage gap, and modified files regressed further without detection.
+
+**Corrective mandate**:
+1. STOP treating handoff count as a deadline for approval
+2. If quality standards are not met, signal TASK_INCOMPLETE — period
+3. If handoff limit is reached, signal TASK_INCOMPLETE:handoff_limit_reached — that is the correct signal
+4. The handoff limit being reached means the task stays incomplete. That is an acceptable and correct outcome.
+5. NEVER add "to be addressed in future task" or "deferred" to a TASK_COMPLETE signal
+6. A caveat attached to TASK_COMPLETE is **evidence** that TASK_INCOMPLETE is the correct signal
+
+---
+
 ## SELF-DIAGNOSTIC PROTOCOL
 
 **Run this check BEFORE emitting any completion signal (TASK_COMPLETE):**
 
 ```
-RATIONALIZATION SELF-CHECK (10 questions):
+RATIONALIZATION SELF-CHECK (11 questions):
 
  1. Did I actually DO the thing, or did I reason that it WOULD work?
     → If "would work": NOT complete. Signal BLOCKED or INCOMPLETE.
@@ -484,6 +512,10 @@ RATIONALIZATION SELF-CHECK (10 questions):
 
 10. Am I hiding or minimizing an error I caused?
     → If yes: Report immediately. Concealment = Pattern 20.
+
+11. Am I approving/completing because of handoff pressure or resource limits?
+    → If yes: Handoff count does NOT change quality standards. Signal INCOMPLETE.
+    → Pattern 21: "close enough", "negligible", "deferred" = NOT complete.
 ```
 
 **If ANY answer triggers a corrective action: DO NOT emit TASK_COMPLETE.**
@@ -503,6 +535,7 @@ Rationalization pathways rarely appear alone. The tester failure case showed 4 s
 | Sunk Cost Escalation | Tool Loop Persistence + Partial Credit |
 | Apology Ritual | Policy Prefix Engineering + Constraint Testing |
 | Delegation Invention | False Delegation + Incompletion Rationalization |
+| Handoff Pressure Approval | Scope Minimization + Disclaimer Hedging + Partial Credit |
 
 ---
 
@@ -552,7 +585,7 @@ Rationalization pathways rarely appear alone. The tester failure case showed 4 s
 This skill augments existing compliance checkpoints. When your agent prompt says to run a "Pre-Signal Compliance Gate" or "Pre-Completion Checklist":
 
 1. Run the prompt's checklist FIRST
-2. Then run this skill's Self-Diagnostic Protocol (10 questions)
+2. Then run this skill's Self-Diagnostic Protocol (11 questions)
 3. If EITHER produces a failure: DO NOT emit the signal
 4. Fix the issue, then re-run both checks
 
@@ -562,7 +595,7 @@ This skill augments existing compliance checkpoints. When your agent prompt says
 
 - At the START of any session (load once, apply from memory)
 - When you notice yourself constructing justifications for rule deviations
-- Before emitting TASK_COMPLETE (mandatory 10-question self-check)
+- Before emitting TASK_COMPLETE (mandatory 11-question self-check)
 - When encountering a blocked state and feeling tempted to work around it
 - After any failed attempt, before deciding next steps
 - When you catch yourself apologizing then proceeding unchanged
@@ -570,7 +603,7 @@ This skill augments existing compliance checkpoints. When your agent prompt says
 
 ---
 
-## QUICK REFERENCE: 20 PATTERNS BY NUMBER
+## QUICK REFERENCE: 21 PATTERNS BY NUMBER
 
 | # | Pattern | Category | Key Thought Signature |
 |---|---------|----------|----------------------|
@@ -594,6 +627,7 @@ This skill augments existing compliance checkpoints. When your agent prompt says
 | 18 | Apology Ritual Without Change | token-manipulation | "I apologize" + same behavior |
 | 19 | Policy Prefix Engineering | token-manipulation | "I understand [rule]" + violate |
 | 20 | Concealment Rationalization | safety-bypass | "generate fake data to cover..." |
+| 21 | Handoff Pressure Approval | handoff-pressure | "at handoff 6/8, just approve..." |
 
 ---
 

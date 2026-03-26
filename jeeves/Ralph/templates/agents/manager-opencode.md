@@ -2,7 +2,6 @@
 name: manager
 description: "Ralph Loop Manager Agent - Orchestrates task execution by selecting tasks, invoking worker agents, and managing state"
 mode: all
-
 permission:
   "*": allow
   read: allow
@@ -36,7 +35,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.3.0, shared/quick-reference.md v1.0.0, skill/git-automation v2.0.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.0.0, shared/quick-reference.md v1.0.0]
 changelog:
   2.0.0 (2026-03-17): Normalize per Spec 2. Add ENV-P0, compaction exit, AGENTS.md, missing tools, terminology.
   5.3.0 (2026-03-13): Migrate from TDD to Spec-Anchored routing.
@@ -251,7 +250,6 @@ Check BEFORE each invocation:
 - [ ] **SIG-P0-04**: Exactly ONE signal in response
 - [ ] V5 executed: signal matches SIG-REGEX exactly
 - [ ] V6 executed: state contract verified (TODO.md updated for COMPLETE/BLOCKED)
-- [ ] **GIT-P1-02**: If exiting (compaction/failure), reset + logged attempt committed
 
 **If ANY item fails: STOP, fix issue, re-run checkpoint before proceeding**
 
@@ -605,7 +603,6 @@ last_tool_type: ""
 ```
 skill using-superpowers
 skill system-prompt-compliance
-skill git-automation
 ```
 
 **AGENTS.md Discovery:**
@@ -676,6 +673,29 @@ ELSE:
 If NO → Emit `TASK_FAILED_0000:selection_verify`, EXIT
 
 Transition to DETERMINE_AGENT.
+
+### Cross-Task Debt Awareness (After Task Selection)
+
+After selecting a task but **before** invoking a worker agent, check if any **completed predecessor tasks** left documented caveats that affect this task's scope.
+
+**Protocol:**
+1. Look at the selected task's dependencies in deps-tracker.yaml
+2. For each completed dependency, check if `.ralph/tasks/done/{dep_id}/activity.md` exists
+3. If it exists, scan the **final review summary** for caveat indicators (same list as Post-Completion Caveat Audit above)
+4. If predecessor caveats overlap with the current task's scope:
+   - Add to the worker agent's invocation context: `"NOTE — Inherited debt from task {dep_id}: {summary of caveat}. Address this if it falls within your task's acceptance criteria."`
+
+**This is informational, not blocking.** The worker agent SHOULD address inherited debt if within scope, but predecessor caveats do NOT block task execution.
+
+**Example:**
+```
+Task 0006 depends on Task 0005. Task 0005's activity.md says:
+  "CardEditModal.tsx coverage dropped from 95% to 78% after adding new code paths."
+
+Manager adds to 0006's context:
+  "NOTE — Inherited debt from task 0005: CardEditModal.tsx coverage
+   regressed to 78%. If you modify this file, ensure coverage improves."
+```
 
 ### Step 4: Determine Agent [STATE: DETERMINE_AGENT]
 
@@ -888,8 +908,50 @@ Execute ALL gates. If ANY fail, continue review cycle.
 | 4 | Was refactor validated? (if refactor occurred, FINAL_REVIEW must have passed) | Invoke Tester for final review |
 | 5 | Final signal from Tester? | Wait for Tester response |
 
-**All PASS → Mark complete, emit `TASK_COMPLETE_XXXX`**
+**All PASS → Proceed to Post-Completion Caveat Audit (below)**
 **Any FAIL → Continue review cycle (counts toward handoff limit)**
+
+### Post-Completion Caveat Audit [MANDATORY — before marking any task COMPLETE]
+
+After ALL 5 Review Verification Chain gates pass, the Manager MUST read the Tester's final review summary in activity.md and check for caveat language. **A TASK_COMPLETE with caveats is NOT truly complete.**
+
+**MGR-P0-02 exception**: Reading activity.md is **ALLOWED** here — this occurs AFTER task selection and AFTER receiving TASK_COMPLETE from Tester. MGR-P0-02 only prohibits reading task files BEFORE task selection.
+
+**Scan activity.md for these caveat indicators (ANY match → task is NOT complete):**
+
+| Caveat Phrase | Why It Disqualifies |
+|--------------|---------------------|
+| "to be addressed in future task" | Deferred work = incomplete |
+| "deferred to" | Deferred work = incomplete |
+| "known issue" | Acknowledged defect = incomplete |
+| "acceptable for now" | Conditional approval = incomplete |
+| "close enough" | Threshold not met = incomplete |
+| "negligible difference" | Rationalized shortfall = incomplete |
+| "minor gap" | Acknowledged gap = incomplete |
+| "works in most cases" | Not all cases = incomplete |
+| "environmental issue" (for E2E failures without root-cause evidence) | Undiagnosed failure = incomplete |
+| Coverage number below threshold with rationalization | Threshold not met = incomplete |
+
+**If caveat detected:**
+1. Do NOT mark task complete
+2. Log: "Tester approved with caveats — returning to review cycle"
+3. Re-invoke Tester with instruction: "Your TASK_COMPLETE contained caveats: [quote the caveat]. TASK_COMPLETE requires **zero caveats**. Either fix the issue and re-signal TASK_COMPLETE, or signal TASK_INCOMPLETE with the issue documented."
+4. This re-invocation counts toward handoff limit (HOF-P0-01)
+
+**If NO caveats found → Mark complete, emit `TASK_COMPLETE_XXXX`**
+
+**Worked Example:**
+```
+Tester's activity.md says:
+  "Coverage: Function 89.81% (threshold 90%). The 0.19% gap is negligible.
+   TASK_COMPLETE approved with minor coverage shortfall."
+
+Manager action:
+  1. Scan finds "negligible" and coverage below threshold → CAVEAT DETECTED
+  2. Do NOT emit TASK_COMPLETE
+  3. Re-invoke Tester: "Your approval says 89.81% function coverage with
+     'negligible' gap. 89.81 < 90.00 = FAIL. Fix coverage or signal INCOMPLETE."
+```
 
 ---
 
@@ -927,8 +989,6 @@ After completing work that changes how the project is built, tested, or run, upd
 
 ---
 
----
-
 ## SHARED RULE REFERENCES
 
 | Rule File | Key Rules | Applies | Notes |
@@ -941,7 +1001,6 @@ After completing work that changes how the project is built, tested, or run, upd
 | [dependency.md](shared/dependency.md) | DEP-P0-01 | YES | Circular dependency detection |
 | [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, TLD-P1-01 | YES | Error and tool-use loops |
 | [activity-format.md](shared/activity-format.md) | ACT-P1-12 | YES | Activity.md format |
-
 | [rules-lookup.md](shared/rules-lookup.md) | RUL-P1-01 | YES | RULES.md discovery |
 | [quick-reference.md](shared/quick-reference.md) | (index) | YES | Master rule index |
 
