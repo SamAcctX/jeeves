@@ -1,22 +1,23 @@
 #!/bin/bash
 # git-commit-msg.sh - Conventional commit message generator
-# Task: 0070
 #
 # Usage:
-#   ./git-commit-msg.sh --task-id NNNN --agent-type developer --task-title "Implement feature X"
-#   ./git-commit-msg.sh --task-id NNNN --agent-type tester --task-title "Add tests for Y"
+#   ./git-commit-msg.sh --task-id 0042 --agent-type developer --task-title "Implement feature X"
+#   ./git-commit-msg.sh --task-id 0042 --agent-type tester --task-title "Add tests for Y"
+#   ./git-commit-msg.sh --task-id 0042 --agent-type developer --task-title "Fix login crash" --scope 0042
 #
-# Output: Single line commit message to stdout
+# Output: Single line conventional commit message to stdout
+#   With --scope:    feat(0042): implement feature x
+#   Without --scope: feat: implement feature x
 
 set -e
 
-# Default values
 TASK_ID=""
 AGENT_TYPE=""
 TASK_TITLE=""
+SCOPE=""
 BREAKING="false"
 
-# Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --task-id)
@@ -29,6 +30,10 @@ while [[ $# -gt 0 ]]; do
             ;;
         --task-title)
             TASK_TITLE="$2"
+            shift 2
+            ;;
+        --scope)
+            SCOPE="$2"
             shift 2
             ;;
         --breaking)
@@ -153,8 +158,14 @@ main() {
         breaking_marker="!"
     fi
 
+    # Build scope portion
+    local scope_str=""
+    if [[ -n "$SCOPE" ]]; then
+        scope_str="(${SCOPE})"
+    fi
+
     # Output formatted commit message
-    echo "${commit_type}${breaking_marker}: ${subject}"
+    echo "${commit_type}${breaking_marker}${scope_str}: ${subject}"
 }
 
 main "$@"
