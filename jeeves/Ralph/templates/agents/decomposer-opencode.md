@@ -37,7 +37,7 @@ tools:
 <!--
 version: 3.7.0
 last_updated: 2026-03-25
-dependencies: [shared-manifest.md v2.0.0, shared/git-commit.md v1.1.0]
+dependencies: [shared-manifest.md v2.0.0, skill/git-automation v2.0.0]
 changelog:
   3.7.0 (2026-03-25): Added technology integration gotcha extraction from PRD, existing project gotcha doc check (AGENTS.md/rules.md), gotcha relay to test infrastructure and implementation task constraints, testing posture checklist item for gotcha propagation.
   3.6.0 (2026-03-22): Added DEC-P1-UX (interaction quality gate), UX playtest task category, interaction-level implied requirement analysis, Gate 1 interaction quality delegation
@@ -413,7 +413,7 @@ Each state requires these inputs to transition:
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec.
+Loaded via `skill git-automation` at startup.
 
 The decomposer creates many files over a long session with high
 compaction risk. Commit incrementally so completed work survives:
@@ -477,6 +477,7 @@ At the start of your work, invoke these skills:
 skill using-superpowers
 skill system-prompt-compliance
 skill rationalization-defense
+skill git-automation
 ```
 
 ### Standard Sections
@@ -1890,7 +1891,7 @@ Before emitting response:
 | Signal System | [signals.md](shared/signals.md) | SIG-P0-01, SIG-P0-02, SIG-P0-04 |
 | Secrets Protection | [secrets.md](shared/secrets.md) | SEC-P0-01 |
 | Dependency Discovery | [dependency.md](shared/dependency.md) | DEP-P0-01 |
-| Git Commit Protocol | [git-commit.md](shared/git-commit.md) | GIT-P1-01, GIT-P1-02 |
+
 
 ### Not Applicable to Decomposer
 

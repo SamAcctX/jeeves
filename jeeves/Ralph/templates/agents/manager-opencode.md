@@ -36,7 +36,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.3.0, shared/quick-reference.md v1.0.0, shared/git-commit.md v1.1.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.3.0, shared/quick-reference.md v1.0.0, skill/git-automation v2.0.0]
 changelog:
   2.0.0 (2026-03-17): Normalize per Spec 2. Add ENV-P0, compaction exit, AGENTS.md, missing tools, terminology.
   5.3.0 (2026-03-13): Migrate from TDD to Spec-Anchored routing.
@@ -605,6 +605,7 @@ last_tool_type: ""
 ```
 skill using-superpowers
 skill system-prompt-compliance
+skill git-automation
 ```
 
 **AGENTS.md Discovery:**
@@ -926,16 +927,6 @@ After completing work that changes how the project is built, tested, or run, upd
 
 ---
 
-## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
-
-See [git-commit.md](shared/git-commit.md) for full spec.
-
-The Manager orchestrates but does not produce deliverables. Worker agents
-commit their own work per GIT-P1-01/02. The Manager's role:
-
-- **On `ALL_TASKS_COMPLETE, EXIT LOOP`**: No commit needed (workers already committed).
-- **On compaction or failure**: Follow GIT-P1-02 — reset, write attempt summary to activity.md/attempts.md, commit state files, then emit signal.
-
 ---
 
 ## SHARED RULE REFERENCES
@@ -950,7 +941,7 @@ commit their own work per GIT-P1-01/02. The Manager's role:
 | [dependency.md](shared/dependency.md) | DEP-P0-01 | YES | Circular dependency detection |
 | [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, TLD-P1-01 | YES | Error and tool-use loops |
 | [activity-format.md](shared/activity-format.md) | ACT-P1-12 | YES | Activity.md format |
-| [git-commit.md](shared/git-commit.md) | GIT-P1-01, GIT-P1-02 | YES (GIT-P1-02 only) | Reset on failure, workers commit own work |
+
 | [rules-lookup.md](shared/rules-lookup.md) | RUL-P1-01 | YES | RULES.md discovery |
 | [quick-reference.md](shared/quick-reference.md) | (index) | YES | Master rule index |
 
