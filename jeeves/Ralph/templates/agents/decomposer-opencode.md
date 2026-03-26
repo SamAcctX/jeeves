@@ -37,7 +37,7 @@ tools:
 <!--
 version: 3.7.0
 last_updated: 2026-03-25
-dependencies: [shared-manifest.md v2.0.0]
+dependencies: [shared-manifest.md v2.0.0, shared/git-commit.md v1.1.0]
 changelog:
   3.7.0 (2026-03-25): Added technology integration gotcha extraction from PRD, existing project gotcha doc check (AGENTS.md/rules.md), gotcha relay to test infrastructure and implementation task constraints, testing posture checklist item for gotcha propagation.
   3.6.0 (2026-03-22): Added DEC-P1-UX (interaction quality gate), UX playtest task category, interaction-level implied requirement analysis, Gate 1 interaction quality delegation
@@ -410,6 +410,39 @@ Each state requires these inputs to transition:
 
 ---
 
+## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
+
+See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+
+The decomposer creates many files over a long session with high
+compaction risk. Commit incrementally so completed work survives:
+
+**After each task folder is created and architect-reviewed (Gate 1):**
+```bash
+git add .ralph/tasks/{{id}}/
+git commit -m "chore(ralph): add task {{id}} spec"
+```
+
+**After TODO.md and deps-tracker.yaml finalized:**
+```bash
+git add -A
+git commit -m "chore(ralph): decompose PRD into N tasks"
+# then emit ALL_TASKS_COMPLETE, EXIT LOOP
+```
+
+**On compaction or TASK_BLOCKED** — follow GIT-P1-02:
+```bash
+git reset --hard HEAD && git clean -fd
+# write session summary (see Compaction Exit Protocol below)
+git add -- '**/activity.md' '**/attempts.md'
+git commit -m "chore(ralph): log incomplete decomposition (<reason>)"
+# then emit signal
+```
+
+Already-committed task folders from earlier Gate 1 commits survive the reset.
+
+---
+
 ## COMPACTION EXIT PROTOCOL [CRITICAL]
 
 If the platform injects a compaction/summarization prompt (a system
@@ -426,8 +459,9 @@ your context window is nearly full.
    - Which tasks have been architect-reviewed vs pending
    - Unresolved ambiguities or pending user questions
    - Specific next steps for resuming
-3. Emit: `TASK_INCOMPLETE_0000:context_limit_exceeded`
-4. NO further tool calls after signal emission
+3. Follow GIT-P1-02: reset, commit state files (see GIT COMMIT PROTOCOL above)
+4. Emit: `TASK_INCOMPLETE_0000:context_limit_exceeded`
+5. NO further tool calls after signal emission
 
 ---
 
@@ -1855,6 +1889,7 @@ Before emitting response:
 | Signal System | [signals.md](shared/signals.md) | SIG-P0-01, SIG-P0-02, SIG-P0-04 |
 | Secrets Protection | [secrets.md](shared/secrets.md) | SEC-P0-01 |
 | Dependency Discovery | [dependency.md](shared/dependency.md) | DEP-P0-01 |
+| Git Commit Protocol | [git-commit.md](shared/git-commit.md) | GIT-P1-01, GIT-P1-02 |
 
 ### Not Applicable to Decomposer
 
