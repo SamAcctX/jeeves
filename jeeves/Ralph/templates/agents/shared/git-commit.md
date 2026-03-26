@@ -5,28 +5,19 @@
 Agents MUST commit at defined checkpoints so progress is saved and
 failed attempts can be rolled back with `git reset --hard`.
 
-**Tooling**: Use the git-automation skill scripts at
-`/proj/jeeves/Ralph/skills/git-automation/scripts/`:
-
-| Script | Purpose |
-|--------|---------|
-| `git-wrapper.sh` | Safe git operations with retry and error categorization (source it, then call `git_safe`) |
-| `git-commit-msg.sh` | Generates commit type from agent type + task title keywords |
-| `git-context.sh` | Detects repo context (REPO_ROOT / SUBFOLDER / NO_REPO) |
+**Optional tooling**: The `git-automation` skill
+(`/proj/jeeves/Ralph/skills/git-automation/`) provides helper scripts
+for safe git operations, commit message generation, branch management,
+and conflict detection. Load it with `skill git-automation` if available.
+The protocol below works with or without the skill.
 
 ## GIT-P1-01: Commit on Successful Handoff
 
 Before emitting `TASK_COMPLETE` or `TASK_INCOMPLETE:handoff_to:*`:
 
 ```bash
-SCRIPTS="/proj/jeeves/Ralph/skills/git-automation/scripts"
-source "$SCRIPTS/git-wrapper.sh"
-
-# Generate commit type from agent type + title keywords
-TYPE=$("$SCRIPTS/git-commit-msg.sh" --task-id {{id}} --agent-type {{agent}} --task-title "{{title}}" | cut -d: -f1)
-
 git add -A
-git_safe commit -m "${TYPE}({{id}}): {{description}}"
+git commit -m "<type>(<task-id>): <description>"
 ```
 
 Then emit the signal. The commit is the last action before the signal.
@@ -40,18 +31,15 @@ On compaction prompt, `TASK_FAILED`, or `TASK_BLOCKED` — the agent did
 not finish. Discard partial work, preserve only the attempt log:
 
 ```bash
-SCRIPTS="/proj/jeeves/Ralph/skills/git-automation/scripts"
-source "$SCRIPTS/git-wrapper.sh"
-
 # 1. Nuke all uncommitted work (tracked and untracked)
-git_safe reset --hard HEAD
+git reset --hard HEAD
 git clean -fd
 
 # 2. Write attempt summary to activity.md and attempts.md
 
 # 3. Commit ONLY the state files
 git add -- '**/activity.md' '**/attempts.md'
-git_safe commit -m "chore({{id}}): log failed attempt ({{reason}})"
+git commit -m "chore(<task-id>): log failed attempt (<reason>)"
 ```
 
 Then emit the signal.
@@ -62,8 +50,7 @@ would just need undoing anyway.
 
 ## Commit Type Selection
 
-Use Conventional Commits. The `git-commit-msg.sh` script auto-selects
-type from agent type and title keywords. Override rules (first match):
+Use Conventional Commits. Evaluate in order — first match wins:
 
 | Title keyword | Type | Overrides agent default |
 |---------------|------|------------------------|
@@ -82,13 +69,14 @@ Agent defaults (when no keyword match):
 | writer | docs |
 | researcher | docs |
 | ui-designer | feat |
+| decomposer | chore |
 | (unknown) | chore |
 
 ## Message Format
 
 `<type>(<scope>): <description>`
 
-- **type**: from script or table above
+- **type**: from tables above
 - **scope**: 4-digit task ID (e.g., `0042`) or `ralph` for decomposer
 - **description**: imperative, lowercase, no trailing period
 - Append `!` after type for breaking changes: `feat!(0042): ...`
