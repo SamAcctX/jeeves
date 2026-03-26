@@ -5,12 +5,6 @@
 Agents MUST commit at defined checkpoints so progress is saved and
 failed attempts can be rolled back with `git reset --hard`.
 
-**Optional tooling**: The `git-automation` skill
-(`/proj/jeeves/Ralph/skills/git-automation/`) provides helper scripts
-for safe git operations, commit message generation, branch management,
-and conflict detection. Load it with `skill git-automation` if available.
-The protocol below works with or without the skill.
-
 ## GIT-P1-01: Commit on Successful Handoff
 
 Before emitting `TASK_COMPLETE` or `TASK_INCOMPLETE:handoff_to:*`:

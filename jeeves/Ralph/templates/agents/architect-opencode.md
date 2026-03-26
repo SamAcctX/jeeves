@@ -223,6 +223,7 @@ If any work done before skills invoked → TASK_INCOMPLETE:missing_skills
 - [ ] ARCH-P1-01: Handoff target = tester
 - [ ] ACT-P1-12: activity.md updated with attempt header, work completed, handoff record
 - [ ] TLD-P1-01: No tool-use loop detected (all tool signatures <3x)
+- [ ] GIT-P1-01/02: Committed work or reset + logged attempt
 
 ---
 
@@ -746,7 +747,7 @@ When TLD-P1-01a is breached:
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 **Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
 ```bash

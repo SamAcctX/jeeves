@@ -249,6 +249,7 @@ Maximum 8 worker agent invocations per task. At count = 8: emit `TASK_INCOMPLETE
 - [ ] ACT-P1-12: activity.md updated this turn before signal emission
 - [ ] HOF-P0-01: Handoff count recorded if this is a handoff
 - [ ] SIG-REGEX: Full signal matches authoritative regex
+- [ ] GIT-P1-01/02: Committed work or reset + logged attempt
 
 **FAIL ANY P0**: STOP immediately, emit appropriate signal.
 **FAIL ANY P1**: Document in activity.md, take corrective action before proceeding.
@@ -1188,7 +1189,7 @@ Use `sequentialthinking` for:
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 **Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
 ```bash

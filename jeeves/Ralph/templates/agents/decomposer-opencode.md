@@ -304,6 +304,7 @@ CHECK:
   - [ ] SIG-P0-02: Task ID is exactly 4 digits with leading zeros (regex: \d{4})
   - [ ] DEC-P0-01: Signal type is in Decomposer-allowed set (not TASK_COMPLETE, not TASK_FAILED)
   - [ ] SIG-P0-04: Exactly ONE signal in entire response
+  - [ ] GIT-P1-01/02: Final commit done (ALL_TASKS_COMPLETE) or reset + logged attempt (incomplete exit)
 FIX IF: Any P0 check fails. Correct and re-run checkpoint.
 ```
 
@@ -412,7 +413,7 @@ Each state requires these inputs to transition:
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 The decomposer creates many files over a long session with high
 compaction risk. Commit incrementally so completed work survives:

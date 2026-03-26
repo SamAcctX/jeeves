@@ -1509,13 +1509,15 @@ skill rationalization-defense
 - [ ] **Coverage Gates**: Met before READY_FOR_REVIEW handoff (80% line, 70% branch, 90% function)
 - [ ] **Spec-to-Test Traceability**: Documented in activity.md before handoff
 
+- [ ] **GIT**: Committed work (GIT-P1-01) or reset + logged attempt (GIT-P1-02)
+
 **If ANY check fails**: STOP and correct before proceeding.
 
 ---
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 **Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
 ```bash

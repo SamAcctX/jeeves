@@ -251,6 +251,7 @@ Check BEFORE each invocation:
 - [ ] **SIG-P0-04**: Exactly ONE signal in response
 - [ ] V5 executed: signal matches SIG-REGEX exactly
 - [ ] V6 executed: state contract verified (TODO.md updated for COMPLETE/BLOCKED)
+- [ ] **GIT-P1-02**: If exiting (compaction/failure), reset + logged attempt committed
 
 **If ANY item fails: STOP, fix issue, re-run checkpoint before proceeding**
 
@@ -927,7 +928,7 @@ After completing work that changes how the project is built, tested, or run, upd
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 The Manager orchestrates but does not produce deliverables. Worker agents
 commit their own work per GIT-P1-01/02. The Manager's role:

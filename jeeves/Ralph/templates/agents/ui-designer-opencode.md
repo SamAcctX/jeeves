@@ -1228,7 +1228,7 @@ If the feedback contradicts TASK.md acceptance criteria:
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 **Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
 ```bash
@@ -1346,6 +1346,7 @@ Where:
 - [ ] Signal will be FIRST token (SIG-P0-01)
 - [ ] Using TASK_INCOMPLETE with handoff_to:tester:see_activity_md (DES-P0-01 + HOF-P1-02)
 - [ ] Handoff state documented in activity.md (not in signal suffix)
+- [ ] GIT-P1-01/02: Committed work or reset + logged attempt
 
 ---
 

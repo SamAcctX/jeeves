@@ -217,6 +217,7 @@ target_agent MUST NOT equal current_agent or last_handoff_from.
 - [ ] SIG-P0-04: Exactly one signal emitted
 - [ ] ACT-P1-12: activity.md updated before signal
 - [ ] RES-TODO-01: All TODO questions answered or flagged before signal
+- [ ] GIT-P1-01/02: Committed work or reset + logged attempt
 
 **FAIL ANY P0**: STOP immediately, emit appropriate signal.
 **FAIL ANY P1**: Document in activity.md, take corrective action before proceeding.
@@ -886,7 +887,7 @@ Detects when the same tool is used repeatedly on the same target — independent
 
 ## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
 
-See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+See [git-commit.md](shared/git-commit.md) for full spec.
 
 **Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
 ```bash
