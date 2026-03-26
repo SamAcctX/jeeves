@@ -36,7 +36,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0, shared/git-commit.md v1.1.0]
 changelog:
   2.0.0 (2026-03-17): Normalize to canonical structure per Spec 2. Add ENV-P0, compaction exit protocol, AGENTS.md discovery/maintenance, terminology standardization. Add missing tools.
   1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. No rule ID changes.
@@ -744,6 +744,29 @@ When TLD-P1-01a is breached:
 
 ---
 
+## GIT COMMIT PROTOCOL [GIT-P1-01 / GIT-P1-02]
+
+See [git-commit.md](shared/git-commit.md) for full spec. Optionally load `skill git-automation` for safe wrappers.
+
+**Successful handoff** (TASK_COMPLETE / handoff_to:*) — commit before signal:
+```bash
+git add -A
+git commit -m "<type>({{id}}): <description>"
+# then emit signal
+```
+Type: `docs` (architecture specs), `feat` (design artifacts).
+
+**Incomplete exit** (compaction / TASK_FAILED / TASK_BLOCKED) — reset, log, commit log:
+```bash
+git reset --hard HEAD && git clean -fd
+# write attempt summary to activity.md and attempts.md
+git add -- '**/activity.md' '**/attempts.md'
+git commit -m "chore({{id}}): log failed attempt (<reason>)"
+# then emit signal
+```
+
+---
+
 ## SHARED RULE REFERENCES
 
 | Rule File | Key Rules | Applies | Notes |
@@ -756,6 +779,7 @@ When TLD-P1-01a is breached:
 | [dependency.md](shared/dependency.md) | DEP-P0-01 | YES | Circular dependency detection |
 | [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, TLD-P1-01 | YES | Error and tool-use loops |
 | [activity-format.md](shared/activity-format.md) | ACT-P1-12 | YES | activity.md format |
+| [git-commit.md](shared/git-commit.md) | GIT-P1-01, GIT-P1-02 | YES | Commit on handoff, reset on failure |
 | [rules-lookup.md](shared/rules-lookup.md) | RUL-P1-01 | YES | RULES.md discovery |
 | [quick-reference.md](shared/quick-reference.md) | (index) | YES | Master rule index |
 
