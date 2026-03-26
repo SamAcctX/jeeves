@@ -36,7 +36,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.2.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
 changelog:
   2.0.0 (2026-03-17): Normalize to canonical structure per Spec 2. Add ENV-P0, compaction exit protocol, AGENTS.md discovery/maintenance, terminology standardization. Add missing tools.
   1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. No rule ID changes.
@@ -118,7 +118,7 @@ commands without timeout bounds.
 Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format**: SIG-P0-01 (Signal format), SEC-P0-01 (No secrets), CTX-P0-01 (Compaction exit), DEP-P0-01 (Circular deps), HOF-P0-01 (Handoff limit), HOF-P0-02 (No handoff loops), ARCH-P0-01 (No code/tests), ARCH-P0-02 (Skills invoked)
 2. **P0/P1 State Contract**: State updates before signals (ACT-P1-12), TDD-P0-01 (Role boundary/SOD)
-3. **P1 Workflow Gates**: LPD-P1-01 (Error loop limits), TLD-P1-01 (Tool-use loop limits), DEP-P1-01 (Dependencies), RUL-P1-01 (RULES.md lookup)
+3. **P1 Workflow Gates**: LPD-P1-01 (Error loop limits), TLD-P1-01 (Tool-use loop limits), DEP-P1-01 (Dependencies), RUL-P1-01 (RULES.md lookup), RUL-P1-03 (Gotcha capture)
 4. **P2/P3 Best Practices**: HOF-P2-01 (Handoff best practices)
 
 Tie-break: If lower priority conflicts with higher priority, drop the lower priority.
@@ -559,6 +559,7 @@ Summary of architectural decisions and guidance follows here...
 - [ ] HOF-P1-02: Handoff suffix is `:see_activity_md` (not a custom message)
 - [ ] Exactly ONE signal token
 - [ ] Signal is FIRST token (character position 0)
+- [ ] RUL-P1-03: Any repeatable gotchas or anti-patterns encountered this session captured in RULES.md
 
 ### AGENTS.md Maintenance [MANDATORY when applicable]
 

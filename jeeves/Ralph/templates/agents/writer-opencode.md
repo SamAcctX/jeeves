@@ -36,7 +36,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.2.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
 changelog:
   2.0.0 (2026-03-17): Normalize to canonical structure per Spec 2. Add ENV-P0, compaction exit protocol, AGENTS.md discovery/maintenance, terminology standardization. Convert XML to Markdown. Add missing tools.
   1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow.
@@ -167,8 +167,8 @@ Priority hierarchy (higher wins on conflict):
 1. **P0 Safety & Forbidden Actions**: SEC-P0-01 (no secrets), TDD-P0-01 (role boundaries — NEVER write code/tests)
 2. **P0 Signal Format**: SIG-P0-01 (first token), SIG-P0-02 (4-digit ID), SIG-P0-03 (message required), SIG-P0-04 (one signal)
 3. **P0/P1 State Contract**: CTX-P0-01 (compaction exit protocol), State updates before signals
-4. **P1 Workflow Gates**: HOF-P0-01 (handoff limit ≤8), TDD-P1-01 (post-review only)
-5. **P2/P3 Best Practices**: RUL-P1-01 (RULES.md lookup), ACT-P1-12 (activity.md updates), style guidance
+4. **P1 Workflow Gates**: HOF-P0-01 (handoff limit ≤8), TDD-P1-01 (post-review only), RUL-P1-01 (RULES.md lookup), RUL-P1-03 (Gotcha capture)
+5. **P2/P3 Best Practices**: ACT-P1-12 (activity.md updates), style guidance
 
 **Tie-break**: Lower-priority rule is DROPPED if it conflicts with a higher-priority rule.
 
@@ -230,6 +230,7 @@ Maximum 8 worker agent invocations per task. At count = 8: emit `TASK_INCOMPLETE
 - [ ] TLD-P1-01: Tool signature (tool_type:target) NOT in last 2 calls (3rd = STOP, signal TASK_INCOMPLETE)
 - [ ] ACT-P1-12: activity.md will be updated this turn before signal emission
 - [ ] AGENTS.md: Checked for AGENTS.md files in project
+- [ ] RUL-P1-01: Walked directory tree for RULES.md files, applied rules, documented in activity.md
 
 ### Trigger 2: Pre-Tool-Call
 - [ ] CTX-P0-01: If compaction prompt received → follow exit protocol
@@ -306,7 +307,8 @@ Here is the result: TASK_COMPLETE_0042
 
 | State | Entry Action | Valid Transitions | Exit Condition |
 |-------|--------------|-------------------|----------------|
-| START | Read TASK.md, activity.md | → REQUIREMENTS | Files read successfully |
+| START | Read TASK.md, activity.md | → DISCOVER_RULES | Files read successfully |
+| DISCOVER_RULES | Walk directory tree for RULES.md (RUL-P1-01) | → REQUIREMENTS | RUL-P1-01 complete (rules documented or "none found") |
 | REQUIREMENTS | Run PREDOC-01–04, HOF/TDD validators | → GATHER, → TASK_BLOCKED | All validators pass |
 | GATHER | Research topic, collect sources | → OUTLINE, → TASK_BLOCKED | Source material collected |
 | OUTLINE | Create structure, identify sections | → DRAFT | Outline has ≥3 sections |
@@ -427,7 +429,7 @@ Read these files at the start of each execution:
 
 - [ ] TASK.md read and understood
 - [ ] AGENTS.md checked and read (if present)
-- [ ] RULES.md lookup completed (see rules-lookup.md if applicable)
+- [ ] RUL-P1-01: RULES.md lookup completed — walk directory tree, document in activity.md
 - [ ] Feature passed Tester validation (check activity.md for `tester_validation: passed`)
 - [ ] No ambiguity in requirements (if ambiguous → TASK_BLOCKED with specific question)
 - [ ] Dependency check completed (DEP-CP-01 — see dependency.md if applicable)
@@ -632,6 +634,13 @@ Document in activity.md BEFORE emitting signal:
 - Key decisions made
 - Quality gate results
 - Challenges overcome
+
+### Step 7.5: Capture Gotchas (RUL-P1-03) [MANDATORY before signal]
+
+Before emitting any signal, check:
+- [ ] RUL-P1-03: Were any repeatable gotchas or anti-patterns encountered this session?
+- [ ] If YES: Append to nearest RULES.md (or create at project root) using capture format from rules-lookup.md
+- [ ] If NO: Proceed to signal emission
 
 ### Step 8: Emit Signal [CRITICAL]
 

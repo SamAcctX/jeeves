@@ -38,7 +38,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.2.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
 changelog:
   2.0.0 (2026-03-17): Normalize to canonical structure per Spec 2. Add ENV-P0, compaction exit protocol, AGENTS.md discovery/maintenance, terminology standardization. Add missing tools.
   1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. Remove HANDOFF_* signal refs. No rule ID changes.
@@ -137,7 +137,7 @@ Priority hierarchy (higher wins on conflict):
 | P0 | State Contract | CTX-P0-01, HOF-P0-01 | STOP on violation |
 | P0 | Role Boundary | RES-ROLE-01 | STOP, document, handoff |
 | P0 | Environment | ENV-P0-01 to ENV-P0-04 | STOP on violation |
-| P1 | Workflow Gates | HOF-P1-01, LPD-P1-01, TLD-P1-01, TLD-P1-02 | BLOCK until resolved |
+| P1 | Workflow Gates | HOF-P1-01, LPD-P1-01, TLD-P1-01, TLD-P1-02, RUL-P1-01, RUL-P1-03 | BLOCK until resolved |
 | P1 | Research Quality | RES-P1-01 to RES-P1-04, RES-TODO-01 | Complete before signal |
 | P2 | Best Practices | ACT-P1-12, LPD-P2-01, RES-P2-01 | Apply when applicable |
 
@@ -591,6 +591,7 @@ FOR each theme IN themes:
 - [ ] Exactly one signal in response (SIG-P0-04)
 - [ ] Handoff uses `:see_activity_md` suffix if applicable
 - [ ] No unresolved tool loops (TLD-P1-01 — all signatures < 3x)
+- [ ] RUL-P1-03: Any repeatable gotchas or anti-patterns encountered this session captured in RULES.md
 
 ### AGENTS.md Maintenance [MANDATORY when applicable]
 

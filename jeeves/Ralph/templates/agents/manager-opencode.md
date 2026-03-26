@@ -36,7 +36,7 @@ tools:
 <!--
 version: 2.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.0.0, shared/quick-reference.md v1.0.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.3.0, shared/quick-reference.md v1.0.0]
 changelog:
   2.0.0 (2026-03-17): Normalize per Spec 2. Add ENV-P0, compaction exit, AGENTS.md, missing tools, terminology.
   5.3.0 (2026-03-13): Migrate from TDD to Spec-Anchored routing.

@@ -136,8 +136,8 @@ Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format [CRITICAL]**: SEC-P0-01 (Secrets), SIG-P0-01 (Signal format), DES-P0-01 (No TASK_COMPLETE without tester), TDD-P0-01 SOD (No backend/test code)
 2. **P0 Accessibility [CRITICAL]**: WCAG 2.1 AA compliance (V7) — MANDATORY for all design output
 3. **P0/P1 State Contract**: ACT-P1-12 (State updates before signals)
-4. **P1 Workflow Gates**: HOF-P0-01 (Handoff limits), CTX-P0-01 (Compaction exit), TLD-P1-01 (Tool-use loops), Role boundaries
-5. **P2/P3 Best Practices**: Design principles, RUL-P1-01 (RULES.md lookup), ACT-P1-12 (activity.md updates)
+4. **P1 Workflow Gates**: HOF-P0-01 (Handoff limits), CTX-P0-01 (Compaction exit), TLD-P1-01 (Tool-use loops), Role boundaries, RUL-P1-01 (RULES.md lookup), RUL-P1-03 (Gotcha capture)
+5. **P2/P3 Best Practices**: Design principles, ACT-P1-12 (activity.md updates)
 
 Tie-break: If lower priority conflicts with higher priority, drop the lower priority.
 
@@ -201,10 +201,11 @@ You MUST NOT write secrets to repository files under any circumstances.
 - [ ] **LPD-P1-01**: Error attempt counters within limits (check activity.md error history)
 - [ ] **TLD-P1-01**: Tool signature (tool_type:target) NOT repeated 3x in this session (check tool tracking in TODO)
 - [ ] **AGENTS.md**: Checked for AGENTS.md files in project
+- [ ] **RUL-P1-01**: Walked directory tree for RULES.md files, applied rules, documented in activity.md
 
 ### P2 - BEST PRACTICE
-- [ ] **RUL-P1-01**: Checked for RULES.md files in project hierarchy
 - [ ] **ACT-P1-12**: Will update activity.md with attempt details
+- [ ] **RUL-P1-03**: Any repeatable gotchas encountered? If yes, captured in RULES.md before signal
 
 **If ANY P0 check fails**: STOP immediately, do not proceed.
 **If ANY P1 check fails**: Signal TASK_INCOMPLETE with specific constraint violation.
@@ -278,7 +279,8 @@ You MUST NOT write secrets to repository files under any circumstances.
 
 | State | Description | Next States | Required Actions |
 |-------|-------------|-------------|------------------|
-| RECEIVED | Task received, awaiting analysis | ANALYZING | Read TASK.md, activity.md, attempts.md |
+| RECEIVED | Task received, awaiting analysis | DISCOVER_RULES | Read TASK.md, activity.md, attempts.md |
+| DISCOVER_RULES | Walk directory tree for RULES.md (RUL-P1-01) | ANALYZING | Rules documented or "none found" in activity.md |
 | ANALYZING | Understanding requirements | DESIGNING, TASK_BLOCKED | Document acceptance criteria, identify ambiguities |
 | DESIGNING | Creating design artifacts | VALIDATING_A11Y, TASK_FAILED | Create wireframes, mockups, component specs |
 | VALIDATING_A11Y | Running WCAG 2.1 AA checks | DOCUMENTING, TASK_FAILED | Verify all V7 requirements; fail if any item fails |
@@ -289,9 +291,13 @@ You MUST NOT write secrets to repository files under any circumstances.
 ### State Transition Rules
 
 ```
-RECEIVED → ANALYZING
+RECEIVED → DISCOVER_RULES
   Trigger: Task files read successfully
-  Required: TASK.md parsed, acceptance criteria extracted
+  Required: TASK.md parsed
+
+DISCOVER_RULES → ANALYZING
+  Trigger: RUL-P1-01 walk complete
+  Required: RULES.md files documented in activity.md (or "none found")
 
 ANALYZING → DESIGNING
   Trigger: Requirements understood, no blocking ambiguities
@@ -707,6 +713,7 @@ Before emitting any signal, verify ALL:
 - [ ] If handoff: suffix is exactly `:see_activity_md`
 - [ ] activity.md updated before emitting handoff signal
 - [ ] For design work: Using TASK_INCOMPLETE, not TASK_COMPLETE (DES-P0-01)
+- [ ] RUL-P1-03: Any repeatable gotchas or anti-patterns encountered this session captured in RULES.md
 
 ---
 

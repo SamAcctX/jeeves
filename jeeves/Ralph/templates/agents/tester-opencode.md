@@ -38,7 +38,7 @@ tools:
 <!--
 version: 5.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.2.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
 changelog:
   5.0.0 (2026-03-17): Normalize per Spec 2. Convert XML to Markdown. Add compaction exit, AGENTS.md, terminology standardization. Remove context percentage monitoring.
   4.0.0 (2026-03-13): Role shift from Test Author to QA Reviewer.
@@ -164,8 +164,8 @@ Never block execution with foreground processes.
 Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format [CRITICAL]**: SIG-P0-01, SIG-P0-02, SEC-P0-01, TDD-P0-03, ENV-P0-02, CTX-P0-01, HOF-P0-01
 2. **P0/P1 State Contract**: State updates before signals
-3. **P1 Workflow Gates**: HOF-P1-01, LPD-P1-01, TLD-P1-01, ACT-P1-12
-4. **P2/P3 Best Practices**: RUL-P1-01, SIG-P1-02
+3. **P1 Workflow Gates**: HOF-P1-01, LPD-P1-01, TLD-P1-01, ACT-P1-12, RUL-P1-01 (RULES.md lookup), RUL-P1-03 (Gotcha capture)
+4. **P2/P3 Best Practices**: SIG-P1-02
 
 Tie-break: Lower priority drops if conflicts with higher priority.
 
@@ -255,6 +255,8 @@ When the platform injects a compaction/summarization prompt, STOP immediately. T
 - [ ] LPD-P1-01d: Total attempts this task < 10 (current: ___)
 - [ ] TLD-P1-01: Tool signature not repeated 3x in session (check session context)
 - [ ] ACT-P1-12: activity.md will be updated before signal
+- [ ] RUL-P1-01: Walked directory tree for RULES.md files, applied rules, documented in activity.md
+- [ ] RUL-P1-03: Any repeatable gotchas encountered? If yes, captured in RULES.md before signal
 - [ ] ROLE: QA Reviewer -- reviewing and enhancing, not authoring from scratch
 - [ ] STATE: Current state is valid per State Machine
 - [ ] AGENTS.md: Checked for AGENTS.md files in project
@@ -281,7 +283,7 @@ When the platform injects a compaction/summarization prompt, STOP immediately. T
 
 | Current State | Event | Next State | Signal |
 |---------------|-------|------------|--------|
-| VERIFYING | All checks pass | SCOPING | None |
+| VERIFYING | All checks pass, RULES.md discovered (RUL-P1-01) | SCOPING | None |
 | VERIFYING | Invalid handoff_status | BLOCKED | TASK_BLOCKED_XXXX:message |
 | SCOPING | Criteria mapped | REVIEWING | None |
 | SCOPING | Ambiguous criteria | BLOCKED | TASK_BLOCKED_XXXX:message |
@@ -448,12 +450,24 @@ If tempted to fix production code:
 2. `.ralph/tasks/{{id}}/TASK.md` - Task definition and acceptance criteria
 3. `.ralph/tasks/{{id}}/attempts.md` - Detailed attempt history
 
+#### 0.2.5 Discover RULES.md Files [RUL-P1-01 - MANDATORY]
+
+1. Walk up directory tree from task working directory to root
+2. Collect all RULES.md files found
+3. Stop if `IGNORE_PARENT_RULES` encountered
+4. Read files in root-to-leaf order (deeper overrides shallower)
+5. Document applied rules in activity.md
+6. If no RULES.md found: proceed with shared rules only, document "No RULES.md files found"
+
+**Apply discovered rules**: Use RULES.md conventions when reviewing code quality, test quality, and naming conventions. Flag violations of project-specific rules in review findings.
+
 #### 0.3 Pre-Review Checklist
 
 **BEFORE PROCEEDING:**
 - [ ] TDD-P0-03: SOD rules understood
 - [ ] ENV-P0-02: Headless environment confirmed (all test execution will be scripted/CLI-based)
 - [ ] ACT-P1-12: activity.md read (check handoff status)
+- [ ] RUL-P1-01: RULES.md files discovered and documented in activity.md
 - [ ] TLD-P1-01: Tool signature tracking initialized
 - [ ] Acceptance criteria reviewed (word for word)
 - [ ] Developer's spec-to-test traceability reviewed
@@ -557,6 +571,7 @@ PRE-SIGNAL TODO CHECK:
 - [ ] COVERAGE thresholds checked and documented
 - [ ] MUTATION testing run (if tooling available) or documented as unavailable
 - [ ] Tool check items: No tool signature at 3/3 (TLD-P1-01)
+- [ ] RUL-P1-03: Any repeatable gotchas encountered? Captured in RULES.md before signal
 - [ ] Signal choice matches TODO state:
       -> All AC done + all tests pass + coverage met + quality OK = TASK_COMPLETE
       -> Any DEFECT items open = TASK_INCOMPLETE:handoff_to:developer
@@ -1178,6 +1193,10 @@ If mutation testing tooling is available for the project's stack:
 - [ ] Only test code changed/added
 - [ ] Defect reports created for production code bugs
 
+### Rules Capture [RUL-P1-03]
+- [ ] Any repeatable gotchas or anti-patterns encountered this session?
+- [ ] If yes: captured in nearest RULES.md (or created at project root)
+
 ### Verification
 - [ ] Self-verification: All tests pass
 - [ ] LPD-P1-01a: Attempt count < 3 on any issue
@@ -1483,21 +1502,9 @@ Before emitting response, verify:
 - [ ] No prose before signal
 - [ ] Exactly one signal emitted
 
-## RULES.md Lookup [RUL-P1-01]
+## RULES.md Lookup [RUL-P1-01, RUL-P1-03]
 
-**Procedure:**
-1. Walk up directory tree from working directory
-2. Collect all RULES.md files
-3. Stop if IGNORE_PARENT_RULES encountered
-4. Read root-to-leaf (deepest takes precedence)
-
-**Documentation:**
-```markdown
-## Attempt {{N}} [{{timestamp}}]
-RULES.md Applied:
-- /proj/RULES.md
-- /proj/src/RULES.md
-```
+See Step 0.2.5 (VERIFYING state) for discovery procedure. See Pre-Completion Checklist for RUL-P1-03 gotcha capture.
 
 ## Secrets Protection [SEC-P0-01, SEC-P1-01]
 

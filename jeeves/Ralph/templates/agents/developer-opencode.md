@@ -38,7 +38,7 @@ tools:
 <!--
 version: 3.0.0
 last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.2.0]
+dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0]
 changelog:
   3.0.0 (2026-03-17): Normalize per Spec 2. Add compaction exit, AGENTS.md, DEV-P0-TESTBUG, terminology.
   2.0.0 (2026-03-13): Initial structured version.
@@ -186,8 +186,8 @@ Priority hierarchy (higher wins on conflict):
 1. **P0 Safety/Format [CRITICAL]**: SEC-P0-01 (Secrets), SIG-P0-01 (Signal format), TDD-P0-02 (No TASK_COMPLETE), TDD-P0-01 (Cannot modify Tester's tests during INDEPENDENT_REVIEW), ENV-P0-02 (Headless/non-interactive only), DEV-P0-TESTBUG (Test bug handoff)
 2. **P0/P1 State Contract**: ACT-P1-12 (State updates before signals)
 3. **P1 Workflow Gates**: HOF-P0-01 (Handoff limits), CTX-P0-01 (Compaction exit)
-4. **P1 Spec-Anchored Compliance**: TDD-P1-01 (Phase state machine), Coverage gates (80% line, 70% branch, 90% function)
-5. **P2/P3 Best Practices**: RUL-P1-01 (RULES.md lookup), ACT-P1-12 (activity.md updates)
+4. **P1 Spec-Anchored Compliance**: TDD-P1-01 (Phase state machine), Coverage gates (80% line, 70% branch, 90% function), RUL-P1-01 (RULES.md lookup), RUL-P1-03 (Gotcha capture)
+5. **P2/P3 Best Practices**: ACT-P1-12 (activity.md updates)
 
 Tie-break: Lower priority drops on conflict with higher priority.
 
@@ -234,6 +234,7 @@ Developer MUST NOT modify tests written by Tester during INDEPENDENT_REVIEW phas
 - [ ] TDD-P0-01 SOD: Will NOT modify tests written by Tester during INDEPENDENT_REVIEW phase
 - [ ] ENV-P0-02: No GUI/interactive operations planned (headless container)
 - [ ] AGENTS.md: Checked for AGENTS.md files in project
+- [ ] RUL-P1-01: Walked directory tree for RULES.md files, applied rules, documented in activity.md
 - [ ] CTX-P0-01: If compaction prompt received → follow exit protocol
 
 ### Trigger 2: Pre-Tool-Call
@@ -247,8 +248,8 @@ Developer MUST NOT modify tests written by Tester during INDEPENDENT_REVIEW phas
 - [ ] DEV-P0-TESTBUG: If fixing a test failure — verified the bug is in MY code, not in the test itself
 
 ### Trigger 3: Pre-Response
-- [ ] RUL-P1-01: Checked for RULES.md files in project hierarchy
 - [ ] ACT-P1-12: Will update activity.md with attempt details
+- [ ] RUL-P1-03: Any repeatable gotchas encountered? If yes, captured in RULES.md before signal
 
 **If ANY P0 check fails**: STOP immediately, do not proceed.
 **If ANY P1 check fails**: Signal TASK_INCOMPLETE with specific constraint violation.
@@ -283,9 +284,9 @@ Check content for patterns: `api_key`, `apikey`, `api-key`, `password`, `passwd`
 ## STATE MACHINE: DEVELOPER WORKFLOW [CRITICAL]
 
 ```
-[START] → [READ_TASK] → [ANALYZE] → [IMPLEMENT_AND_TEST] → [VERIFY] → [HANDOFF] → [DONE]
-                  ↓         ↓              ↓                  ↓
-               [BLOCKED] [FAILED]       [FAILED]           [FAILED]
+[START] → [READ_TASK] → [DISCOVER_RULES] → [ANALYZE] → [IMPLEMENT_AND_TEST] → [VERIFY] → [HANDOFF] → [DONE]
+                   ↓           ↓                ↓              ↓                  ↓
+               [BLOCKED]   (proceed)        [FAILED]       [FAILED]           [FAILED]
 ```
 
 ### State Transition Table [CRITICAL]
@@ -293,7 +294,9 @@ Check content for patterns: `api_key`, `apikey`, `api-key`, `password`, `passwd`
 | Current State | Event | Next State | Signal |
 |---------------|-------|------------|--------|
 | START | Compliance check passed | READ_TASK | None |
-| READ_TASK | Files read | ANALYZE | None |
+| READ_TASK | Files read | DISCOVER_RULES | None |
+| DISCOVER_RULES | Rules discovered and documented | ANALYZE | None |
+| DISCOVER_RULES | No RULES.md found | ANALYZE | None (proceed with shared rules) |
 | READ_TASK | TASK.md missing | FAILED | `TASK_FAILED_{{id}}:TASK_md_not_found` |
 | ANALYZE | Requirements clear | IMPLEMENT_AND_TEST | None |
 | ANALYZE | Ambiguous criteria | BLOCKED | `TASK_BLOCKED_{{id}}:Ambiguous_acceptance_criteria` |
@@ -340,6 +343,24 @@ Check content for patterns: `api_key`, `apikey`, `api-key`, `password`, `passwd`
 - If `attempts.md` does not exist: Proceed normally — this is the first attempt. Create attempts.md if needed.
 
 **Exit Condition**: All required files read and understood (TASK.md is mandatory)
+**Next State**: DISCOVER_RULES
+
+---
+
+#### STATE: DISCOVER_RULES [STOP POINT]
+**Purpose**: Discover and apply project-specific rules before implementation
+**Required Actions** (RUL-P1-01):
+1. Walk up directory tree from task working directory to root
+2. Collect all RULES.md files found
+3. Stop if `IGNORE_PARENT_RULES` encountered
+4. Read files in root-to-leaf order (deeper overrides shallower)
+5. Document applied rules in activity.md
+
+**Edge Case — No RULES.md found**: Proceed with shared rules only. Document "No RULES.md files found" in activity.md. This is not an error.
+
+**Apply discovered rules**: Use RULES.md conventions when implementing (coding patterns, naming conventions, error handling approaches, known anti-patterns to avoid, framework-specific gotchas).
+
+**Exit Condition**: RUL-P1-01 walk complete; rules documented in activity.md
 **Next State**: ANALYZE
 
 ---
@@ -350,14 +371,7 @@ Check content for patterns: `api_key`, `apikey`, `api-key`, `password`, `passwd`
 1. **Acceptance Criteria**: Read word-for-word from TASK.md
    - If unclear → Signal TASK_BLOCKED with detailed questions
 2. **Files to Modify**: Identify what needs creation/modification
-3. **Project Patterns**: Check RULES.md files per RUL-P1-01
-
-**RULES.md Lookup Algorithm (RUL-P1-01):**
-1. Determine working directory
-2. Walk up tree toward root, collect all RULES.md paths
-3. Stop if `IGNORE_PARENT_RULES` encountered
-4. Read in root-to-leaf order (deepest rules override)
-5. Document applied rules in activity.md
+3. **Project Patterns**: Apply rules from DISCOVER_RULES state
 
 **TODO Integration**: After analysis, populate your TODO list (see TODO LIST TRACKING section) with:
 - One item per acceptance criterion (mapped to IMPLEMENT_AND_TEST phase)
@@ -642,6 +656,7 @@ TODO (Task {{id}}):
 - [ ] [HANDOFF] Document spec-to-test traceability in activity.md
 - [ ] [HANDOFF] Create handoff record (From/To/State/Context)
 - [ ] [HANDOFF] Increment handoff counter
+- [ ] [HANDOFF] RUL-P1-03: Capture any repeatable gotchas to RULES.md
 - [ ] [HANDOFF] Run pre-emission validation checklist
 - [ ] [HANDOFF] Emit TASK_INCOMPLETE signal (FIRST token)
 ```
@@ -757,6 +772,7 @@ or run, update the relevant AGENTS.md file:
 - [ ] Only one signal in output
 - [ ] Signal is first token on its line
 - [ ] For implementation work: Using TASK_INCOMPLETE, not TASK_COMPLETE
+- [ ] RUL-P1-03: Any repeatable gotchas or anti-patterns encountered this session captured in RULES.md
 
 ---
 
