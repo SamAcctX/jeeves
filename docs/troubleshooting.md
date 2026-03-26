@@ -51,6 +51,40 @@ tail -n 30 .ralph/tasks/*/activity.md   # Recent agent activity
 2. Debug interactively: `docker run -it --rm --entrypoint /bin/bash jeeves:latest`
 3. Inspect configuration: `docker inspect jeeves`
 
+### opencode-web Crashes on Startup (Windows / WSL2)
+
+**Problem:** Container starts, supervisord launches, but `opencode-web` immediately exits with `SIGSEGV (core dumped)` and the container stops. Logs show:
+
+```
+WARN exited: opencode-web (terminated by SIGSEGV (core dumped); not expected)
+opencode-web: ERROR (spawn error)
+```
+
+**Cause:** Missing WSL2 configuration. Without `firewall=false` and `guiApplications=true` in `.wslconfig`, certain network and process features that opencode depends on are unavailable inside the WSL2 VM.
+
+**Fix:**
+
+1. Open (or create) `%USERPROFILE%\.wslconfig` on your Windows host.
+2. Add the following under the `[wsl2]` section:
+
+```ini
+[wsl2]
+firewall=false
+guiApplications=true
+```
+
+3. Restart WSL to apply the settings:
+
+```powershell
+wsl --shutdown
+```
+
+4. Restart Docker Desktop, then start the container again:
+
+```powershell
+./jeeves.ps1 start
+```
+
 ### Permission Issues
 
 **Problem:** `permission denied` errors accessing files inside the container.
@@ -525,6 +559,14 @@ cat .ralph/config/agents.yaml
 pwsh ./jeeves.ps1
 # Or: Set-ExecutionPolicy -Scope Process -Bypass
 ```
+
+**Windows (WSL2):** If the container crashes immediately on start, ensure `%USERPROFILE%\.wslconfig` contains:
+```ini
+[wsl2]
+firewall=false
+guiApplications=true
+```
+Then run `wsl --shutdown` and restart Docker Desktop. See [opencode-web Crashes on Startup](#opencode-web-crashes-on-startup-windows--wsl2) for full details.
 
 **Linux/macOS:** Install PowerShell Core if not available:
 ```bash

@@ -209,6 +209,24 @@ See [docs/commands.md](docs/commands.md) for the complete reference.
 - **git**: 2.x+
 - **GPU** (optional): NVIDIA GPU with CUDA support for GPU-accelerated workloads
 
+### Windows (WSL2) Requirements
+
+If you are running Docker via WSL2 on Windows, you must add the following to `%USERPROFILE%\.wslconfig` before starting the container:
+
+```ini
+[wsl2]
+firewall=false
+guiApplications=true
+```
+
+Then restart WSL for the settings to take effect:
+
+```powershell
+wsl --shutdown
+```
+
+Without these settings the container will start but the `opencode-web` service will crash immediately with a segfault. See [Troubleshooting](docs/troubleshooting.md) for more details.
+
 ## License
 
 This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
