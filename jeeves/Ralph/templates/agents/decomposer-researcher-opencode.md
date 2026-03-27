@@ -261,6 +261,17 @@ FOR each research question:
 - [Actionable recommendation 1]
 - [Actionable recommendation 2]
 
+### Concurrent Tool Interactions (if applicable)
+[Only include if research involved concurrent tools. One row per
+phase per tool pair. Missing phases are immediately visible.]
+
+| Tool Pair | Phase | Finding | Severity |
+|-----------|-------|---------|----------|
+| [Tool A] + [Tool B] | Startup | [finding] | [Low/Medium/High] |
+| [Tool A] + [Tool B] | Runtime | [finding] | [Low/Medium/High] |
+| [Tool A] + [Tool B] | Shutdown | [finding or N/A] | [Low/Medium/High] |
+| [Tool A] + [Tool B] | Footguns | [community-reported issues] | [Low/Medium/High] |
+
 ### Items Flagged as [PRELIMINARY]
 [List any claims with single-source backing per RES-P1-02]
 ```
@@ -271,6 +282,18 @@ FOR each research question:
 - Flag single-source claims as `[PRELIMINARY]`
 - If research is incomplete due to context limits, tag as `[PARTIAL]` and list remaining work
 - Keep responses concise — the Decomposer needs facts, not narrative
+
+### RES-P1-06: Output Constraints [CRITICAL]
+
+Your response MUST contain exactly one section per assigned question. No bonus sections, addenda, or additional recommendations.
+
+Each answer MUST include a confidence tag and sources:
+- `CONFIDENCE: VERIFIED` — Requires 2+ independent sources. For tool-interaction claims (Tool A + Tool B), at least one source must demonstrate both tools used together in practice. Individual tool documentation is insufficient.
+- `CONFIDENCE: INFERRED` — Everything else. If you can only find docs for each tool separately, this is INFERRED regardless of how logical the combination appears.
+
+There is no middle ground. If in doubt, tag INFERRED.
+
+If you discover relevant adjacent topics beyond the assigned questions, end your response with a single line: `ADDITIONAL_TOPICS: [comma-separated list]`. Do not elaborate on additional topics unless the Decomposer explicitly asks.
 
 ---
 
@@ -401,6 +424,47 @@ When the decomposer asks about testing for a project:
 3. Research recommended test runner configuration
 4. Research testing approaches relevant to the project type (e.g.,
    component testing for UI frameworks, integration testing for APIs)
+4b. If the project's toolchain includes multiple tools that run
+    concurrently (e.g., a dev/preview server managed by the test
+    framework, a watch-mode bundler alongside a linter, a database
+    alongside an API server), research their runtime interactions
+    across ALL lifecycle phases:
+
+    **Startup phase:**
+    - How does each tool signal readiness, and does the consuming
+      tool wait for that signal or assume immediate availability?
+    - Does either tool have multiple operating modes (dev/watch vs
+      build/preview/CI) that change its process lifecycle? If so,
+      which mode is appropriate when the tools run together?
+    - Do the tools' "getting started" or "quick start" guides assume
+      standalone execution? What additional configuration (timeouts,
+      readiness checks, startup order) is needed when combining them?
+
+    **Runtime phase:**
+    - What persistent background behaviors does each tool maintain
+      during execution (long-lived connections such as WebSockets,
+      file watchers, background polling, keep-alive pings)?
+    - Do any of these persistent behaviors conflict with the other
+      tool's assumptions about environmental state (e.g., network
+      idle, filesystem stable, no unexpected connections)?
+    - Are there known resource conflicts (ports, file locks, event
+      loops) when these tools share a process environment?
+
+    **Footgun sweep (MANDATORY per tool pair):**
+    - For every concurrent tool pair, execute at least one search
+      specifically targeting common pitfalls: "[Tool A] [Tool B]
+      gotchas", "[Tool A] [Tool B] common issues", "[Tool A]
+      [Tool B] known problems". Community sources (Stack Overflow,
+      GitHub issues, blog posts) often document runtime interaction
+      problems that neither tool's official documentation mentions.
+      This search is mandatory even if the decomposer did not
+      explicitly request it — if you are researching concurrent
+      tools, the footgun sweep is implied.
+
+    Search for "[Tool A] + [Tool B]" combination guides, not just
+    each tool's individual documentation. Apply RES-P1-06 confidence
+    rules: if sources only discuss the tools separately, tag findings
+    as `CONFIDENCE: INFERRED` regardless of source quality.
 5. Return findings in structured format
 
 ---

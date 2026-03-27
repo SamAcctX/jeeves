@@ -33,10 +33,11 @@ tools:
 ---
 
 <!--
-version: 3.6.0
-last_updated: 2026-03-22
+version: 3.7.0
+last_updated: 2026-03-27
 dependencies: [shared-manifest.md v2.0.0]
 changelog:
+  3.7.0 (2026-03-27): Added DEC-P1-VER-CONCURRENT lifecycle-phased research protocol for concurrent tool pairs (startup/runtime/shutdown + footgun sweep), Gate 2 phase-structured delegation template, runtime interaction propagation check in Task Validation Checklist, consolidated Implied Requirement Analysis concurrent-tool block to reference DEC-P1-VER-CONCURRENT
   3.6.0 (2026-03-22): Added DEC-P1-UX (interaction quality gate), UX playtest task category, interaction-level implied requirement analysis, Gate 1 interaction quality delegation
   3.5.0 (2026-03-19): Added DEC-P1-TEST-VAL (validation steps must cover all test runners), DEC-P1-TEST-E2E (E2E authoring strategy with distribution decision framework), test runner manifest requirement, clarified test levels in Spec-Anchored workflow
   3.4.0 (2026-03-17): Added implied requirement analysis, testing posture (DEC-P1-TEST), mandatory sub-agent review protocol (DEC-P1-REVIEW), compaction exit protocol, AGENTS.md mandate, normalized section order
@@ -596,7 +597,36 @@ Determine if version validation is needed based on project type:
 2. **For net-new projects**: Invoke **decomposer-researcher** to web-search for the current latest stable version of each major dependency. Do NOT trust version numbers in the PRD — they may be outdated from when the PRD was written.
 3. **For existing projects**: Read the project's dependency files (package.json, requirements.txt, go.mod, etc.) to confirm actual versions in use
 4. **For architecture/compatibility questions**: Invoke **decomposer-architect** to validate that the chosen versions are compatible with each other
-5. **Document findings**: Record validated versions in a version manifest note that gets referenced by implementation tasks
+5. **For toolchains with concurrent processes (DEC-P1-VER-CONCURRENT)**:
+   When the PRD specifies tools that will run simultaneously (e.g., a
+   dev server alongside a test runner, a watch-mode bundler alongside a
+   linter, a database alongside an API server), invoke
+   **decomposer-researcher** with **lifecycle-phased research questions**.
+
+   **All three phases are mandatory for each concurrent tool pair.** Do
+   NOT combine them into a single open-ended question — each phase must
+   be a separate, explicit research question.
+
+   | Phase | Mandatory? | Research Question Template |
+   |-------|------------|--------------------------|
+   | **Startup** | YES | "How does [Tool B] detect that [Tool A] is ready? Does [Tool A]'s 'ready' signal (e.g., 'listening on port') mean it is fully initialized and serving, or just bound? Do any tools have distinct modes (dev/watch vs build/CI) that change startup behavior? Do 'getting started' docs assume standalone execution — what additional configuration is needed when combining them?" |
+   | **Runtime** | YES | "What persistent background behaviors does [Tool A] maintain during execution (long-lived connections such as WebSockets, file watchers, background polling, keep-alive pings)? Do any of these conflict with [Tool B]'s assumptions about environmental state (network idle, filesystem stable, no unexpected connections)? Are there known resource conflicts (ports, file locks, event loops) when these tools share a process environment?" |
+   | **Shutdown** | IF shared resources | "If either tool manages shared resources (ports, temp files, lock files), does termination of one leave the other in a broken state? Does either tool require explicit cleanup that the other doesn't trigger?" |
+
+   Additionally, for **EVERY** concurrent tool pair, include this
+   footgun-sweep query (mandatory):
+   - "What are the most common pitfalls, gotchas, or known issues when
+     running [Tool A] with [Tool B]? Search GitHub issues, Stack
+     Overflow threads, migration guides, and community blog posts."
+
+   Record findings in the version manifest and flag any interaction
+   that requires non-default configuration in the infrastructure task.
+
+   **Anti-pattern (REJECT):** A single question like "Are there issues
+   with Tool A and Tool B?" — this allows the researcher to focus on
+   whichever phase seems most salient (usually startup) and miss
+   runtime interaction problems.
+6. **Document findings**: Record validated versions in a version manifest note that gets referenced by implementation tasks
 
 **Include in each TASK.md where relevant:**
 ```
@@ -727,6 +757,22 @@ implement.
 - Are there keyboard equivalents for every pointer interaction? Do they conflict with other bindings on the same element?
 - What visual feedback signals that a gesture has been recognized?
 - What happens when two tasks (e.g., "card editing" and "drag-and-drop") compose competing interactions on the same element?
+
+**For features where multiple tools run concurrently (dev server + test
+runner, bundler + linter, database + app server), also explore:**
+- What interaction assumptions does the behavioral spec make that depend
+  on runtime tool coordination (e.g., "page loads successfully" assumes
+  dev server is ready AND not interfering with page load detection)?
+- Do any acceptance criteria implicitly depend on tool behavior that
+  DEC-P1-VER-CONCURRENT research flagged as problematic? If so, add
+  explicit spec scenarios and constraints addressing the interaction.
+- Reference the version manifest's tool interaction findings when
+  writing specs — do not re-derive from scratch.
+
+(For the underlying research into how concurrent tools interact across
+startup, runtime, and shutdown phases, see DEC-P1-VER-CONCURRENT in
+Step 1.1 item 5. This section focuses on translating those research
+findings into behavioral specs.)
 
 **The decomposer-architect MUST review specs for implied requirement
 completeness** (see DEC-P1-REVIEW, Gate 1).
@@ -1000,6 +1046,8 @@ When user approves final decomposition:
    - [ ] E2E authoring strategy chosen and documented (DEC-P1-TEST-E2E)
    - [ ] If Distributed: implementation tasks have E2E acceptance criteria for their user flows (not just Implementation Notes)
    - [ ] If Concentrated: E2E task is followed by a review task AND at least one fix cycle opportunity
+   - [ ] If test manifest includes concurrent tools: infrastructure task's acceptance criteria validate they coordinate correctly at runtime (DEC-P1-VER step 5)
+   - [ ] If DEC-P1-VER-CONCURRENT research was performed: all mandatory lifecycle phases (startup, runtime, footgun sweep) were covered in researcher findings — no mandatory phase has "not investigated" status
    - **If any check fails: DO NOT emit signal. Fix testing gaps first.**
 7. **Verify spec-anchored structure (DEC-P1-SPEC)**: Implementation tasks have behavioral specs; review tasks exist for complex features; acceptance criteria are implementation-agnostic
 7.5. **Verify interaction quality specs (DEC-P1-UX) [CONDITIONAL — for projects with interactive UI]**:
@@ -1104,6 +1152,9 @@ Invoke decomposer-researcher when the task involves ANY of:
 - Technologies, patterns, or domains the decomposer hasn't validated
 - Integration with external services or APIs
 - Version-sensitive dependencies (DEC-P1-VER)
+- Multiple tools that will run concurrently in dev or CI (e.g., dev
+  server + test runner, bundler + linter) — research runtime
+  interaction and lifecycle coordination requirements
 
 **Delegation message MUST include:**
 1. Specific research questions (not vague "look into this")
@@ -1111,6 +1162,53 @@ Invoke decomposer-researcher when the task involves ANY of:
 3. What information is needed for the TASK.md
 4. The standalone consultation instructions (see DEC-P0-03 invocation
    template)
+
+**When delegating concurrent tool research (DEC-P1-VER-CONCURRENT):**
+Structure the research request with explicit per-phase questions. Do NOT
+combine phases into a single open-ended question. Example delegation:
+
+> Research the runtime interaction between PostgreSQL and our Express
+> API server for the integration test setup:
+>
+> **Q1 (Startup):** How does the API server detect that PostgreSQL is
+> ready to accept connections? Does PostgreSQL's "ready" state (port
+> open) mean it has finished recovery and is accepting queries, or
+> just that the socket is listening?
+>
+> **Q2 (Runtime):** What persistent background behaviors does
+> PostgreSQL maintain during execution (connection pooling, WAL
+> archiving, autovacuum, checkpoint writes)? Do any of these conflict
+> with the API server's assumptions about connection availability or
+> query latency during test execution?
+>
+> **Q3 (Footguns):** What are the most common issues/gotchas reported
+> when running an Express API server against PostgreSQL in a test
+> environment? Search GitHub issues and community threads.
+>
+> **Q4 (Shutdown — if applicable):** If PostgreSQL is terminated
+> mid-test, does the API server's connection pool handle the
+> disconnection gracefully, or does it require explicit cleanup?
+
+**Anti-pattern (REJECT):** "Research whether Tool A and Tool B work
+together and if there are any issues." — This open-ended question
+allows the researcher to focus on whatever seems most salient (usually
+startup) and miss runtime interactions.
+
+### Research Consumption Rules (DEC-P1-RES) [MANDATORY]
+
+When consuming findings from decomposer-researcher, apply these gates:
+
+| Researcher Tag | Decomposer Action |
+|----------------|-------------------|
+| `CONFIDENCE: VERIFIED` | Use in primary specs (TASK.md constraints, acceptance criteria, validation steps). |
+| `CONFIDENCE: INFERRED` | Implementation Notes section only, prefixed with "Requires validation:". Do NOT use as primary approach — prefer the established/battle-tested alternative. |
+| Missing confidence/sources | Treat as INFERRED. |
+
+**ADDITIONAL_TOPICS** from researcher: ignore unless decomposer-architect explicitly requests elaboration during Gate 1 or Gate 3 review.
+
+**Novelty override**: Any finding about a feature or API released within the last 6 months is treated as INFERRED regardless of the researcher's tag. Check release dates when version numbers or "new in vX" language appears.
+
+**Integration override**: Any finding about a Tool A + Tool B interaction where all cited sources discuss the tools separately (not the specific combination in practice) is treated as INFERRED regardless of tag.
 
 ### Gate 3: Post-Decomposition Review [MANDATORY]
 
@@ -1365,6 +1463,14 @@ During the READING_PRD phase, evaluate the project's test infrastructure:
   whether features have independent user flows (→ Distributed) or
   are tightly coupled (→ Concentrated/Grouped). Document the decision.
   See DEC-P1-TEST-E2E.
+- **Toolchain runtime interactions**: If the test runner manifest
+  includes tools that run concurrently (e.g., a dev/preview server
+  started by the test framework, a database seeder, a mock API),
+  verify via decomposer-researcher (Gate 2) that their runtime
+  lifecycle assumptions are compatible. Infrastructure task acceptance
+  criteria MUST include validating that all manifest tools start, run,
+  and shut down correctly when invoked together — not just individually.
+  See DEC-P1-VER step 5.
 
 Include test infrastructure setup as an early task (no implementation
 dependencies) when needed. For net-new projects, the infrastructure
@@ -1593,6 +1699,9 @@ For each created task, verify:
 - [ ] If Distributed: E2E user flow criteria in Acceptance Criteria (not just Implementation Notes)
 - [ ] If Concentrated: E2E task is followed by a review task AND at least one fix cycle opportunity
 - [ ] If E2E tests exist: TASK.md includes E2E quality requirements (DEC-P1-TEST-E2E-QUALITY)
+- [ ] If test manifest includes concurrent tools: infrastructure task validates they start/run/shutdown correctly together (DEC-P1-VER step 5)
+- [ ] If DEC-P1-VER-CONCURRENT research found runtime interaction issues: infrastructure task's Constraints or Implementation Notes include explicit mitigation guidance (e.g., "Set connection timeout to 120s due to slow cold-start" or "Disable auto-reload during test execution")
+- [ ] Any PRD-specified toolchain config has been researcher-validated, not copied verbatim (DEC-P1-VER step 5)
 
 **Documentation Check (DEC-P1-DOC):**
 - [ ] EVERY task includes documentation acceptance criteria (not just dedicated doc tasks)
@@ -1834,6 +1943,7 @@ Question: How should auth work?
 - Rule ENV-P0-02: All commands headless/non-interactive; all TASK.md files relay headless constraints to workers
 - Rule DEC-P1-DOC: Every task includes documentation acceptance criteria; at least one dedicated doc task exists
 - Rule DEC-P1-REVIEW: EACH completed task individually architect-reviewed (Gate 1)? [Y/N, reviewed: X of Y]
+- Rule DEC-P1-VER-CONCURRENT: If concurrent tools identified — were startup, runtime, AND footgun phases all researched? [Y/N/NA]
 - Current state: [STATE_NAME]
 - Compaction received: [no]
 Confirm: [ ] All P0 rules satisfied, [ ] State correct, [ ] Doc criteria included, [ ] Proceed
