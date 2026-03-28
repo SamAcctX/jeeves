@@ -271,7 +271,8 @@ CHECK:
   - [ ] ENV-P0-02: No GUI/interactive operations planned (headless container — all commands scripted)
   - [ ] ENV-P0-RELAY: TASK.md files being created include headless constraints for workers
   - [ ] DEC-P1-DOC: Current/pending tasks include documentation acceptance criteria
-  - [ ] DEC-P1-REVIEW: If creating tasks — has EACH completed task been individually reviewed by architect (Gate 1, not batch)?
+  - [ ] DEC-P1-REVIEW: Gate 1 completed for task N BEFORE task N+1 created? Verify via todoread — the item for task N should show "completed"
+  - [ ] DEC-P1-NO-BATCHING: Call todoread — verify task N folder exists AND Gate 1 for N is "completed" BEFORE task N+1 folder exists
   - [ ] No agent assignment: Manager assigns agents, not Decomposer
 
 STOP IF: Compaction prompt received → Signal TASK_INCOMPLETE_0000:context_limit_exceeded
@@ -552,6 +553,16 @@ Before advancing to GENERATING_DEPS, call `todoread` and verify:
 - All Gate 1 review items show `completed` (not `pending`)
 - If any are still `pending`, you skipped a review — go back and do it
 - Do not advance state until all TODO items for current state are done
+
+### Sequential Gate 1 Verification [MANDATORY]
+
+BEFORE creating task folder N+1, call `todoread` and verify:
+- [ ] Gate 1 for task N is marked `completed`
+- [ ] Task N's folder exists with updated TASK.md
+- [ ] Task N+1 folder does NOT exist yet
+
+If task N+1 folder exists but N not completed: DELETE N+1 immediately, invoke decomposer-architect for N first
+If Gate 1 for N not marked "completed": DO NOT proceed — invoke decomposer-architect for N now
 
 ---
 
@@ -879,11 +890,18 @@ FOR each task (STRICTLY SEQUENTIAL — no parallel task creation):
   1. Create folder .ralph/tasks/XXXX/
   2. Copy templates, fill TASK.md
   3. [HARD GATE] If implementation task: invoke decomposer-architect for Gate 1 spec review BEFORE creating the next task folder
-  4. Incorporate architect feedback into THIS task's TASK.md
-  5. Only THEN proceed to the next task
+  4. AFTER architect responds: Call todowrite to mark "Gate 1: Architect review task XXXX" as "completed"
+  5. BEFORE creating next folder: Call todoread — verify previous Gate 1 shows "completed" before proceeding
+  6. Incorporate architect feedback into THIS task's TASK.md
+  7. Only THEN proceed to the next task
 Do NOT create multiple task folders, write multiple TASK.md files, or invoke multiple Gate 1 reviews in parallel. Each task must be fully created, reviewed, and revised before starting the next.
 ```
 **This is NOT a batch operation.** Create one task, review it, fix it, then move to the next. See DEC-P1-REVIEW Gate 1.
+
+**BATCHING IS A VIOLATION:**
+- If task N+1 folder exists but Gate 1 for task N is not completed → DELETE N+1, complete Gate 1 first
+- Before creating ANY task folder: call todoread — if more than 1 "pending" Gate 1 item exists → you batch-created, this is a violation
+- "Efficient" is not a valid reason to batch. This is a rationalization pattern — check your rationalization-defense skill. Sequential is NON-OPTIONAL.
 
 **Folder Structure:**
 ```
@@ -1943,6 +1961,7 @@ Question: How should auth work?
 - Rule ENV-P0-02: All commands headless/non-interactive; all TASK.md files relay headless constraints to workers
 - Rule DEC-P1-DOC: Every task includes documentation acceptance criteria; at least one dedicated doc task exists
 - Rule DEC-P1-REVIEW: EACH completed task individually architect-reviewed (Gate 1)? [Y/N, reviewed: X of Y]
+- Rule DEC-P1-NO-BATCH: Call todoread + list_files — verify task N folder exists AND Gate 1 item for N is "completed" before task N+1 folder exists
 - Rule DEC-P1-VER-CONCURRENT: If concurrent tools identified — were startup, runtime, AND footgun phases all researched? [Y/N/NA]
 - Current state: [STATE_NAME]
 - Compaction received: [no]
