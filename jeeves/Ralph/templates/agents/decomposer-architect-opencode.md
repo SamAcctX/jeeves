@@ -14,7 +14,7 @@ permission:
   external_directory:
     "/tmp/**": allow
     "/opt/jeeves/**": allow
-model: ""
+model: "anthropic/claude-sonnet-4-6"
 tools:
   read: true
   write: true
@@ -30,8 +30,6 @@ tools:
   todowrite: true
   skill: true
 ---
-
-
 
 <!--
 version: 2.4.0

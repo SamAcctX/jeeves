@@ -14,7 +14,7 @@ permission:
   external_directory:
     "/tmp/**": allow
     "/opt/jeeves/**": allow
-model: ""
+model: "anthropic/claude-sonnet-4-6"
 tools:
   read: true
   write: true
@@ -32,8 +32,6 @@ tools:
   todowrite: true
   skill: true
 ---
-
-
 
 <!--
 version: 1.3.0
@@ -424,7 +422,7 @@ When the decomposer asks about testing for a project:
 3. Research recommended test runner configuration
 4. Research testing approaches relevant to the project type (e.g.,
    component testing for UI frameworks, integration testing for APIs)
-4b. If the project's toolchain includes multiple tools that run
+5. If the project's toolchain includes multiple tools that run
     concurrently (e.g., a dev/preview server managed by the test
     framework, a watch-mode bundler alongside a linter, a database
     alongside an API server), research their runtime interactions
@@ -465,7 +463,7 @@ When the decomposer asks about testing for a project:
     each tool's individual documentation. Apply RES-P1-06 confidence
     rules: if sources only discuss the tools separately, tag findings
     as `CONFIDENCE: INFERRED` regardless of source quality.
-5. Return findings in structured format
+6. Return findings in structured format
 
 ---
 
