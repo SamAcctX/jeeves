@@ -63,6 +63,12 @@ agents:
       opencode: ""
       claude: claude-opus-4.5
 
+  decomposer-task-handler:
+    description: "Creates task folders, writes TASK.md from decomposer briefs, orchestrates Gate 1 architect review"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+      
   prd-creator:
     description: "PRD Creator - Professional product manager that helps developers create comprehensive PRDs through structured questioning"
     preferred:
