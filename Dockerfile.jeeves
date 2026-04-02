@@ -768,6 +768,10 @@ trap cleanup EXIT
 # Start Docker first
 start_docker_engine
 
+# Pre-stage custom todo plugin for opencode
+sudo mkdir -p /home/jeeves/.config/opencode/plugins
+sudo cp /opt/jeeves/Ralph/plugins/todo.ts /home/jeeves/.config/opencode/plugins/todo.ts
+
 # Initialize configuration directories
 copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
 copy_oob_if_empty "/home/jeeves/.claude" "/opt/oob-config/.claude" "Claude"
