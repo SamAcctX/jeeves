@@ -370,7 +370,7 @@ todowrite([
 3. Fill the template section by section:
    - **Title**: Use the `TASK_TITLE` from the decomposer's brief
    - **Behavioral Specifications**: Given/When/Then scenarios from cross-reference analysis (include implied requirements) (required for implementation tasks; optional for infrastructure/documentation)
-   - **Acceptance Criteria**: Specific, measurable pass/fail conditions. Include standard coverage criteria for implementation tasks. Include at least one documentation acceptance criterion (MANDATORY).
+   - **Acceptance Criteria**: Specific, measurable pass/fail conditions. Describe observable behavior, not implementation mechanisms — library APIs and hook names belong in Implementation Notes. Include standard coverage criteria for implementation tasks. Include at least one documentation acceptance criterion (MANDATORY).
    - **Constraints**: Include the standard ENV-P0 block PLUS any task-specific constraints from the decomposer's brief (include for all task types — infrastructure tasks should list environment/tooling constraints)
    - **Workflow Context**: Task type, review task reference, full suite regression check
    - **Version References**: Include any version information provided by the decomposer
@@ -401,7 +401,7 @@ todowrite([
    - Evaluation criteria:
      - Does the spec capture all PRD requirements (explicit AND implied)?
      - Are there situations that naturally arise from this feature that the spec doesn't address?
-     - Are acceptance criteria specific enough for an implementation agent to work from without guessing?
+      - Are acceptance criteria specific about behavior without prescribing implementation? (Library/API details belong in Implementation Notes)
      - Are there architectural concerns, hidden dependencies, or integration risks?
      - Is the task appropriately scoped for one agent session?
      - For interactive UI tasks: are gesture conflicts, touch tolerances, keyboard/pointer disambiguation addressed?

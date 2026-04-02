@@ -1,35 +1,8 @@
 ---
 name: prd-researcher
 description: "PRD Researcher Agent - Specialized for design pattern research, competitive analysis, technology validation, API/CLI/library/data best practices investigation for PRD creation"
-mode: subagent
-permission:
-  "*": allow
-  read: allow
-  write: allow
-  bash: allow
-  webfetch: allow
-  edit: deny
-  question: deny
-  doom_loop: deny
-  external_directory:
-    "/tmp/**": allow
-    "/opt/jeeves/**": allow
-model: ""
-tools:
-  read: true
-  write: true
-  grep: true
-  glob: true
-  bash: true
-  webfetch: true
-  sequentialthinking: true
-  searxng_searxng_web_search: true
-  searxng_web_url_read: true
-  websearch: true
-  codesearch: true
-  skill: true
-  todoread: true
-  todowrite: true
+model: inherit
+disallowedTools: AskUserQuestion, Edit
 ---
 
 <!--
