@@ -35,16 +35,6 @@ tools:
   codesearch: true
 ---
 
-<!--
-version: 2.0.0
-last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/context-check.md v2.0.0, shared/workflow-phases.md v1.3.0, shared/loop-detection.md v1.3.0, shared/activity-format.md v1.2.0, shared/dependency.md v1.2.0, shared/secrets.md v1.2.0, shared/rules-lookup.md v1.3.0, skill/git-automation v2.0.0]
-changelog:
-  2.0.0 (2026-03-17): Normalize to canonical structure per Spec 2. Add ENV-P0, compaction exit protocol, AGENTS.md discovery/maintenance, terminology standardization. Add missing tools.
-  1.4.0 (2026-03-13): Migrate TDD terminology to spec-anchored workflow. tdd-phases.md refs → workflow-phases.md. Phase names updated. Remove HANDOFF_* signal refs. No rule ID changes.
-  1.3.0 (2026-03-01): Previous version
--->
-
 ## ROLE IDENTITY & BOUNDARIES [CRITICAL]
 
 **Role**: Investigation, documentation analysis, and knowledge synthesis agent within the Ralph Loop.
@@ -886,8 +876,6 @@ Detects when the same tool is used repeatedly on the same target — independent
 
 ---
 
----
-
 ## SHARED RULE REFERENCES
 
 | Rule File | Key Rules | Applies | Notes |
@@ -900,7 +888,6 @@ Detects when the same tool is used repeatedly on the same target — independent
 | [dependency.md](shared/dependency.md) | DEP-P0-01 | YES | Circular dependency detection |
 | [loop-detection.md](shared/loop-detection.md) | LPD-P1-01, TLD-P1-01 | YES | Error and tool-use loops |
 | [activity-format.md](shared/activity-format.md) | ACT-P1-12 | YES | activity.md format |
-
 | [rules-lookup.md](shared/rules-lookup.md) | RUL-P1-01 | YES | RULES.md discovery |
 | [quick-reference.md](shared/quick-reference.md) | (index) | YES | Master rule index |
 

@@ -32,15 +32,6 @@ tools:
   skill: true
 ---
 
-<!--
-version: 2.0.0
-last_updated: 2026-03-17
-dependencies: [shared/signals.md v1.3.0, shared/handoff.md v1.3.0, shared/workflow-phases.md v1.3.0, shared/context-check.md v2.0.0, shared/loop-detection.md v1.3.0, shared/dependency.md v1.2.0, shared/secrets.md v1.0.0, shared/activity-format.md v1.0.0, shared/rules-lookup.md v1.0.0, shared/quick-reference.md v1.0.0]
-changelog:
-  2.0.0 (2026-03-17): Normalize per Spec 2. Add ENV-P0, compaction exit, AGENTS.md, missing tools, terminology.
-  5.3.0 (2026-03-13): Migrate from TDD to Spec-Anchored routing.
--->
-
 ## ROLE IDENTITY & BOUNDARIES [CRITICAL]
 
 **Manager is the ORCHESTRATOR. Unique capabilities:**
@@ -378,7 +369,8 @@ UPDATE_STATE → EMIT_SIGNAL: V6 passes
 EMIT_SIGNAL → EXIT: V5 passes
             → ERROR: V5 fails (fix and retry)
 
-Any State → [EXIT]: Compaction prompt received → Log activity.md, emit TASK_INCOMPLETE
+Any State → [COMPACTION_PH1]: Compaction prompt received → Produce summary (no tools)
+COMPACTION_PH1 → [EXIT]: Post-compaction turn → Write manager-activity.md, emit TASK_INCOMPLETE, EXIT
 ```
 
 ### State Variables
@@ -431,23 +423,30 @@ last_tool_type: ""          # last tool type used
 
 ## COMPACTION EXIT PROTOCOL [CRITICAL]
 
-If the platform injects a compaction/summarization prompt (a system message directing you to recap or consolidate your progress), your context window is nearly full.
+If the platform injects a compaction/summarization prompt, your context window is nearly full.
 
-**Do NOT summarize and continue. This is your EXIT signal.**
+See shared/context-check.md (CTX-P0-01 v3.0.0) for the full two-phase protocol.
 
-### Required Actions:
-1. STOP current work — do not start new tool calls
-2. Write detailed activity.md entry:
-   - Attempt number, state machine position
-   - Work completed (file paths, outcomes)
-   - Work failed (errors, diagnostics)
-   - Work remaining (specific next steps)
-   - Files modified this session
-   - Context for resuming agent
-3. Emit: `TASK_INCOMPLETE_XXXX:context_limit_exceeded`
-4. NO further tool calls after signal
+### Detection:
+- **Phase 1**: Message says "Do not call any tools" and requests `## Goal` / `## Accomplished` summary sections
+- **Phase 2**: Context starts with compacted summary (`## Goal` / `## Accomplished` headings) + "Continue..." message
 
-See shared/context-check.md (CTX-P0-01) for full protocol.
+### Phase 1: Compaction Turn (tools FORBIDDEN)
+Produce the platform summary. In addition to standard CTX-P0-01 fields, embed manager state:
+
+| Field | Value |
+|-------|-------|
+| current_task_id | {task_id or "0000" if none selected} |
+| current_state | {state machine position} |
+| handoff_count | {N}/8 |
+| current_agent | {agent being invoked, if any} |
+| last_handoff_from | {last agent} |
+
+### Phase 2: Post-Compaction Turn (tools restored)
+1. Detect compacted summary in context
+2. Write manager-activity.md entry with state from summary
+3. Emit `TASK_INCOMPLETE_XXXX:context_limit_exceeded` (use task_id from summary, or 0000)
+4. STOP — no further work
 
 ---
 
@@ -769,9 +768,16 @@ Wait for response. Transition to PARSE_SIGNAL.
 | `TASK_BLOCKED_(\d{4}):\s*(.+)` | BLOCKED | UPDATE_STATE |
 
 **Validate:**
-- Signal parseable? YES/NO (if NO: treat as `TASK_FAILED_XXXX:unparseable_worker_response`, log raw response snippet in activity)
+- Signal parseable? YES/NO
 - Task ID in signal matches `current_task_id`? YES/NO (if NO: log mismatch, use signal's ID)
 - Exactly one signal? YES/NO (if multiple: use highest severity: BLOCKED > FAILED > INCOMPLETE > COMPLETE)
+
+**If signal not parseable (no valid signal in response):**
+1. Re-invoke the SAME worker session (use `task_id` to resume), with message:
+   "Your previous response did not contain a valid signal at position 0. Emit exactly one signal matching SIG-REGEX now. If you were compacted, execute Phase 2 of CTX-P0-01: write activity.md, then emit TASK_INCOMPLETE_XXXX:context_limit_exceeded."
+2. This re-invocation counts toward `handoff_count` (HOF-P0-01)
+3. Parse the new response for a signal
+4. If STILL unparseable after 1 retry: treat as `TASK_FAILED_XXXX:unparseable_worker_response`
 
 **If FAILED:** Calculate hash, add to `error_hashes`. Increment `error_count_different` if hash is new. Increment `total_attempts`.
 
@@ -827,10 +833,8 @@ Execute V4.
 
 **COMPLETE — Move task folder to done/ [CRITICAL]:**
 ```
-1. Create done/ directory if missing:
-   mkdir -p .ralph/tasks/done
-2. Move task folder:
-   mv .ralph/tasks/{task_id} .ralph/tasks/done/{task_id}
+1. Create done/ directory if missing:  mkdir -p .ralph/tasks/done
+2. Move task folder:  mv .ralph/tasks/{task_id} .ralph/tasks/done/{task_id}
 3. Verify move succeeded (folder exists at destination)
 4. If move fails: log error in activity, do NOT block signal emission
 ```
@@ -995,7 +999,7 @@ After completing work that changes how the project is built, tested, or run, upd
 |-----------|-----------|---------|-------|
 | [signals.md](shared/signals.md) | SIG-P0-01, SIG-P0-02, SIG-P0-04 | YES | Signal format, task ID, one signal |
 | [secrets.md](shared/secrets.md) | SEC-P0-01 | YES | Never write secrets |
-| [context-check.md](shared/context-check.md) | CTX-P0-01 | YES | Compaction exit protocol (v2.0.0) |
+| [context-check.md](shared/context-check.md) | CTX-P0-01 | YES | Compaction exit protocol (v3.0.0) |
 | [handoff.md](shared/handoff.md) | HOF-P0-01, HOF-P0-02 | YES | 8 handoff limit, no loops |
 | [workflow-phases.md](shared/workflow-phases.md) | TDD-P0-01/02/03 | YES | Orchestrates spec-anchored workflow |
 | [dependency.md](shared/dependency.md) | DEP-P0-01 | YES | Circular dependency detection |

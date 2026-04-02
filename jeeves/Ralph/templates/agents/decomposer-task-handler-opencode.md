@@ -30,15 +30,6 @@ tools:
   skill: true
 ---
 
-
-<!--
-version: 1.0.0
-last_updated: 2026-03-29
-dependencies: [shared/secrets.md v1.2.0]
-changelog:
-  1.0.0 (2026-03-29): Initial creation — task creation orchestrator for decomposer
--->
-
 ## ROLE IDENTITY & BOUNDARIES [CRITICAL]
 
 **You are a SUB-ASSISTANT to the Decomposer agent. You are NOT an independent Ralph Loop agent.**
@@ -281,8 +272,7 @@ attempts.md: /proj/.ralph/tasks/{TASK_ID}/attempts.md
 - [ ] No pre-existing tests broken, skipped, or deleted without justification
 - [ ] Test coverage meets project thresholds (>=80% line, >=70% branch, >=90% function)
       — EXACT minimums, no rounding (89.99% function = FAIL)
-- [ ] Per-file coverage: Every file created/modified in this task has >=50% branch
-      and >=60% function coverage
+- [ ] Per-file coverage: Every file created/modified in this task has >=50% branch and >=60% function coverage
 - [ ] Coverage regression: No modified file has lower coverage than before this task
 - [ ] No scope creep (only what was requested)
 ```
@@ -291,9 +281,7 @@ attempts.md: /proj/.ralph/tasks/{TASK_ID}/attempts.md
 
 ```markdown
 ### Validation Approach
-Consider established testing techniques (boundary analysis, equivalence
-partitioning, pairwise testing, state transition testing, etc.) as
-appropriate to ensure comprehensive validation of all specified behaviors.
+Consider established testing techniques (boundary analysis, equivalence partitioning, pairwise testing, state transition testing, etc.) as appropriate to ensure comprehensive validation of all specified behaviors.
 ```
 
 ### Standard E2E Test Quality Requirements (include when task has E2E criteria)
@@ -511,9 +499,6 @@ Confirm: [ ] All P0 satisfied, [ ] State correct, [ ] Proceed
 
 ### TODO-Based Progress Tracking
 
-Use the `todowrite` tool to track workflow steps persistently. Do NOT
-rely on mental tracking — the TODO list survives context drift.
+Use the `todowrite` tool to track workflow steps persistently. Do NOT rely on mental tracking — the TODO list survives context drift.
 
-**At the start of each invocation**, call `todowrite` with the workflow
-items (see Step 2). Mark each item `completed` as you finish it. Call
-`todoread` before constructing the recap to ensure no steps were skipped.
+**At the start of each invocation**, call `todowrite` with the workflow items (see Step 2). Mark each item `completed` as you finish it. Call `todoread` before constructing the recap to ensure no steps were skipped.

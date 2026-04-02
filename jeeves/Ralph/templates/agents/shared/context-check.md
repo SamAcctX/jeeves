@@ -1,4 +1,4 @@
-<!-- version: 2.0.0 | last_updated: 2026-03-17 | canonical: YES -->
+<!-- version: 3.0.0 | last_updated: 2026-03-31 | canonical: YES -->
 <!-- Priority: P0 (Must-never-break) -->
 <!-- Scope: Universal (all agents) -->
 
@@ -12,6 +12,18 @@ Context exhaustion is detected via platform compaction, not self-monitoring.
 This file is AUTHORITATIVE for context exhaustion behavior.
 On conflict with other rules: Safety > Signals > Context > Everything else.
 
+## Detection Heuristics
+
+**Phase 1 (compaction prompt arriving):**
+The platform sends a message containing "Do not call any tools" and requesting a
+summary with `## Goal`, `## Instructions`, `## Discoveries`, `## Accomplished`,
+`## Relevant files` sections. Tools are disabled for this turn.
+
+**Phase 2 (post-compaction resume):**
+Your context begins with a compacted summary (has `## Goal` / `## Accomplished`
+headings) followed by a platform-injected message: "Continue if you have next steps,
+or stop and ask for clarification if you are unsure how to proceed."
+
 ---
 
 ## CTX-P0-01: Compaction Exit Protocol [CRITICAL]
@@ -22,35 +34,38 @@ When the platform injects a compaction/summarization prompt — a system
 message directing you to recap, summarize, or consolidate your progress
 — your context window is nearly full.
 
-**Do NOT summarize and continue. This is your EXIT signal.**
+**Tool calls are FORBIDDEN during compaction.** You cannot write files,
+update activity.md, or emit signals. Your summary text is the ONLY
+bridge to your next turn.
 
-### Required Actions (in this order):
-1. **STOP** current work immediately — do not start new tool calls
-2. **LOG** a detailed activity.md entry:
-   - Current attempt number and state machine position
-   - Work completed successfully (with file paths and specific outcomes)
-   - Work attempted but failed (with error messages and diagnostics)
-   - Work remaining (specific actionable next steps, not vague summaries)
-   - Files modified or created in this session
-   - Critical context the resuming agent needs to know
-   - Any blockers or dependencies discovered during this session
-3. **EMIT** signal: `TASK_INCOMPLETE_XXXX:context_limit_exceeded`
-4. **STOP** — make NO further tool calls after signal emission
+### Phase 1: Compaction Turn (no tools available)
+1. **STOP** current work — do not attempt new operations
+2. **PRODUCE** the summary using the platform's template, embedding recovery state:
 
-### What NOT To Do:
-- Do NOT attempt to summarize and keep working
-- Do NOT start new implementation work after compaction
-- Do NOT skip the activity.md entry
-- Do NOT emit any signal other than TASK_INCOMPLETE
+| Platform Section | Must Include |
+|-----------------|-------------|
+| **Instructions** | Task ID, state machine position, current attempt number |
+| **Discoveries** | Gotchas, blockers, dependencies discovered this session |
+| **Accomplished** | Work completed (file paths + outcomes), work failed (errors), specific next steps remaining. **Final line MUST be**: "Next: Execute Phase 2 of CTX-P0-01 — write activity.md and emit TASK_INCOMPLETE signal." |
+| **Relevant files** | activity.md path, TASK.md path, all files modified or created this session |
 
-### Activity.md Entry Template:
+### Phase 2: Post-Compaction Turn (tools available)
+After compaction, the platform injects "Continue if you have next steps..."
+and your tools are restored. You are NOT resuming work — you are persisting
+state and exiting.
+
+1. **DETECT**: If your context begins with a compacted summary (## Goal / ## Accomplished sections), you were just compacted
+2. **WRITE** activity.md: Transfer the Accomplished/Discoveries/Remaining info from your summary into a proper activity.md entry using the template below
+3. **EMIT**: `TASK_INCOMPLETE_XXXX:context_limit_exceeded`
+4. **STOP** — no further work. The manager will re-invoke as needed.
+
+### Activity.md Entry Template (for Phase 2):
 ```
 ## Attempt [N] — Context Limit Reached
 
 ### State: [current state machine position]
 ### Completed:
 - [specific item completed with file path and outcome]
-- [specific item completed]
 
 ### Failed:
 - [what was attempted]: [error message or failure reason]
@@ -64,24 +79,17 @@ message directing you to recap, summarize, or consolidate your progress
 
 ### Context for Next Agent:
 - [critical information the next agent must know]
-- [any gotchas or pitfalls discovered]
 ```
 
-</rule>
+### Best-Effort Pre-Compaction Logging:
+Activity.md should be updated **during normal work** (after each significant
+milestone), not only at compaction time. This ensures recovery state exists
+even if Phase 2 fails to execute.
 
----
-
-## CTX-P1-02: Context Resumption Protocol
-
-<rule id="CTX-P1-02" priority="P1" scope="universal" trigger="start-of-turn">
-
-When resuming a task after a context limit was hit:
-
-1. **READ** the previous agent's activity.md checkpoint FIRST
-2. **REVIEW** files listed as in-progress or modified
-3. **VERIFY** current state matches the checkpoint
-4. **CONTINUE** from the "Remaining" / "Next Steps" section
-5. **DO NOT** re-read full task history or redo completed work
+### What NOT To Do:
+- Do NOT attempt tool calls during Phase 1 (the platform forbids them)
+- Do NOT continue working in Phase 2 — only persist state and emit signal
+- Do NOT produce a vague summary — include specific file paths, error messages, and next steps
 
 </rule>
 
@@ -90,11 +98,17 @@ When resuming a task after a context limit was hit:
 ## CTX-CP-01: Compliance Checkpoint
 
 <checkpoint id="CTX-CP-01" trigger="on-compaction">
-- [ ] CTX-P0-01: Recognized compaction prompt as EXIT signal
-- [ ] CTX-P0-01: Stopped current work (no new tool calls)
-- [ ] CTX-P0-01: Wrote detailed activity.md entry
-- [ ] CTX-P0-01: Emitted TASK_INCOMPLETE_XXXX:context_limit_exceeded
-- [ ] CTX-P0-01: Made NO further tool calls after signal
+Phase 1 (compaction turn):
+- [ ] Recognized compaction prompt — stopped current work
+- [ ] Summary includes task ID, state, completed/failed/remaining work
+- [ ] Summary includes file paths for all modified files
+- [ ] No tool calls attempted during compaction response
+
+Phase 2 (post-compaction turn):
+- [ ] Detected compacted summary in context
+- [ ] Wrote activity.md entry with recovery state
+- [ ] Emitted TASK_INCOMPLETE_XXXX:context_limit_exceeded
+- [ ] Stopped — no further work attempted
 </checkpoint>
 
 ---
