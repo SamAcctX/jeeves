@@ -109,7 +109,7 @@ copy_config_templates() {
     local config_templates=(
         "config/agents.yaml.template:config/agents.yaml"
         "config/TODO.md.template:tasks/TODO.md"
-        "config/deps-tracker.yaml.template:config/deps-tracker.yaml"
+        "config/deps-tracker.yaml.template:tasks/deps-tracker.yaml"
     )
     
     local copied_count=0
