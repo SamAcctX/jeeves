@@ -39,11 +39,13 @@ The `shared/` directory contains 10 rule files (signals, dependency tracking, se
 ### OpenCode Format (Key-Value Boolean Tools)
 ```yaml
 ---
+name: agent-name
 description: "Agent description here"
 mode: subagent
+model: ""
 
 permission:
-  write: ask      # ask | allow | deny
+  write: ask
   bash: ask
   webfetch: allow
   edit: deny

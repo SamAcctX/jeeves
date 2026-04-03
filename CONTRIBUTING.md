@@ -170,18 +170,21 @@ When adding a new skill:
 - If the skill has dependencies, include a manifest parseable by `parse_skill_deps.py`
 - Update `install-skills.sh` if needed
 
-### Loop Scripts
+### Scripts
 
-The Ralph loop is driven by scripts in `jeeves/bin/`:
+All scripts live in `jeeves/bin/` (15 total). The core Ralph loop scripts are:
 
 | Script | Purpose |
 |--------|---------|
 | `ralph-init.sh` | Initialize Ralph scaffolding |
 | `ralph-loop.sh` | Main autonomous loop orchestrator |
-| `ralph-peek.sh` | Inspect loop state |
+| `ralph-peek.sh` | Monitor active loop sessions |
 | `ralph-paths.sh` | Path resolution utilities |
 | `ralph-validate.sh` | Validate Ralph configuration |
 | `ralph-filter-output.sh` | Filter agent output for signals |
+| `sync-agents.sh` | Sync agent model configurations |
+
+Supporting scripts include `apply-rules.sh`, `find-rules-files.sh`, `install-mcp-servers.sh`, `install-agents.sh`, `install-skills.sh`, `install-skill-deps.sh`, `fetch-opencode-models.sh`, and `parse_skill_deps.py`. See [jeeves/bin/AGENTS.md](jeeves/bin/AGENTS.md) for full details.
 
 Changes to loop scripts should preserve the signal-based state machine (COMPLETE, INCOMPLETE, FAILED, BLOCKED) and fresh-context-per-iteration design.
 

@@ -104,7 +104,7 @@ Tasks use a **4-digit zero-padded ID system**:
 ### Git Integration
 - **`.gitignore`**: Excludes `.ralph/tasks/` to prevent ephemeral task data from being committed
 - **Completed tasks**: `.ralph/tasks/done/` can optionally be included for historical record
-- **Branch strategy**: Each task works in a dedicated branch (`task-XXX`) and squash-merges to primary branch on completion
+- **Branch strategy**: Each task works in a dedicated branch (`task/NNNN-description`) and squash-merges to primary branch on completion
 
 ## Key Design Principles
 
