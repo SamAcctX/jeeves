@@ -533,7 +533,7 @@ All environment variables in one table, grouped by context.
 | `VIRTUAL_ENV` | `/opt/venv` | Python virtual environment path |
 | `DISABLE_WELCOME` | (unset) | Set to `1` to suppress the welcome message |
 | `DISABLE_TMUX` | (unset) | Set to `1` to skip tmux auto-attach |
-| `ENABLE_DIND` | (unset) | Set to `true` for Docker-in-Docker support |
+| `ENABLE_DIND` | (unset) | Set to `true` for Docker-in-Docker support. Also installs `kubectl`, `helm`, and `kind` at startup. |
 | `UV_USE_IO_URING` | `0` | Disable io_uring for compatibility in containers |
 | `GIT_AUTHOR_NAME` | (from host) | Forwarded from host for git identity |
 | `GIT_AUTHOR_EMAIL` | (from host) | Forwarded from host for git identity |
