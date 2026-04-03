@@ -1,33 +1,131 @@
 # Task XXXX: [Title]
 
 ## Description
-[Detailed description of what needs to be implemented. Be specific about:
+[Detailed description of WHAT needs to be built and WHY. Be specific about:
 - What functionality or feature is required
 - Why it's needed (business/technical context)
-- Any specific constraints or requirements]
+- Any specific constraints or requirements
+Do NOT specify file paths, folder structures, or implementation methods — the assigned agent determines HOW.]
+
+## Behavioral Specification
+[Define expected behavior using Given/When/Then format. These specs are
+the CONTRACT both Developer and Tester work from.
+
+Specifications must capture the full requirement space — not just the
+obvious happy path, but all situations that naturally arise from the
+feature. If the PRD says "users can do X", specify what happens in every
+meaningful state X can be performed in.]
+
+### Scenario 1: [Descriptive name]
+- **Given**: [preconditions — be specific about system state]
+- **When**: [action/trigger]
+- **Then**: [expected outcome]
+
+### Scenario 2: [Descriptive name]
+- **Given**: [different preconditions or system state]
+- **When**: [same or related action]
+- **Then**: [expected outcome under these conditions]
+
+[Continue with as many scenarios as needed to fully capture the
+requirement. Every scenario represents a specific behavior the
+implementation must support.]
+
+> **IMPORTANT**: Specifications must be implementation-agnostic — describe
+> BEHAVIOR and OUTCOMES, never implementation details like pixel values,
+> DOM structure, CSS selectors, or internal function names. The Developer
+> determines HOW; the spec defines WHAT.
 
 ## Acceptance Criteria
-- [ ] Criterion 1: Specific, testable requirement
-- [ ] Criterion 2: Another specific requirement
-- [ ] All tests pass (defined per task type)
+- [ ] Criterion 1: [specific, testable requirement mapped to PRD]
+- [ ] Criterion 2: [another specific requirement mapped to PRD]
+- [ ] All behavioral spec scenarios have corresponding test coverage
+- [ ] Full project test suite passes (ALL tests, not just this feature's)
+- [ ] All Validation Steps commands pass (unit, build, E2E — see below)
+- [ ] No pre-existing tests broken, skipped, or deleted without justification
+- [ ] Test coverage meets project thresholds (>=80% line, >=70% branch, >=90% function) — EXACT minimums, no rounding (89.99% function = FAIL)
+- [ ] Per-file coverage: Every file created/modified in this task has >=50% branch and >=60% function coverage
+- [ ] Coverage regression: No modified file has lower coverage than before this task
 - [ ] No scope creep (only what was requested)
+- [ ] Documentation: [specific doc requirement — inline docs, README, API docs, etc.]
+- [ ] If infrastructure was created/modified: AGENTS.md updated with
+      exact commands (including working directory) for build, test, and run
+<!-- CONDITIONAL E2E acceptance criteria:
+- Distributed strategy + task HAS user-facing flows: Replace placeholders
+  below with actual E2E criteria for this task's user flows.
+- Distributed strategy + task has NO user-facing flows (data model,
+  utilities, etc.): Delete the placeholders. E2E regression still runs
+  via "All Validation Steps commands pass" above.
+- Concentrated/Grouped strategy: Delete the placeholders entirely.
+  E2E regression runs via Validation Steps; authoring is in another task. -->
+- [ ] E2E test covers [flow 1]: [REMOVE if no user-facing flows or not Distributed]
+- [ ] E2E test covers [flow 2]: [REMOVE if no user-facing flows or not Distributed]
+
+> **Acceptance criteria must be implementation-agnostic** — describe what
+> must be true when done, not how to get there.
+
+## Constraints
+- All operations within `/proj` directory only
+- Headless environment — no GUI, no display server, no interactive prompts
+- All test execution via CLI (`pytest`, `npm test`, `jest --ci`, etc.)
+- Browser tests MUST use headless mode only (Playwright: `headless: true`)
+- All servers must run backgrounded with timeout wrappers
+- All commands must be non-interactive (use `--yes`, `-y`, `--ci` flags)
+- No foreground processes that block execution
+- Read AGENTS.md for project-specific build/test commands and working directories
+- If this task creates infrastructure: update AGENTS.md with usage instructions
+
+## Workflow Context
+- Task Type: [implementation | review | documentation | infrastructure]
+- Review Task: [Task ID of review task, or "included" for batch review]
+- Full suite regression check required: YES
 
 ## Implementation Notes
-[Specific technical details, patterns to follow, files to modify, etc.]
-
-### Files to Create/Modify
-- `/path/to/file1` - Purpose
-- `/path/to/file2` - Purpose
+[Technical context, patterns to follow, integration points, reference materials]
 
 ### Technical Details
 [Any specific algorithms, data structures, APIs, or patterns to use]
 
+### Test Traceability
+[The Developer must trace every test to a behavioral specification scenario or acceptance criterion. The Tester will verify this traceability during review.]
+
+### E2E Test Scope
+[Choose ONE:
+- Distributed + has user flows: List the user flows this task E2E-tests.
+- Distributed + no user flows (data model, utilities): "N/A — no
+  user-facing flows. E2E regression runs via Validation Steps."
+- Concentrated/Grouped: "E2E authoring in task XXXX. This task runs
+  E2E tests as regression checks only."
+For net-new projects: after the infrastructure task creates initial E2E
+smoke tests, every subsequent task runs them even if no feature-specific
+E2E tests exist yet.]
+
+### Validation Approach
+Consider established testing techniques (boundary analysis, equivalence
+partitioning, pairwise testing, state transition testing, etc.) as
+appropriate to ensure comprehensive validation of all specified behaviors.
+
 ### Validation Steps
+[CRITICAL (DEC-P1-TEST-VAL): List commands for ALL test runners from
+the test runner manifest (derived from PRD for net-new projects, or
+from project config for existing projects). Workers execute these
+commands literally — if a runner is omitted, those tests won't run.
+For tasks after infrastructure setup, include ALL runners even if
+only smoke tests exist for some (they serve as regression checks).]
 ```bash
-# Commands to verify implementation
-command1
-command2
+# Unit/component tests
+[unit test command]
+# Type check (if applicable)
+[type check command]
+# Build
+[build command]
+# E2E tests (MANDATORY after infrastructure task per DEC-P1-TEST-VAL)
+[e2e test command]
 ```
+
+## Version References
+- Project type: [net-new | existing]
+- [Package]: [version or "latest stable as of decomposition"]
+- Source: [web search / existing project files / PRD]
 
 ## Dependencies
 [Technical dependencies only - packages, libraries, external resources]

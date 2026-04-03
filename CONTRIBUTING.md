@@ -1,367 +1,278 @@
 # Contributing to Jeeves
 
-Thank you for your interest in contributing to Jeeves! This document provides guidelines and information for contributors.
+Guidelines for contributing to the Jeeves container management system and Ralph autonomous task execution framework.
 
-## 🚀 Getting Started
+## Prerequisites
 
-### Prerequisites
-- **Docker Desktop** (Windows/Mac) or **Docker Engine** (Linux)
-- **PowerShell 7.0+** for Windows, or **PowerShell Core** for cross-platform support
-- **Git** for version control
-- **Basic knowledge** of containerization and AI development tools
+- **Docker**: Docker Desktop (Windows/Mac) or Docker Engine (Linux)
+- **PowerShell 7.0+**: Pre-installed on Windows 10+; install via `brew install powershell` (macOS) or `sudo apt-get install -y powershell` (Linux)
+- **Git**: 2.x+
+- **GPU** (optional): NVIDIA GPU with CUDA support
 
-### Platform-Specific Setup
+## Getting Started
 
-#### Windows
-1. **Install Docker Desktop** from [docker.com](https://www.docker.com/products/docker-desktop)
-2. **PowerShell is pre-installed** on Windows 10+
-3. **Git for Windows**: [git-scm.com](https://git-scm.com/download/win)
+### Fork and Clone
 
-#### macOS
-1. **Install Docker Desktop** for Mac from [docker.com](https://www.docker.com/products/docker-desktop)
-2. **Install PowerShell Core**:
-   ```bash
-   brew install powershell
-   ```
-3. **Git for macOS**: [git-scm.com](https://git-scm.com/download/mac)
-
-#### Linux (Ubuntu/Debian)
-1. **Install Docker Engine**:
-   ```bash
-   sudo apt-get update
-   sudo apt-get install -y docker.io docker-compose
-   sudo usermod -aG docker $USER
-   ```
-2. **Install PowerShell Core**:
-   ```bash
-   # Ubuntu/Debian
-   sudo apt-get install -y powershell
-   
-   # CentOS/RHEL/Fedora
-   sudo yum install -y powershell
-   sudo dnf install -y powershell
-   ```
-3. **Git for Linux**: 
-   ```bash
-   sudo apt-get install -y git
-   ```
-
-### Development Setup
-
-1. **Fork and Clone**
 ```bash
 git clone https://github.com/SamAcctX/jeeves.git
 cd jeeves
 ```
 
-2. **Create Development Branch**
+### Build and Start
+
+All container lifecycle commands run from the **host machine** using `jeeves.ps1`:
+
+```bash
+./jeeves.ps1 build --no-cache
+./jeeves.ps1 start
+./jeeves.ps1 shell
+```
+
+### Verify Your Setup
+
+Inside the container:
+
+```bash
+opencode --version
+claude --version
+install-mcp-servers.sh --dry-run
+install-agents.sh --global
+```
+
+## Development Workflow
+
+### 1. Create a Feature Branch
+
+The `main` branch is protected. All changes must go through pull requests.
+
 ```bash
 git checkout -b feature/your-feature-name
 ```
 
-3. **Set Up Development Environment**
+### 2. Make Changes
+
+Follow the code style guidelines defined in [AGENTS.md](AGENTS.md). That file is the single source of truth for:
+
+- PowerShell script conventions (PascalCase, `Write-Log`, `[CmdletBinding()]`)
+- Shell script conventions (POSIX bash, `set -e`, `print_info`/`print_success`)
+- Dockerfile conventions (multi-stage builds, `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04` base, layer optimization)
+- Agent template conventions (YAML frontmatter, tool permissions)
+- The "no comments unless requested" policy
+
+### 3. Test Your Changes
+
+Testing happens in two contexts -- **host** and **container** -- and it is important to use the right one.
+
+**Host commands** (run from your development machine):
+
 ```bash
-# Build the development image
 ./jeeves.ps1 build --no-cache
-
-# Start the container for development
 ./jeeves.ps1 start
-
-# Access the container for testing
+./jeeves.ps1 stop
 ./jeeves.ps1 shell
 ```
 
-4. **Verify Your Setup**
+**Container commands** (run inside the container via `./jeeves.ps1 shell`):
+
 ```bash
-# Inside the container, verify tools work
 opencode --version
 claude --version
-
-# Note: Agents (@prd-creator, @deepest-thinking) are markdown templates
-# They become available as subagents after installation
+install-mcp-servers.sh --dry-run
+install-agents.sh --global
+install-skills.sh
 ```
 
-## 📋 Contribution Types
+There is no formal test suite. See the manual testing checklist below.
 
-We welcome the following types of contributions:
+### 4. Commit and Push
 
-### 🐛 Bug Reports
-- Use the [GitHub Issues](https://github.com/SamAcctX/jeeves/issues) page
-- Provide detailed reproduction steps
-- Include environment information:
-  - Operating system and version
-  - Docker version
-  - PowerShell version
-  - Container status (running/stopped)
-- Add relevant logs and screenshots
-- Use the "Bug Report" issue template
-
-### ✨ Feature Requests
-- Open an issue with "Feature Request" label
-- Describe the use case and problem you're solving
-- Suggest potential implementation approaches
-- Consider impact on existing functionality
-
-### 📝 Documentation
-- Improve README.md and other documentation files
-- Fix typos and grammatical errors
-- Add examples and tutorials
-- Update outdated information
-- Improve clarity and flow
-
-### 🔧 Code Contributions
-- Bug fixes and performance improvements
-- New features and capabilities
-- Refactoring and code cleanup
-- Test coverage improvements
-- Cross-platform compatibility fixes
-
-### 🎨 Agents and MCP Servers
-- New AI agents for specific use cases
-- Additional MCP server integrations
-- Agent template improvements
-- Server configuration enhancements
-
-## 🛠️ Development Workflow
-
-### 1. Planning
-- Check existing [Issues](https://github.com/SamAcctX/jeeves/issues) and [Discussions](https://github.com/SamAcctX/jeeves/discussions)
-- Create an issue for discussion if needed
-- Plan implementation approach
-- Consider backward compatibility
-
-### 2. Implementation
-- Follow existing code style and patterns
-- Add appropriate tests for new functionality
-- Update documentation for new features
-- Consider cross-platform compatibility
-
-### 3. Testing
-```bash
-# Test your changes thoroughly
-./jeeves.ps1 build --no-cache
-./jeeves.ps1 start
-
-# Test inside the container using docker exec
-docker exec jeeves opencode --version
-docker exec jeeves claude --version
-docker exec jeeves bash -c "cd /usr/local/bin && install-mcp-servers.sh --dry-run"
-docker exec jeeves bash -c "cd /usr/local/bin && install-agents.sh --global"
-
-# Test different platforms if possible
-```
-
-### 4. Submission
-1. **Commit your changes**:
 ```bash
 git add .
-git commit -m "feat: add your feature description"
-```
-
-2. **Push to your fork**:
-```bash
+git commit -m "feat: your conventional commit message"
 git push origin feature/your-feature-name
 ```
 
-3. **Create Pull Request**:
-   - Use a descriptive title
-   - Fill out the PR template completely
-   - Link to relevant issues
-   - Request review from maintainers
+Then open a pull request via the GitHub UI or `gh pr create`.
 
-## 📝 Code Style Guidelines
+## Manual Testing Checklist
 
-### PowerShell Scripts
-- **Use PowerShell 7.0+ syntax**
-- Follow Microsoft PowerShell naming conventions (PascalCase for functions)
-- Use cmdlet-style verb-noun naming
-- Include comment-based help for functions
-- Add proper error handling with try/catch
-- Use `Write-Log` with switches (`-info`, `-error`, `-warning`, `-success`, `-trace`, `-debug`) for output
+Before submitting a PR, verify:
 
-#### Example Function Style:
-```powershell
-function Get-JeevesStatus {
-    [CmdletBinding()]
-    [OutputType([string])]
-    param(
-        [Parameter(Mandatory=$true)]
-        [string]$ContainerName = "jeeves"
-    )
-    
-    try {
-        $status = docker ps --filter "name=$ContainerName" --format "table {{.Names}}\t{{.Status}}"
-        Write-Output $status
-    }
-    catch {
-        Write-Error "Failed to get container status: $($_.Exception.Message)"
-        exit 1
-    }
-}
-```
+- [ ] `./jeeves.ps1 build --no-cache` completes without errors
+- [ ] `./jeeves.ps1 start && ./jeeves.ps1 stop` lifecycle works
+- [ ] `./jeeves.ps1 shell` provides shell access
+- [ ] `install-mcp-servers.sh --dry-run` runs inside container
+- [ ] `install-agents.sh --global` runs inside container
+- [ ] File permissions work correctly on host
+- [ ] Cross-platform compatibility verified (Windows, macOS, Linux where possible)
 
-### Docker Configuration
-- **Use multi-stage builds** for efficiency
-- **Specify base image tags** (don't use `latest`)
-- **Document customizations** with comments
-- **Minimize layer count** where possible
+### Cross-Platform Notes
 
-#### Example Dockerfile Style:
-```dockerfile
-# Stage 1: Base system
-FROM ubuntu:22.04 AS base
-RUN apt-get update && apt-get install -y \
-    curl \
-    git \
-    && rm -rf /var/lib/apt/lists/*
+- **Windows**: Test on Windows 10/11 with PowerShell 7.x
+- **macOS**: Test on Intel and Apple Silicon
+- **Linux**: Test on Ubuntu 24.04 or Debian derivatives
 
-# Stage 2: Runtime
-FROM base AS runtime
-COPY --from=base /usr/local/bin/opencode /usr/local/bin/opencode
-CMD ["/bin/bash"]
-```
+## Contribution Types
 
-### Shell Scripts
-- **Use POSIX shell syntax** for compatibility
-- **Include proper shebangs**: `#!/bin/bash`
-- **Use `set -e`** for error handling
-- **Quote variables properly**: `"$VAR"` not `$VAR`
-- **Add usage information and help text**
-- **Make scripts executable**: `chmod +x`
+### Bug Reports
 
-#### Example Script Style:
-```bash
-#!/bin/bash
-# Jeeves Agent Installation Script
-# Usage: ./install-agents.sh [OPTIONS]
+Open a [GitHub Issue](https://github.com/SamAcctX/jeeves/issues) with:
 
-set -e
+- Detailed reproduction steps
+- Operating system and version
+- Docker version
+- PowerShell version
+- Container status and relevant logs
 
-show_help() {
-    echo "Jeeves Agent Installation Script"
-    echo "Usage: $0 [--global]"
-    echo "  --global    Install globally"
-}
+### Feature Requests
 
-# Main script logic here
-```
+Open an issue describing the use case, proposed approach, and impact on existing functionality.
+
+### Code Contributions
+
+Bug fixes, new features, performance improvements, refactoring, and cross-platform fixes. Follow the code style in [AGENTS.md](AGENTS.md).
+
+### Documentation
+
+Improvements to any file in `docs/`, `README.md`, `AGENTS.md`, or this file. See [Contributing to Documentation](#contributing-to-documentation) below.
+
+### Ralph Contributions
+
+Agents, skills, templates, and loop improvements. See [Contributing to Ralph](#contributing-to-ralph) below.
+
+## Contributing to Ralph
+
+Ralph is the autonomous task execution framework. Its source lives in `jeeves/Ralph/`.
 
 ### Agent Templates
-- **Use YAML frontmatter** with required fields
-- **Provide clear descriptions** of agent capabilities
-- **Set appropriate tool permissions** (ask, allow, deny)
-- **Include usage examples** in documentation
-- **Test with both OpenCode and Claude Code**
 
-## 🧪 Testing Guidelines
+Ralph has 11 agent types with 11 OpenCode and 10 Claude Code templates (OpenCode and Claude Code) in `jeeves/Ralph/templates/agents/`. When contributing a new agent or modifying an existing one:
 
-### Manual Testing Checklist
-- [ ] Container builds successfully without errors
-- [ ] Container starts and stops cleanly
-- [ ] OpenCode CLI/TUI/Web UI work
-- [ ] Claude Code integration works
-- [ ] MCP servers install and function
-- [ ] AI agents install and operate
-- [ ] File permissions work correctly on host
-- [ ] Cross-platform compatibility verified
+- Follow the naming convention: `{role}-opencode.md` and `{role}-claude.md`
+- Include proper YAML frontmatter with `description`, `mode`, `permission`, and `tools`
+- Shared rules live in `jeeves/Ralph/templates/agents/shared/` and are included by all agent templates
+- Test with both OpenCode and Claude Code platforms
+- See the existing templates for reference
 
-### Automated Testing
-```bash
-# Run basic functionality tests
-docker exec jeeves opencode --version
-docker exec jeeves claude --version
-docker exec jeeves bash -c "cd /usr/local/bin && install-mcp-servers.sh --dry-run"
-docker exec jeeves bash -c "cd /usr/local/bin && install-agents.sh --global"
+### Skills
 
-# Verify agent templates are installed
-docker exec jeeves ls -la /opt/jeeves/PRD/
-docker exec jeeves ls -la /opt/jeeves/Deepest-Thinking/
-```
+Ralph skills live in `jeeves/Ralph/skills/`. Each skill is a directory containing a `SKILL.md` and any supporting files. Current skills:
 
-### Cross-Platform Testing
-- **Windows**: Test on Windows 10/11 with PowerShell 5.1/7.x
-- **macOS**: Test on Intel and Apple Silicon Macs
-- **Linux**: Test on Ubuntu 20.04/22.04 and Debian derivatives
+- `dependency-tracking/` -- Task dependency management and cycle detection
+- `git-automation/` -- Branch management, commits, squash merges
+- `rationalization-defense/` -- Detect and correct rationalization patterns
+- `system-prompt-compliance/` -- Prompt compliance verification
 
-## 🔄 Pull Request Process
+When adding a new skill:
 
-### Commit Message Convention
+- Create a directory under `jeeves/Ralph/skills/`
+- Include a `SKILL.md` with clear instructions
+- If the skill has dependencies, include a manifest parseable by `parse_skill_deps.py`
+- Update `install-skills.sh` if needed
 
-All commit messages and PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. This is enforced by automated CI checks.
+### Scripts
+
+All scripts live in `jeeves/bin/` (15 total). The core Ralph loop scripts are:
+
+| Script | Purpose |
+|--------|---------|
+| `ralph-init.sh` | Initialize Ralph scaffolding |
+| `ralph-loop.sh` | Main autonomous loop orchestrator |
+| `ralph-peek.sh` | Monitor active loop sessions |
+| `ralph-paths.sh` | Path resolution utilities |
+| `ralph-validate.sh` | Validate Ralph configuration |
+| `ralph-filter-output.sh` | Filter agent output for signals |
+| `sync-agents.sh` | Sync agent model configurations |
+
+Supporting scripts include `apply-rules.sh`, `find-rules-files.sh`, `install-mcp-servers.sh`, `install-agents.sh`, `install-skills.sh`, `install-skill-deps.sh`, `fetch-opencode-models.sh`, and `parse_skill_deps.py`. See [jeeves/bin/AGENTS.md](jeeves/bin/AGENTS.md) for full details.
+
+Changes to loop scripts should preserve the signal-based state machine (COMPLETE, INCOMPLETE, FAILED, BLOCKED) and fresh-context-per-iteration design.
+
+### Standalone Agents
+
+PRD Creator (`jeeves/PRD/`) and Deepest-Thinking (`jeeves/Deepest-Thinking/`) operate outside the Ralph Loop. Each has OpenCode and Claude Code templates and a README.
+
+## Contributing to Documentation
+
+Project documentation lives in `docs/`:
+
+| File | Content |
+|------|---------|
+| `guide.md` | Workflow guide: setup, Ralph phases, agent selection, tips |
+| `reference.md` | Commands, flags, configuration, environment variables |
+| `troubleshooting.md` | Common issues and solutions |
+
+When updating documentation:
+
+- Keep content factually accurate and consistent with the current codebase
+- Do not duplicate content that belongs in `AGENTS.md` (code style) or `README.md` (project overview)
+- Reference other docs rather than repeating information
+- No emojis unless explicitly requested
+- See the [Ralph documentation](jeeves/Ralph/docs/) for Ralph-specific docs
+
+## Commit Message Convention
+
+All commit messages and PR titles **must** follow the [Conventional Commits](https://www.conventionalcommits.org/) specification. PR titles are validated by GitHub Actions.
 
 **Format:**
+
 ```
 <type>[optional scope]: <description>
 ```
 
 **Types:**
-- **feat**: A new feature
-- **fix**: A bug fix
-- **docs**: Documentation only changes
-- **style**: Code style changes (formatting, semicolons, etc.)
-- **refactor**: Code refactoring
-- **perf**: Performance improvements
-- **test**: Adding or updating tests
-- **chore**: Build process or auxiliary tool changes
-- **sec**: Security-related changes
-- **revert**: Reverting a previous commit
 
-**Scopes (optional):**
-- **ps1**: PowerShell scripts
-- **docker**: Docker-related changes
-- **docs**: Documentation
-- **ci**: CI/CD configuration
-- **deps**: Dependencies
-- **core**: Core functionality
-- **bin**: Binary/installation scripts
+| Type | Meaning |
+|------|---------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `docs` | Documentation changes |
+| `style` | Formatting, no logic change |
+| `refactor` | Code restructuring |
+| `perf` | Performance improvement |
+| `test` | Adding or updating tests |
+| `chore` | Build process or tooling |
+| `sec` | Security-related changes |
+| `revert` | Reverting a previous commit |
+
+**Scopes** (optional): `ps1`, `docker`, `docs`, `ci`, `deps`, `core`, `bin`, `ralph`, `agents`, `skills`
 
 **Examples:**
+
 ```
-feat(ps1): add container restart command
-fix(docker): resolve path escaping issue
-docs: update installation instructions
-sec: fix privilege escalation vulnerability
-chore(deps): update Docker base image to Ubuntu 24.04
+feat(ralph): add retry backoff to loop script
+fix(docker): resolve path escaping on Windows
+docs: update troubleshooting guide
+sec: fix privilege escalation in container setup
+chore(deps): update CUDA base image
+feat(agents): add decomposer-architect template
 ```
 
-**Important Notes:**
-- PR titles are automatically validated by GitHub Actions
-- The subject line must not start with an uppercase letter
+**Rules:**
+
+- Subject line must not start with an uppercase letter
 - No period at the end of the subject line
-- Breaking changes should include `!` before the colon (e.g., `feat!: breaking change`)
+- Breaking changes: add `!` before the colon (e.g., `feat!: breaking change`)
+
+## Pull Request Process
 
 ### Before Submitting
-1. **Test thoroughly** - Ensure your changes work as expected
-2. **Update documentation** - Document new features and changes
-3. **Check for existing issues** - Avoid duplicate work
-4. **Keep changes focused** - One feature or fix per PR if possible
-5. **Follow conventional commits** - PR title must follow the format above
 
-### Important: No Direct Commits to Main
+1. Test thoroughly (see [Manual Testing Checklist](#manual-testing-checklist))
+2. Update documentation for any new features or changed behavior
+3. Check for existing issues to avoid duplicate work
+4. Keep PRs focused -- one feature or fix per PR when possible
+5. Follow the commit message convention above
 
-The `main` branch is protected - **direct pushes are blocked**. All changes must go through pull requests:
+### PR Requirements
 
-```bash
-# Create a feature branch
-git checkout -b feature/your-feature-name
-
-# Make your changes and commit
-git add .
-git commit -m "feat: your conventional commit message"
-
-# Push the branch
-git push origin feature/your-feature-name
-
-# Open a PR via GitHub UI or: gh pr create
-```
-
-PRs require:
-- At least 1 approval (if configured)
+- At least 1 approval from a maintainer
 - All status checks passing (including PR title linting)
 - No merge conflicts
-- All conversations resolved
+- All review conversations resolved
 
 ### PR Template
+
 ```markdown
 ## Description
 Brief description of changes
@@ -375,125 +286,62 @@ Brief description of changes
 ## Testing
 - [ ] Manual testing completed
 - [ ] Cross-platform tested
-- [ ] Automated tests pass
+- [ ] Automated tests pass (if applicable)
 
 ## Checklist
-- [ ] Code follows style guidelines
+- [ ] Code follows AGENTS.md style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
-- [ ] Tests added/updated
+- [ ] No duplicated code style content
 ```
 
 ### Review Process
-1. **Automated checks** - CI/CD pipeline validation
-2. **Peer review** - At least one maintainer review required
-3. **Testing validation** - Manual verification of changes
-4. **Approval** - Maintainer approval required for merge
 
-## 🏗️ Project Structure
+1. **Automated checks** -- CI/CD pipeline validation and PR title linting
+2. **Peer review** -- At least one maintainer review
+3. **Testing validation** -- Manual verification of changes
+4. **Approval** -- Maintainer approval required for merge
+
+## Project Structure
+
+See [README.md](README.md) for the full repository structure. Key directories for contributors:
 
 ```
 jeeves/
-├── README.md                    # Main documentation
-├── CONTRIBUTING.md              # Contribution guidelines
-├── LICENSE                      # AGPLv3 license
-├── jeeves.ps1                   # Main management script
-├── Dockerfile.jeeves            # Container build file
-├── .gitignore                   # Git ignore rules
-├── .tmp/                        # Generated configs (git ignored)
-├── jeeves/                      # Package directory
-│   ├── bin/                     # Installation scripts
-│   │   ├── install-mcp-servers.sh
-│   │   └── install-agents.sh
-│   ├── PRD/                     # PRD Creator agent
-│   │   ├── README-PRD.md
-│   │   ├── prd-creator-prompt.md
-│   │   ├── prd-creator-opencode-template.md
-│   │   └── prd-creator-claude-template.md
-│   └── Deepest-Thinking/        # Research agent
-│       ├── README-Deepest-Thinking.md
-│       ├── deepest-thinking-prompt.md
-│       ├── deepest-thinking-opencode-template.md
-│       └── deepest-thinking-claude-template.md
-└── docs/                        # Reference documentation
-    ├── commands.md
-    ├── configuration.md
-    └── troubleshooting.md
+├── jeeves.ps1                     # Host-side container management
+├── Dockerfile.jeeves              # Multi-stage Docker build
+├── jeeves/
+│   ├── bin/                       # All scripts (15 total)
+│   ├── PRD/                       # PRD Creator agent
+│   ├── Deepest-Thinking/          # Research agent
+│   └── Ralph/                     # Ralph Loop framework
+│       ├── skills/                #   Pluggable skills
+│       └── templates/
+│           ├── agents/            #   11 agent types (OpenCode + Claude)
+│           │   └── shared/        #   Shared rules (10 files)
+│           ├── config/            #   Configuration templates
+│           ├── prompts/           #   Prompt templates
+│           └── task/              #   Task file templates
+├── docs/                          # Project documentation (3 files)
+├── AGENTS.md                      # Code style and agent guidelines
+└── CONTRIBUTING.md                # This file
 ```
 
-## 🎯 Areas for Contribution
+## License
 
-### High Priority
-- Bug fixes and stability improvements
-- Documentation enhancements
-- Test coverage improvements
-- Cross-platform compatibility fixes
+Jeeves is licensed under the [GNU Affero General Public License v3.0](LICENSE) (AGPL-3.0). By submitting a contribution, you agree that your work will be licensed under the same terms. The AGPL-3.0 requires that any modified version of this software made available over a network must also make its source code available. Keep this in mind when contributing features that involve network-facing services.
 
-### Medium Priority
-- New AI agent development
-- Additional MCP server integrations
-- Performance optimizations
-- User experience improvements
+## Community Guidelines
 
-### Low Priority
-- New feature development
-- Experimental integrations
-- Advanced customization options
-
-## 🤝 Community Guidelines
-
-### Code of Conduct
 - Be respectful and inclusive
-- Welcome newcomers and help them learn
-- Focus on constructive feedback
-- Avoid personal attacks or criticism
+- Focus on constructive, actionable feedback
+- Use [GitHub Issues](https://github.com/SamAcctX/jeeves/issues) for bugs and feature requests
+- Use [GitHub Discussions](https://github.com/SamAcctX/jeeves/discussions) for general conversation
+- Check the [troubleshooting guide](docs/troubleshooting.md) before asking for help
 
-### Communication
-- Use GitHub Issues for bug reports and questions
-- Use GitHub Discussions for general conversation
-- Be patient with response times
-- Provide clear, actionable feedback
+## Resources
 
-### Recognition
-- Contributors are recognized in releases
-- Significant contributions may be highlighted
-- Community members are valued and appreciated
-
-## 📚 Resources
-
-### Development Tools
 - [Docker Documentation](https://docs.docker.com/)
 - [PowerShell Documentation](https://docs.microsoft.com/en-us/powershell/)
-- [OpenCode Documentation](https://opencode.ai/docs/)
-- [Claude Code Documentation](https://docs.claude.com/)
-
-### MCP Resources
 - [MCP Specification](https://modelcontextprotocol.io/)
-- [Awesome MCP Servers](https://github.com/wong2/awesome-mcp-servers)
-- [MCP Server Development Guide](https://docs.anthropic.com/claude/docs/mcp)
-
-### AI Agent Development
-- [OpenCode Agent Documentation](https://opencode.ai/docs/agents/)
-- [Agent Best Practices](https://opencode.ai/docs/agent-best-practices/)
-- [Agent Template Reference](https://opencode.ai/docs/agent-templates/)
-
-## 🆘 Getting Help
-
-### Troubleshooting
-- Check the [troubleshooting guide](https://github.com/SamAcctX/jeeves/blob/main/docs/troubleshooting.md)
-- Search existing [Issues](https://github.com/SamAcctX/jeeves/issues)
-- Check container logs: `./jeeves.ps1 logs`
-
-### Questions
-- Open a [GitHub Discussion](https://github.com/SamAcctX/jeeves/discussions/new)
-- Check documentation before asking questions
-- Provide context and error messages when seeking help
-
-### Reporting Issues
-- Open a new issue with detailed information
-- Include system information and reproduction steps
-- Provide logs and screenshots when applicable
-
----
-
-Thank you for contributing to Jeeves! Your contributions help make AI-powered development more accessible and productive for everyone.
+- [Conventional Commits](https://www.conventionalcommits.org/)

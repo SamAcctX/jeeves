@@ -72,7 +72,7 @@ detect_project_root() {
 create_ralph_structure() {
     print_info "Creating Ralph directory structure..."
     
-    local dirs=("config" "prompts" "tasks" "specs")
+    local dirs=("config" "tasks" "specs")
     
     for dir in "${dirs[@]}"; do
         local target_dir="$RALPH_DIR/$dir"
@@ -108,8 +108,8 @@ copy_config_templates() {
     
     local config_templates=(
         "config/agents.yaml.template:config/agents.yaml"
-        "config/TODO.md.template:TODO.md"
-        "config/deps-tracker.yaml.template:config/deps-tracker.yaml"
+        "config/TODO.md.template:tasks/TODO.md"
+        "config/deps-tracker.yaml.template:tasks/deps-tracker.yaml"
     )
     
     local copied_count=0
@@ -146,40 +146,6 @@ copy_config_templates() {
     return 0
 }
 
-copy_task_templates() {
-    print_info "Copying task templates..."
-    
-    local task_templates=(
-        "task/TASK.md.template:TASK.md"
-        "task/activity.md.template:activity.md"
-        "task/attempts.md.template:attempts.md"
-    )
-    
-    local copied_count=0
-    
-    for template_mapping in "${task_templates[@]}"; do
-        local source_template="${template_mapping%:*}"
-        local dest_file="${template_mapping#*:}"
-        local source_path="$TEMPLATE_SOURCE/$source_template"
-        local dest_path="$RALPH_DIR/$dest_file"
-        
-        if [ -f "$source_path" ]; then
-            if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                print_warning "Skipping existing file: $dest_path (use --force to overwrite)"
-            else
-                cp -p "$source_path" "$dest_path"
-                print_success "Created: $dest_file"
-                copied_count=$((copied_count + 1))
-            fi
-        else
-            print_warning "Template not found: $source_path"
-        fi
-    done
-    
-    echo "$copied_count"
-    return 0
-}
-
 copy_agent_templates() {
     print_info "Copying agent templates..."
     
@@ -201,25 +167,27 @@ copy_agent_templates() {
             
             if [[ "$template_name" == *"-opencode.md" ]]; then
                 dest_dir=".opencode/agents"
-                dest_path="$dest_dir/$template_name"
+                local base_name="${template_name%-opencode.md}"
+                dest_path="$dest_dir/${base_name}.md"
                 
                 if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                    print_warning "Skipping existing OpenCode template: $template_name (use --force to overwrite)"
+                    print_warning "Skipping existing OpenCode template: $base_name.md (use --force to overwrite)"
                 else
                     cp -p "$template_file" "$dest_path"
-                    print_success "Copied $template_name to .opencode/agents/"
+                    print_success "Copied $template_name to .opencode/agents/${base_name}.md"
                     copied_count=$((copied_count + 1))
                 fi
                 
             elif [[ "$template_name" == *"-claude.md" ]]; then
                 dest_dir=".claude/agents"
-                dest_path="$dest_dir/$template_name"
+                local base_name="${template_name%-claude.md}"
+                dest_path="$dest_dir/${base_name}.md"
                 
                 if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                    print_warning "Skipping existing Claude template: $template_name (use --force to overwrite)"
+                    print_warning "Skipping existing Claude template: $base_name.md (use --force to overwrite)"
                 else
                     cp -p "$template_file" "$dest_path"
-                    print_success "Copied $template_name to .claude/agents/"
+                    print_success "Copied $template_name to .claude/agents/${base_name}.md"
                     copied_count=$((copied_count + 1))
                 fi
                 
@@ -229,31 +197,81 @@ copy_agent_templates() {
         fi
     done
     
+    # Copy shared agent files
+    local shared_source="$TEMPLATE_SOURCE/agents/shared"
+    if [ -d "$shared_source" ]; then
+        mkdir -p ".opencode/agents/shared"
+        mkdir -p ".claude/agents/shared"
+        
+        for shared_file in "$shared_source"/*.md; do
+            if [ -f "$shared_file" ]; then
+                local shared_filename=$(basename "$shared_file")
+                
+                # Copy to OpenCode agents shared directory
+                local opencode_dest=".opencode/agents/shared/$shared_filename"
+                if [ -f "$opencode_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                    print_warning "Skipping existing OpenCode shared file: $shared_filename (use --force to overwrite)"
+                else
+                    cp -p "$shared_file" "$opencode_dest"
+                    print_success "Copied $shared_filename to .opencode/agents/shared/"
+                    copied_count=$((copied_count + 1))
+                fi
+                
+                # Copy to Claude agents shared directory
+                local claude_dest=".claude/agents/shared/$shared_filename"
+                if [ -f "$claude_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                    print_warning "Skipping existing Claude shared file: $shared_filename (use --force to overwrite)"
+                else
+                    cp -p "$shared_file" "$claude_dest"
+                    print_success "Copied $shared_filename to .claude/agents/shared/"
+                    copied_count=$((copied_count + 1))
+                fi
+            fi
+        done
+    else
+        print_warning "Shared agent templates directory not found: $shared_source"
+    fi
+    
     echo "$copied_count"
     return 0
 }
 
-copy_bash_scripts() {
-    print_info "Copying bash scripts..."
+copy_skills() {
+    print_info "Copying Ralph skills..."
     
-    if [ ! -d "$TEMPLATE_SOURCE/bin" ]; then
-        print_warning "Bash scripts directory not found: $TEMPLATE_SOURCE/bin"
+    local skills_source="/opt/jeeves/Ralph/skills"
+    
+    if [ ! -d "$skills_source" ]; then
+        print_warning "Skills directory not found: $skills_source"
         return 0
     fi
     
     local copied_count=0
     
-    for script_file in "$TEMPLATE_SOURCE/bin"/*.sh; do
-        if [ -f "$script_file" ]; then
-            local script_name=$(basename "$script_file")
-            local dest_path="/usr/local/bin/$script_name"
+    mkdir -p ".opencode/skills"
+    mkdir -p ".claude/skills"
+    
+    for skill_dir in "$skills_source"/*/; do
+        if [ -d "$skill_dir" ]; then
+            local skill_name=$(basename "$skill_dir")
+            local opencode_dest=".opencode/skills/$skill_name"
+            local claude_dest=".claude/skills/$skill_name"
             
-            if [ -f "$dest_path" ] && [ "${FORCE:-0}" -ne 1 ]; then
-                print_warning "Skipping existing bash script: $script_name (use --force to overwrite)"
+            if [ -d "$opencode_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                print_warning "Skipping existing OpenCode skill: $skill_name (use --force to overwrite)"
             else
-                cp -p "$script_file" "$dest_path"
-                chmod +x "$dest_path"
-                print_success "Copied $(basename "$script_file") to /usr/local/bin/"
+                rm -rf "$opencode_dest"
+                cp -r "$skill_dir" "$opencode_dest"
+                print_success "Copied skill '$skill_name' to .opencode/skills/"
+                copied_count=$((copied_count + 1))
+            fi
+            
+            if [ -d "$claude_dest" ] && [ "${FORCE:-0}" -ne 1 ]; then
+                print_warning "Skipping existing Claude skill: $skill_name (use --force to overwrite)"
+            else
+                rm -rf "$claude_dest"
+                cp -r "$skill_dir" "$claude_dest"
+                print_success "Copied skill '$skill_name' to .claude/skills/"
                 copied_count=$((copied_count + 1))
             fi
         fi
@@ -396,29 +414,58 @@ copy_templates() {
     
     local total_copied=0
     local config_count=0
-    local task_count=0
     local agent_count=0
-    local script_count=0
+    local skills_count=0
     
     config_count=$(copy_config_templates)
     total_copied=$((total_copied + config_count))
     
-    task_count=$(copy_task_templates)
-    total_copied=$((total_copied + task_count))
-    
     agent_count=$(copy_agent_templates)
     total_copied=$((total_copied + agent_count))
     
-    script_count=$(copy_bash_scripts)
-    total_copied=$((total_copied + script_count))
+    skills_count=$(copy_skills)
+    total_copied=$((total_copied + skills_count))
     
     if [ "$total_copied" -gt 0 ]; then
-        print_success "Template copying completed: $total_copied files copied (config: $config_count, task: $task_count, agents: $agent_count, scripts: $script_count)"
+        print_success "Template copying completed: $total_copied items copied (config: $config_count, agents: $agent_count, skills: $skills_count)"
     else
         print_warning "No templates were copied (files may already exist)"
     fi
     
     return 0
+}
+
+run_installation_scripts() {
+    print_info "Running local installation scripts..."
+    
+    local script_dir="$(dirname "$(readlink -f "$0")")"
+    local scripts_to_run=(
+        # "install-skills.sh"
+        "install-agents.sh"
+        "install-mcp-servers.sh"
+        "install-skill-deps.sh"
+    )
+    
+    for script in "${scripts_to_run[@]}"; do
+        local script_path="$script_dir/$script"
+        
+        if [ -f "$script_path" ]; then
+            if [ -x "$script_path" ]; then
+                print_info "Running: $script"
+                if "$script_path" 2>&1; then
+                    print_success "Completed: $script"
+                else
+                    print_warning "Script returned non-zero exit code: $script"
+                fi
+            else
+                print_warning "Script not executable, skipping: $script"
+            fi
+        else
+            print_warning "Script not found: $script_path"
+        fi
+    done
+    
+    print_success "Installation scripts completed"
 }
 
 parse_args() {
@@ -468,6 +515,8 @@ main() {
     fi
     
     copy_templates
+    
+    run_installation_scripts
     
     print_success "Ralph initialization completed successfully!"
     print_info "Your Ralph project structure is ready for use"

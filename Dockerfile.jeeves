@@ -76,6 +76,7 @@ RUN apt-get update && \
         libgbm1 \
         libxss1 \
         libasound2t64 \
+        supervisor \
         # Docker
         docker-ce \
         docker-ce-cli \
@@ -127,8 +128,9 @@ ENV BUILD_DESKTOP=$BUILD_DESKTOP
 
 
 # Opencode requires bun for building/development but not necessarily runtime, so install it on this layer only
-# As of 09 Feb 2026, opencode requires bun 1.3.8 exactly...
-RUN npm install -g bun@1.3.9 && \
+# Opencode is a bit finnicky with bun versions, so you may need to do a test build and see which bun version
+# it is expecting and pin it below for the build to work.
+RUN npm install -g bun@1.3.11 && \
     npm cache clear --force
 
 RUN git config --global http.postBuffer 524288000 \
@@ -140,13 +142,33 @@ RUN git clone --depth=1 --recurse-submodules --shallow-submodules --remote-submo
 
 WORKDIR /app/opencode
 
+# Temp patches to resolve upstream issues before they are merged:
+# - PR #11812: Fix `run --attach` agent validation crash --> Merged
+#   https://github.com/anomalyco/opencode/pull/11812
+# - PR #12623: Doom-loop guard for repeated reasoning/output
+#   https://github.com/anomalyco/opencode/pull/12623
+# - Issue #12938: Subagents can't use 'todowrite' tool (hotfix via sed)
+#   https://github.com/anomalyco/opencode/issues/12938
+#
+#curl -L https://github.com/anomalyco/opencode/pull/11812.patch -o /tmp/11812.patch && \
+    #curl -L https://github.com/anomalyco/opencode/pull/12623.patch -o /tmp/12623.patch \
+    #&& git apply /tmp/11812.patch \
+    #&& git apply /tmp/12623.patch \
+
+RUN \
+    sed -i "s/todoread: { \"*\": \"deny\" }/todoread: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    && sed -i "s/todowrite: { \"*\": \"deny\" }/todowrite: { \"*\": \"allow\" }/g" packages/opencode/src/tool/task.ts \
+    && sed -i 's/todowrite: false/todowrite: true/g' packages/opencode/src/tool/task.ts \
+    && sed -i 's/todoread: false/todoread: true/g' packages/opencode/src/tool/task.ts
+
+
 # Some branding overrides, just because...
 RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
 RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
 
 # CLI/TUI/WebUI build
-RUN bun install
-RUN ./packages/opencode/script/build.ts
+RUN  set -eux; bun install
+RUN  set -eux; ./packages/opencode/script/build.ts
 
 RUN \
     if [  "$BUILD_DESKTOP" = "true" ]; then \
@@ -246,6 +268,7 @@ RUN if getent group ${GID}; then \
 ENV WORKSPACE=/proj
 ENV HOME=/home/jeeves
 ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH="/opt/jeeves/crawl4ai:${PYTHONPATH}"
 
 # Ensure venv is used for python/pip
 ENV VIRTUAL_ENV=/opt/venv
@@ -254,6 +277,17 @@ ENV VIRTUAL_ENV=/opt/venv
 RUN /opt/venv/bin/pip install --upgrade --force-reinstall --ignore-installed \
         mcp-server-fetch \
         pyyaml
+
+RUN /opt/venv/bin/pip install --no-cache-dir \
+        git+https://github.com/BerriAI/litellm.git \
+        git+https://github.com/unclecode/crawl4ai.git  \
+        pydantic \
+        httpx
+
+RUN git clone --depth=1 https://github.com/sadiuysal/crawl4ai-mcp-server.git /tmp/crawl4ai-mcp-server && \
+    mkdir -p /opt/jeeves/crawl4ai && \
+    cp -r /tmp/crawl4ai-mcp-server/crawler_agent /opt/jeeves/crawl4ai/crawler_agent && \
+    rm -rf /tmp/crawl4ai-mcp-server
 
 # Install Playwright browser and dependencies
 USER jeeves
@@ -285,14 +319,42 @@ if [ -n "$TMUX" ]; then
 fi
 
 # Attach to existing session or create it
+# The welcome message will be displayed by the shell's rc file
 exec tmux new-session -A -s "$SESSION_NAME"
 EOF
 
-RUN chmod +x /usr/local/bin/jeeves-shell
+RUN chmod +x /usr/local/bin/jeeves-shell && \
+    sed -i 's/\r$//' /usr/local/bin/jeeves-shell
 
-# tmux hook for bash auto-attach
-# Can be disabled by setting the env var DISABLE_TMUX=1
+# Welcome message and tmux hook for bash
+# Can disable tmux with DISABLE_TMUX=1 and message with DISABLE_WELCOME=1
 RUN cat << 'EOF' >> /etc/bash.bashrc
+
+# --- opencode welcome message ---
+# Skip if:
+# - not an interactive TTY
+# - explicitly disabled
+if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
+  echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
+  echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
+  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m--------------------------------------------- \033[0m"
+  echo -e "\033[0;37mQuick Tips:\033[0m"
+  echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
+  echo -e "\033[0;37m  • Ralph init (-f overwrites): \033[1;36mralph-init.sh -f\033[0m"
+  echo -e "\033[0;37m  • Validate Ralph agents: \033[1;36mCheck .ralph/config/agents.yaml\033[0m"
+  echo -e "\033[0;37m  • Sync Ralph agents: \033[1;36msync-agents.sh\033[0m"
+  echo -e "\033[0;37m  • Opencode sync bug: TUI/WebUI sessions not real-time synced\033[0m"
+  echo -e "\033[0;37m  • Restart container after adding agents/skills/MCP servers\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo
+fi
+# --- end opencode welcome message ---
 
 # --- opencode tmux auto-attach ---
 # Skip if:
@@ -306,8 +368,35 @@ fi
 
 EOF
 
-# same for zsh shell
+# Welcome message and tmux hook for zsh
+# Can disable tmux with DISABLE_TMUX=1 and message with DISABLE_WELCOME=1
 RUN cat << 'EOF' >> /etc/zsh/zshrc
+
+# --- opencode welcome message ---
+# Skip if:
+# - not an interactive TTY
+# - explicitly disabled
+if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[1;32mWelcome to Project Jeeves!\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo -e "\033[0;37mWorkspace: \033[1;36m/proj\033[0m"
+  echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
+  echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
+  echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
+  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  echo -e "\033[1;34m--------------------------------------------- \033[0m"
+  echo -e "\033[0;37mQuick Tips:\033[0m"
+  echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
+  echo -e "\033[0;37m  • Ralph init (-f overwrites): \033[1;36mralph-init.sh -f\033[0m"
+  echo -e "\033[0;37m  • Validate Ralph agents: \033[1;36mCheck .ralph/config/agents.yaml\033[0m"
+  echo -e "\033[0;37m  • Sync Ralph agents: \033[1;36msync-agents.sh\033[0m"
+  echo -e "\033[0;37m  • Opencode sync bug: TUI/WebUI sessions not real-time synced\033[0m"
+  echo -e "\033[0;37m  • Restart container after adding agents/skills/MCP servers\033[0m"
+  echo -e "\033[1;34m=============================================\033[0m"
+  echo
+fi
+# --- end opencode welcome message ---
 
 # --- opencode tmux auto-attach ---
 # Skip if:
@@ -340,6 +429,23 @@ set -g history-limit 50000
 set -g default-terminal "screen-256color"
 EOF
 
+# Opencode pseudo-aliases to auto-attach the TUI to the auto-started web UI server
+RUN echo 'opencode() { \
+  if [[ $# -eq 0 ]]; then \
+    command opencode attach http://localhost:3333; \
+  else \
+    command opencode "$@"; \
+  fi \
+}' >> /home/jeeves/.bashrc
+
+RUN echo 'opencode() { \
+  if [[ $# -eq 0 ]]; then \
+    command opencode attach http://localhost:3333; \
+  else \
+    command opencode "$@"; \
+  fi \
+}' >> /home/jeeves/.zshrc
+
 # ============================================================================
 # Setup directories with proper permissions
 # ============================================================================
@@ -363,16 +469,15 @@ RUN if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then \
         echo "Installing Claude Code..."; \
         curl -fsSL https://claude.ai/install.sh | bash -s -- latest; \
         # Add ~/.local/bin to path, since this is where claude installs and we can't change that, \
-        # we'll manually move the bin ourselves to a more standard location... \
-        sudo cp "$(readlink -f "$HOME/.local/bin/claude")" /usr/local/bin/claude && \
-        sudo chmod 755 /usr/local/bin/claude; \
+        # we'll manually symlink the bin ourselves to a more standard location... \
+        sudo ln -sf "$HOME/.local/bin/claude" /usr/local/bin/claude; \
     else \
         echo "Claude Code installation skipped (INSTALL_CLAUDE_CODE is not 'true')"; \
     fi
 
-#Linux CLI Binary, copied to path location as well since we will use it interactively
-COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/usr/local/bin/opencode"]
+#Linux CLI Binary, linked to path location as well since we will use it interactively
 COPY --from=opencode-builder ["/app/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode", "/app/dist/opencode"]
+RUN sudo ln -sf /app/dist/opencode /usr/local/bin/opencode
 # Linux GUI (Debian/Ubuntu Package)
 COPY --from=opencode-builder ["/app/opencode/packages/desktop/src-tauri/target/release/bundle/deb/OpenCode Jeeves*.deb", "/app/dist/"]
 # Linux GUI (RPM/Fedora Package)
@@ -401,10 +506,113 @@ RUN if [ -d "/home/jeeves/.claude" ] && [ "$(ls -A /home/jeeves/.claude 2>/dev/n
 RUN sudo chown -R jeeves:jeeves /opt/oob-config
 
 # ============================================================================
+# Configure supervisord for service management
+# ============================================================================
+
+# Switch to root for supervisord configuration
+USER root
+
+# Create supervisord configuration directory structure
+# /var/run/supervisor is a dedicated subdirectory owned by jeeves so the
+# unix socket and pidfile can be created without requiring root at runtime
+RUN mkdir -p /etc/supervisor/conf.d /var/log/supervisor /var/run/supervisor && \
+    chown jeeves:jeeves /var/run/supervisor && \
+    chmod 755 /var/run/supervisor
+
+# Main supervisord configuration
+RUN cat << 'EOF' > /etc/supervisor/supervisord.conf
+[supervisord]
+nodaemon=true
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisor/supervisord.pid
+
+[unix_http_server]
+file=/var/run/supervisor/supervisor.sock
+chmod=0770
+chown=jeeves:jeeves
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor/supervisor.sock
+
+[include]
+files = /etc/supervisor/conf.d/*.conf
+EOF
+
+# Opencode web service configuration
+RUN cat << 'EOF' > /etc/supervisor/conf.d/opencode-web.conf
+[program:opencode-web]
+command=/usr/local/bin/opencode web --hostname 0.0.0.0 --port 3333
+directory=/proj
+user=jeeves
+autostart=false
+autorestart=unexpected
+startsecs=2
+startretries=3
+stopsignal=TERM
+stopwaitsecs=30
+stdout_logfile=/var/log/supervisor/opencode-web.log
+stderr_logfile=/var/log/supervisor/opencode-web-error.log
+environment=HOME="/home/jeeves",USER="jeeves",PATH="/opt/venv/bin:/usr/local/cuda/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",BUN_CONFIG_NO_CLEAR_TERMINAL_ON_EXIT="1",UV_USE_IO_URING="0"
+EOF
+
+# Create opencode-web helper script for service management
+RUN cat << 'EOF' > /usr/local/bin/opencode-web
+#!/bin/bash
+
+print_usage() {
+    echo "Usage: opencode-web {start|stop|restart|status|logs}"
+    echo ""
+    echo "Commands:"
+    echo "  start    Start the opencode web service"
+    echo "  stop     Stop the opencode web service"
+    echo "  restart  Restart the opencode web service"
+    echo "  status   Check the service status"
+    echo "  logs     View the service logs"
+}
+
+case "${1:-}" in
+    start)
+        echo "Starting opencode-web service..."
+        supervisorctl start opencode-web
+        ;;
+    stop)
+        echo "Stopping opencode-web service..."
+        supervisorctl stop opencode-web
+        ;;
+    restart)
+        echo "Restarting opencode-web service..."
+        supervisorctl restart opencode-web
+        ;;
+    status)
+        supervisorctl status opencode-web
+        ;;
+    logs)
+        if [ -f /var/log/supervisor/opencode-web.log ]; then
+            tail -f /var/log/supervisor/opencode-web.log
+        else
+            echo "Log file not found. Service may not have started yet."
+            exit 1
+        fi
+        ;;
+    *)
+        print_usage
+        exit 1
+        ;;
+esac
+EOF
+
+RUN chmod +x /usr/local/bin/opencode-web && \
+    sed -i 's/\r$//' /usr/local/bin/opencode-web
+
+# Ensure supervisor log directory is writable by jeeves user
+RUN chown -R jeeves:jeeves /var/log/supervisor
+
+# ============================================================================
 # Install PRD Creator Toolkit
 # ============================================================================
-# Switch to root for installation
-USER root
 
 # Create directory for jeeves supplementary tools
 RUN mkdir -p /opt/jeeves/
@@ -421,16 +629,12 @@ COPY jeeves/Ralph /opt/jeeves/Ralph/
 
 # Set permissions
 RUN chmod -R +x /usr/local/bin/ && \
-    chown -R jeeves:jeeves /opt/jeeves
-
-# Switch back to jeeves user
-USER jeeves
+    chown -R jeeves:jeeves /opt/jeeves && \
+    find /usr/local/bin/ -type f | xargs sed -i 's/\r$//'
 
 # ============================================================================
 # Create embedded entrypoint script for config initialization
 # ============================================================================
-# Temp switch to root
-USER root
 
 RUN sudo cat << 'EOF' > /usr/local/bin/entrypoint.sh
 #!/bin/bash
@@ -564,6 +768,10 @@ trap cleanup EXIT
 # Start Docker first
 start_docker_engine
 
+# Pre-stage custom todo plugin for opencode
+sudo mkdir -p /home/jeeves/.config/opencode/plugins
+sudo cp /opt/jeeves/Ralph/plugins/todo.ts /home/jeeves/.config/opencode/plugins/todo.ts
+
 # Initialize configuration directories
 copy_oob_if_empty "/home/jeeves/.config/opencode" "/opt/oob-config/.config/opencode" "OpenCode"
 copy_oob_if_empty "/home/jeeves/.claude" "/opt/oob-config/.claude" "Claude"
@@ -582,6 +790,50 @@ echo "Installing using-superpowers for opencode and claude code..."
 # https://claude-plugins.dev/skills/@obra/superpowers/using-superpowers
 npx skills-installer install @obra/superpowers/using-superpowers --client opencode
 npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
+
+# Due to https://github.com/anomalyco/opencode/pull/18186, Claude Code OAuth was officially
+# removed from Opencode.  However, community-maintained plugins have replaced this loss of this
+# once-OOB provider, so manually install that specific community plugin.
+# Repo link:  https://github.com/griffinmartin/opencode-claude-auth
+# Note: This plugin is dependent on Claude Code being installed and authenticated,
+# and updating the opencode config to include this plugin.  See the repo's README
+if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
+    echo "Installing opencode-claude-auth plugin..."
+    sudo npm install -g opencode-claude-auth
+    
+    # Update opencode.jsonc to include the claude-auth plugin
+    OPENCODE_CONFIG="/home/jeeves/.config/opencode/opencode.jsonc"
+    
+    # Check if config file exists
+    if [ -f "$OPENCODE_CONFIG" ]; then
+        echo "Updating existing opencode configuration..."
+        # Use jq to add the plugin to the config file
+        # Handle all edge cases: plugin key missing, empty, already exists, etc.
+        temp_file=$(mktemp)
+        jq '
+          # Ensure plugin field exists and is an array
+          .plugin = (if has("plugin") then 
+                      # Check if plugin is an array using try/catch (compatible with jq 1.7)
+                      try (if (.plugin | type == "array") then .plugin else [] end) catch []
+                    else 
+                      [] 
+                    end)
+          # Check if plugin is already installed
+          | if (.plugin | index("opencode-claude-auth")) then
+              .
+            else
+              .plugin |= . + ["opencode-claude-auth"]
+            end
+        ' "$OPENCODE_CONFIG" > "$temp_file" && mv "$temp_file" "$OPENCODE_CONFIG"
+        sudo chown jeeves:jeeves "$OPENCODE_CONFIG"
+        echo "✅ opencode-claude-auth plugin added to configuration"
+    else
+        echo "Warning: opencode.jsonc not found at $OPENCODE_CONFIG"
+        echo "Plugin configuration will not be updated"
+    fi
+else
+    echo "opencode-claude-auth installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
+fi
 
 # Additional setup - tool preferences and amplify skill usage
 echo "Configuring agent preferences and tool settings..."
@@ -651,16 +903,46 @@ if [ -n "$GIT_AUTHOR_EMAIL" ]; then
     git config --global user.email "$GIT_AUTHOR_EMAIL"
 fi
 
-# If no arguments provided, default to opencode web
+# If no arguments provided, start supervisord and the opencode-web service
 if [ $# -eq 0 ]; then
-    set -- opencode web --hostname 0.0.0.0 --port 3333
+    echo "Starting supervisord..."
+    # Start supervisord as daemon (it will daemonize itself with nodaemon=false behavior via -n)
+    # Actually with nodaemon=true it stays in foreground, so we run it in background
+    sudo supervisord -c /etc/supervisor/supervisord.conf &
+    SUPERVISORD_PID=$!
+    
+    # Wait for supervisord socket to exist
+    echo "Waiting for supervisord to be ready..."
+    for i in $(seq 1 30); do
+        if [ -S /var/run/supervisor/supervisor.sock ]; then
+            echo "Supervisord is ready."
+            break
+        fi
+        sleep 1
+    done
+    
+    if [ ! -S /var/run/supervisor/supervisor.sock ]; then
+        echo "ERROR: supervisord did not start properly" >&2
+        exit 1
+    fi
+    
+    # Ensure we're in /proj directory
+    cd /proj || exit 1
+    
+    # Start the opencode-web service
+    echo "Starting opencode-web service..."
+    supervisorctl start opencode-web
+    
+    # Wait for supervisord (keeps container running)
+    wait $SUPERVISORD_PID
+else
+    # Execute the provided command
+    exec "$@"
 fi
-
-# Execute the command
-exec "$@"
 EOF
 
-RUN chmod +x /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh && \
+    sed -i 's/\r$//' /usr/local/bin/entrypoint.sh
 
 # Switch back to runtime user and re-fix home permissions
 USER jeeves

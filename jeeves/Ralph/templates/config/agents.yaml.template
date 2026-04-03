@@ -6,71 +6,108 @@ agents:
   manager:
     description: "Ralph Loop Manager - orchestrates task execution, manages state, handles handoffs"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
 
   architect:
     description: "System design and architecture tasks"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
 
   developer:
     description: "Code implementation and debugging"
     preferred:
-      opencode: inherit
-      claude: claude-sonnet-4.5
-    fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   ui-designer:
     description: "UI/UX design and implementation"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
 
   tester:
     description: "Testing and quality assurance"
     preferred:
-      opencode: inherit
-      claude: claude-sonnet-4.5
-    fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   researcher:
     description: "Research, analysis, and documentation"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
 
   writer:
     description: "Documentation and content creation"
     preferred:
-      opencode: inherit
-      claude: claude-sonnet-4.5
-    fallback:
-      opencode: inherit
+      opencode: ""
       claude: claude-sonnet-4.5
 
   decomposer:
     description: "Task decomposition, TODO management, agent coordination"
     preferred:
-      opencode: inherit
+      opencode: ""
       claude: claude-opus-4.5
-    fallback:
-      opencode: inherit
-      claude: claude-sonnet-4.5
+
+  decomposer-architect:
+    description: "Specialized for system design, patterns, best practices, integration design, verification and validation for PRD decomposition"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  decomposer-researcher:
+    description: "Specialized for investigation, documentation analysis, and knowledge synthesis for PRD decomposition"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  decomposer-task-handler:
+    description: "Creates task folders, writes TASK.md from decomposer briefs, orchestrates Gate 1 architect review"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+      
+  prd-creator:
+    description: "PRD Creator - Professional product manager that helps developers create comprehensive PRDs through structured questioning"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-api:
+    description: "PRD API Advisor - Provides API design, error handling, rate limiting, and backend service guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-cli:
+    description: "PRD CLI Advisor - Provides command grammar, output formatting, configuration, and shell integration guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-data:
+    description: "PRD Data Advisor - Provides data pipeline, ETL, ML pipeline, schema design, and observability guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-advisor-library:
+    description: "PRD Library Advisor - Provides public API design, packaging, versioning, and distribution guidance"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+
+  prd-advisor-ui:
+    description: "PRD UI Advisor - Provides visual design, interaction, accessibility, and layout guidance for UI-based projects"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5
+
+  prd-researcher:
+    description: "PRD Researcher - Specialized for design pattern research, competitive analysis, and technology validation"
+    preferred:
+      opencode: ""
+      claude: claude-opus-4.5

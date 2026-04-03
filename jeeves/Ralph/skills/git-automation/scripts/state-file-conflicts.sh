@@ -14,7 +14,7 @@ set -e
 
 # State files to check
 readonly STATE_FILES=(
-    "/proj/.ralph/TODO.md"
+    "/proj/.ralph/tasks/TODO.md"
     "/proj/.ralph/deps-tracker.yaml"
 )
 
@@ -181,7 +181,7 @@ main() {
         echo "  1. Review both versions of each conflicted file"
         echo "  2. Decide which changes to keep"
         echo "  3. Remove all conflict markers (<<<<<<<, =======, >>>>>>>)"
-        echo "  4. Mark resolved: git add .ralph/TODO.md .ralph/deps-tracker.yaml"
+        echo "  4. Mark resolved: git add .ralph/tasks/TODO.md .ralph/deps-tracker.yaml"
         echo "  5. Restart loop: ./ralph-loop.sh"
         echo ""
 

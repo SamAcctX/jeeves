@@ -6,31 +6,49 @@ This directory contains AI agent templates for OpenCode and Claude Code platform
 ## Directory Structure
 ```
 jeeves/
-├── PRD/                    # PRD Creator agent
-│   ├── prd-creator-opencode-template.md
-│   ├── prd-creator-claude-template.md
-│   ├── prd-creator-prompt.md
-│   └── README-PRD.md
-└── Deepest-Thinking/       # Research agent
-    ├── deepest-thinking-opencode-template.md
-    ├── deepest-thinking-claude-template.md
-    ├── deepest-thinking-prompt.md
-    └── README-Deepest-Thinking.md
+├── PRD/                    # PRD Creator agent pipeline
+│   ├── README-PRD.md
+│   ├── prd-creator-{opencode,claude}-template.md
+│   ├── prd-researcher-{opencode,claude}-template.md
+│   └── prd-advisor-{api,cli,data,library,ui}-{opencode,claude}-template.md
+├── Deepest-Thinking/       # Research agent
+│   ├── README-Deepest-Thinking.md
+│   ├── deepest-thinking-opencode-template.md
+│   └── deepest-thinking-claude-template.md
+└── Ralph/
+    └── templates/
+        └── agents/         # Ralph agent templates ({role}-{platform}.md)
+            ├── shared/     # 10 shared rule files included by all agent templates
+            ├── architect-{opencode,claude}.md
+            ├── decomposer-{opencode,claude}.md
+            ├── decomposer-architect-{opencode,claude}.md
+            ├── decomposer-researcher-{opencode,claude}.md
+            ├── decomposer-task-handler-opencode.md
+            ├── developer-{opencode,claude}.md
+            ├── manager-{opencode,claude}.md
+            ├── researcher-{opencode,claude}.md
+            ├── tester-{opencode,claude}.md
+            ├── ui-designer-{opencode,claude}.md
+            └── writer-{opencode,claude}.md
 ```
+
+The `shared/` directory contains 10 rule files (signals, dependency tracking, secrets, loop detection, etc.) that are included by all agent templates to enforce consistent behavior across roles.
 
 ## Agent Template Format
 
 ### OpenCode Format (Key-Value Boolean Tools)
 ```yaml
 ---
-description: "Professional product manager assistant that helps beginner developers..."
+name: agent-name
+description: "Agent description here"
 mode: subagent
-temperature: 0.3
+model: ""
+
 permission:
-  write: ask      # ask | allow | deny
-  bash: ask       # ask | allow | deny
-  webfetch: allow # ask | allow | deny
-  edit: deny      # ask | allow | deny
+  write: ask
+  bash: ask
+  webfetch: allow
+  edit: deny
 tools:
   read: true
   write: true
@@ -43,18 +61,11 @@ tools:
 ---
 ```
 
-### Claude Code Format (Comma-Separated Tools)
+### Claude Code Format (Comma-Separated Tools String)
 ```yaml
 ---
-name: prd-creator
-description: "Professional product manager assistant..."
-mode: subagent
-temperature: 0.3
-permission:
-  write: ask
-  bash: ask
-  webfetch: allow
-  edit: deny
+name: agent-name
+description: "Agent description here"
 tools: Read, Write, Grep, Glob, Bash, Web, SequentialThinking, Question
 model: inherit
 ---
@@ -63,118 +74,39 @@ model: inherit
 ## Frontmatter Fields
 
 ### Required Fields
+- **name**: Agent identifier (both platforms)
 - **description**: Clear description of agent's purpose
-- **mode**: Always `subagent`
-- **tools**: List of available tools
+- **mode**: `subagent` (most agents) or `all` (manager, decomposer) -- OpenCode only
+- **model**: `""` (empty string) for OpenCode, `inherit` for Claude
+- **permission**: Tool permission levels (OpenCode only)
+- **tools**: Available tools -- key-value boolean map for OpenCode, comma-separated string for Claude
 
 ### Optional Fields
 - **temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
-- **permission**: Tool permission levels (ask/allow/deny)
-  - `write`: ask | allow | deny
-  - `bash`: ask | allow | deny
-  - `webfetch`: ask | allow | deny
-  - `edit`: ask | allow | deny
-- **name**: Agent identifier (Claude only)
-- **model**: Model to use, typically `inherit` (Claude only)
 
-## Tool Options
+## Platform Differences
 
-Available tools for both platforms:
-- `read` / `Read` - File reading
-- `write` / `Write` - File writing
-- `grep` / `Grep` - Text search
-- `glob` / `Glob` - File pattern matching
-- `bash` / `Bash` - Shell commands
-- `webfetch` / `Web` - Web content fetching
-- `question` / `Question` - Interactive questioning
-- `sequentialthinking` / `SequentialThinking` - Structured reasoning
-
-## Code Style Guidelines
-
-### Template Content Structure
-```markdown
----
-[YAML frontmatter]
----
-
-# Agent Name
-
-## Role and Identity
-[Clear description of persona]
-
-## Conversation Approach
-- Bullet points for approach
-- Tone and style guidelines
-
-## Core Structure
-### 1. Phase Name [STOP POINT]
-- Step-by-step instructions
-- Expected outputs
-
-## Tool Usage
-- When to use each tool
-- Tool-specific guidelines
-
-## Error Handling
-- How to handle common errors
-- Recovery procedures
-```
-
-### Formatting Rules
-- **No comments** unless user explicitly requests them
-- **No emojis** unless user explicitly requests them
-- Use clear headings (H1, H2, H3)
-- Use bullet points for lists
-- Use code blocks for examples
-- Keep line length reasonable (80-100 chars)
-
-### YAML Frontmatter Rules
-- Use 2-space indentation
-- Use lowercase for OpenCode tools (key-value pairs)
-- Use PascalCase for Claude tools (comma-separated string)
-- Quote strings containing special characters
-- Boolean values: `true`/`false` (lowercase)
-
-## Installation
-
-Agents are installed via `install-agents.sh`:
-
-```bash
-# Project scope (default)
-./install-agents.sh
-# Installs to: /proj/.claude/agents/ and /proj/.opencode/agents/
-
-# Global scope
-./install-agents.sh --global
-# Installs to: ~/.claude/agents/ and ~/.opencode/agents/
-
-# Deepest-Thinking only
-./install-agents.sh --deepest
-```
-
-## Usage
-
-After installation, invoke agents with:
-
-```bash
-# OpenCode
-@prd-creator
-@deepest-thinking
-
-# Claude Code
-@prd-creator
-@deepest-thinking
-```
+| Feature | OpenCode | Claude Code |
+|---------|----------|-------------|
+| Tools format | Key-value booleans | Comma-separated string |
+| Config file | opencode.json (`.mcp` key) | .mcp.json / ~/.claude.json (`.mcpServers` key) |
+| Permission block | Required (ask/allow/deny) | Not used |
+| Name field | Required | Required |
+| Model field | `""` (empty string) | Optional (`inherit`) |
+| Mode field | `subagent` or `all` | Not used |
+| Environment key (MCP) | `environment` | `env` |
 
 ## Testing Templates
 
 ### Syntax Validation
 ```bash
-# Check YAML frontmatter
-python3 -c "import yaml; yaml.safe_load(open('template.md'))"
+# Extract and validate YAML frontmatter from a template
+head -n $(grep -n '^---$' template.md | sed -n '2p' | cut -d: -f1) template.md \
+  | tail -n +2 \
+  | python3 -c "import yaml,sys; yaml.safe_load(sys.stdin)"
 
 # Check JSON configuration
-cat opencode.json | python3 -m json.tool > /dev/null && echo "Valid JSON"
+python3 -m json.tool < opencode.json > /dev/null && echo "Valid JSON"
 ```
 
 ### Manual Testing
@@ -184,40 +116,16 @@ cat opencode.json | python3 -m json.tool > /dev/null && echo "Valid JSON"
 4. Verify tool permissions work correctly
 5. Check stop points function as intended
 
-## Common Patterns
+## YAML Frontmatter Rules
+- Use 2-space indentation
+- Use lowercase for OpenCode tool keys
+- Use PascalCase for Claude tool names
+- Quote strings containing special characters
+- Boolean values: `true`/`false` (lowercase)
 
-### Conversation Stop Points
-Use `[STOP POINT]` markers to pause for user input:
-```markdown
-### 1. Initial Engagement [STOP POINT ONE]
-- Ask clarifying questions
-- Wait for user response before proceeding
-```
-
-### Tool Configuration
-```markdown
-## Tool Configuration
-- SearxNG Web Search: Use for broad context with max_results=20
-- Sequential Thinking: Maintain minimum 5 thoughts per analysis
-```
-
-### Context Maintenance
-```markdown
-## Context Maintenance
-- Store key findings between tool transitions
-- Reference previous results in subsequent analyses
-- Maintain state across phase transitions
-```
-
-## Platform Differences
-
-| Feature | OpenCode | Claude Code |
-|---------|----------|-------------|
-| Tools format | Key-value booleans | Comma-separated string |
-| Config file | opencode.json | .mcp.json / ~/.claude.json |
-| MCP key | `.mcp` | `.mcpServers` |
-| Name field | Not used | Required |
-| Model field | Not used | Optional (`inherit`) |
-
-## No Comments Policy
-Do not add comments to agent templates unless the user explicitly requests them. The YAML frontmatter and markdown content should be self-documenting.
+## Formatting Rules
+- **No comments** unless user explicitly requests them
+- **No emojis** unless user explicitly requests them
+- Use clear headings (H1, H2, H3)
+- Use bullet points for lists
+- Use code blocks for examples

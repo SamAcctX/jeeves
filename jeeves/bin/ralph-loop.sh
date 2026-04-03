@@ -7,6 +7,24 @@ print_success() { echo -e "\033[1;32m[SUCCESS]\033[0m $1" >&2; }
 print_warning() { echo -e "\033[1;33m[WARNING]\033[0m $1" >&2; }
 print_error() { echo -e "\033[1;31m[ERROR]\033[0m $1" >&2; }
 
+log_message() {
+    local level="$1"
+    local message="$2"
+    local timestamp=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+    local log_line="[$timestamp] [$level] $message"
+    
+    case "$level" in
+        INFO) print_info "$message" ;;
+        SUCCESS) print_success "$message" ;;
+        WARNING) print_warning "$message" ;;
+        ERROR) print_error "$message" ;;
+    esac
+    
+    if [ -n "$LOG_FILE" ] && [ -f "$LOG_FILE" ]; then
+        echo "$log_line" >> "$LOG_FILE"
+    fi
+}
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _SAVE_ARGS=("$@")
 set --
@@ -23,13 +41,17 @@ SHOULD_TERMINATE=0
 NO_DELAY=0
 SKIP_SYNC=0
 DRY_RUN=false
+VERBOSE=0
 
 RALPH_BACKOFF_BASE=${RALPH_BACKOFF_BASE:-2}
 RALPH_BACKOFF_MAX=${RALPH_BACKOFF_MAX:-60}
 RALPH_DIR=".ralph"
 PROJECT_ROOT=""
 
-PROMPT_FILE=".ralph/prompts/ralph-prompt.md"
+LOG_FILE=""
+LOG_DIR="logs"
+
+PROMPT_FILE="/opt/jeeves/Ralph/templates/prompts/ralph-prompt.md.template"
 MANAGER_OUTPUT=""
 MANAGER_EXIT_CODE=0
 
@@ -109,7 +131,7 @@ sleep_with_backoff() {
 }
 
 verify_sync_agents() {
-    if ! command -v sync-agents &> /dev/null; then
+    if ! command -v sync-agents.sh &> /dev/null; then
         print_warning "sync-agents not found in PATH"
         return 1
     fi
@@ -132,13 +154,22 @@ run_sync_agents() {
     
     local start_time=$(date +%s)
     
-    if sync-agents; then
+    if sync-agents.sh; then
         local duration=$(($(date +%s) - start_time))
         print_success "Agent sync completed in ${duration}s"
     else
         local duration=$(($(date +%s) - start_time))
         print_warning "Agent sync failed after ${duration}s (continuing anyway)"
     fi
+
+    print_info "Restarting opencode web service to reload updated agents..."
+    if opencode-web restart; then
+        print_success "Opencode web service restarted"
+    else
+        print_warning "Opencode web service restart failed"
+        print_warning "Opencode CLI may use outdated agent models, and may error, but will try anyways"
+    fi
+
 }
 
 CRITICAL_FILES=(
@@ -206,9 +237,12 @@ should_terminate() {
 
 invoke_manager() {
     print_info "Invoking Manager agent (iteration $ITERATION, tool: $SELECTED_TOOL)..."
-    
-    local prompt_path="$PROJECT_ROOT/$PROMPT_FILE"
-    
+
+    local prompt_path="$PROMPT_FILE"
+    if [[ ! "$PROMPT_FILE" =~ ^/ ]]; then
+        prompt_path="$PROJECT_ROOT/$PROMPT_FILE"
+    fi
+
     if [ ! -f "$prompt_path" ]; then
         print_error "Prompt file not found: $prompt_path"
         return 1
@@ -240,33 +274,60 @@ invoke_manager() {
 invoke_opencode_manager() {
     local prompt_path="$1"
     local model_arg=""
+    local format_arg=""
     
-    [ -n "$RALPH_MANAGER_MODEL" ] && model_arg="--model $RALPH_MANAGER_MODEL"
+    if [ -n "$RALPH_MANAGER_MODEL" ]; then
+        model_arg="--model $RALPH_MANAGER_MODEL"
+    fi
     
-    print_info "Invoking OpenCode Manager..."
+    if [ "$VERBOSE" -eq 1 ]; then
+        format_arg="--format json"
+    fi
+    
+    log_message INFO "Invoking OpenCode Manager (iteration: $ITERATION, max: $MAX_ITERATIONS, tool: $SELECTED_TOOL)"
     
     MANAGER_OUTPUT=$(mktemp)
+    local start_time=$(date +%s)
     
-    if opencode --agent manager $model_arg < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if opencode run --agent manager --attach http://localhost:3333 $model_arg $format_arg < "$prompt_path" | tee "$MANAGER_OUTPUT"; then
+        local duration=$(($(date +%s) - start_time))
+        strip_ansi "$MANAGER_OUTPUT"
+        log_message INFO "OpenCode Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
     else
-        print_warning "OpenCode Manager invocation returned non-zero exit code"
+        local exit_code=$?
+        local duration=$(($(date +%s) - start_time))
+        strip_ansi "$MANAGER_OUTPUT"
+        log_message WARNING "OpenCode Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $exit_code)"
         return 1
     fi
 }
 
 invoke_claude_manager() {
     local prompt_path="$1"
-    local model="${RALPH_MANAGER_MODEL:-opus}"
+    local model_arg=""
+    local verbose_arg=""
     
-    print_info "Invoking Claude Manager (model: $model)..."
+    if [ -n "$RALPH_MANAGER_MODEL" ]; then
+        model_arg="--model $RALPH_MANAGER_MODEL"
+    fi
+    
+    if [ "$VERBOSE" -eq 1 ]; then
+        verbose_arg="--verbose"
+    fi
+    
+    log_message INFO "Invoking Claude Manager (iteration: $ITERATION, max: $MAX_ITERATIONS, tool: $SELECTED_TOOL)"
     
     MANAGER_OUTPUT=$(mktemp)
+    local start_time=$(date +%s)
     
-    if claude -p --dangerously-skip-permissions --model "$model" < "$prompt_path" 2>&1 | tee "$MANAGER_OUTPUT"; then
+    if claude -p --dangerously-skip-permissions $model_arg $verbose_arg < "$prompt_path"  | tee "$MANAGER_OUTPUT"; then
+        local duration=$(($(date +%s) - start_time))
+        log_message INFO "Claude Manager completed (iteration: $ITERATION, duration: ${duration}s, exit_code: 0)"
         return 0
     else
-        print_warning "Claude Manager invocation returned non-zero exit code"
+        local duration=$(($(date +%s) - start_time))
+        log_message WARNING "Claude Manager invocation returned non-zero exit code (iteration: $ITERATION, duration: ${duration}s, exit_code: $?)"
         return 1
     fi
 }
@@ -275,6 +336,14 @@ SIGNAL_COMPLETE="TASK_COMPLETE_[0-9]{4}"
 SIGNAL_INCOMPLETE="TASK_INCOMPLETE_[0-9]{4}"
 SIGNAL_FAILED="TASK_FAILED_[0-9]{4}"
 SIGNAL_BLOCKED="TASK_BLOCKED_[0-9]{4}"
+SIGNAL_ALL_COMPLETE="ALL[_ ]TASKS[_ ]COMPLETE, EXIT LOOP"
+
+strip_ansi() {
+    local file="$1"
+    if [ -f "$file" ]; then
+        sed -i 's/\x1b\[[0-9;]*[a-zA-Z]//g' "$file"
+    fi
+}
 
 extract_task_id() {
     local signal="$1"
@@ -286,7 +355,7 @@ extract_signal_message() {
     local signal="$2"
     
     if echo "$output" | grep -qE "${signal}.*:"; then
-        echo "$output" | grep -oE "${signal}:.*" | head -1 | sed 's/[^:]*: //'
+        echo "$output" | grep -oE "${signal}:.*" | head -1 | sed 's/[^:]*: \?//'
     else
         echo ""
     fi
@@ -294,25 +363,29 @@ extract_signal_message() {
 
 handle_complete_signal() {
     local task_id="$1"
-    print_success "Task $task_id completed"
-    SHOULD_TERMINATE=1
+    log_message SUCCESS "Task $task_id completed (iteration: $ITERATION)"
 }
 
 handle_incomplete_signal() {
     local task_id="$1"
-    print_info "Task $task_id incomplete - continuing loop"
+    log_message INFO "Task $task_id incomplete - continuing loop (iteration: $ITERATION)"
 }
 
 handle_failed_signal() {
     local task_id="$1"
     local message="$2"
-    print_warning "Task $task_id failed: $message"
+    log_message WARNING "Task $task_id failed: $message (iteration: $ITERATION)"
 }
 
 handle_blocked_signal() {
     local task_id="$1"
     local message="$2"
-    print_error "Task $task_id blocked: $message"
+    log_message ERROR "Task $task_id blocked: $message (iteration: $ITERATION)"
+    SHOULD_TERMINATE=1
+}
+
+handle_all_complete_signal() {
+    log_message SUCCESS "All tasks complete - exiting loop (iteration: $ITERATION)"
     SHOULD_TERMINATE=1
 }
 
@@ -329,7 +402,7 @@ parse_todo_md() {
         return 0
     fi
     
-    if grep -qE "^ALL TASKS COMPLETE, EXIT LOOP" "$todo_file"; then
+    if grep -qE "^ALL[_ ]TASKS[_ ]COMPLETE, EXIT LOOP" "$todo_file"; then
         print_info "ALL TASKS COMPLETE, EXIT LOOP sentinel detected"
         SHOULD_TERMINATE=1
         return 0
@@ -342,52 +415,96 @@ parse_signals() {
     local output_file="$1"
     
     if [ ! -f "$output_file" ]; then
-        print_warning "No output file to parse"
+        print_warning "No output file to parse (iteration: $ITERATION)"
         return 1
     fi
     
-    local signal_count=$(grep -c -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || echo "0")
+    log_message INFO "Parsing signals from output (iteration: $ITERATION, file: $output_file)"
+    
+    # Check for ALL_TASKS_COMPLETE signal first
+    if grep -qE "^${SIGNAL_ALL_COMPLETE}" "$output_file" 2>/dev/null; then
+        handle_all_complete_signal
+        return 0
+    fi
+    
+    local all_signals
+    all_signals=$(grep -E "^(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || true)
+    
+    local signal_count=0
+    if [ -n "$all_signals" ]; then
+        signal_count=$(echo "$all_signals" | wc -l | tr -d ' ')
+    fi
     
     if [ "$signal_count" -gt 1 ]; then
-        print_warning "Multiple signals detected ($signal_count) - using first valid signal"
+        print_warning "Multiple start-of-line signals detected ($signal_count) - using first"
+        print_info "Signals found:"
+        echo "$all_signals" | head -5 | while read -r sig; do
+            print_info "  - $sig"
+        done
+        if [ "$signal_count" -gt 5 ]; then
+            print_info "  ... and $((signal_count - 5)) more"
+        fi
     fi
     
     local line
-    line=$(grep -oE "(^|[[:space:]])(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}(:.*)?($|[[:space:]])" "$output_file" 2>/dev/null | head -1)
+    line=$(echo "$all_signals" | head -1)
     
     if [ -z "$line" ]; then
-        print_info "No signal found in output"
+        print_info "No start-of-line signal found in output (iteration: $ITERATION)"
+        print_info "Output file size: $(wc -c < "$output_file" 2>/dev/null || echo 'unknown') bytes"
+        local mid_line_signals
+        mid_line_signals=$(grep -oE "(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}" "$output_file" 2>/dev/null || true)
+        if [ -n "$mid_line_signals" ]; then
+            local mid_count
+            mid_count=$(echo "$mid_line_signals" | wc -l | tr -d ' ')
+            print_warning "Found $mid_count signal(s) embedded mid-line (ignored per SIG-P0-01):"
+            echo "$mid_line_signals" | head -3 | while read -r sig; do
+                print_info "  - $sig"
+            done
+        else
+            local last_lines
+            last_lines=$(tail -20 "$output_file" 2>/dev/null | grep -v '^[[:space:]]*$' | head -10)
+            if [ -n "$last_lines" ]; then
+                print_info "Last non-empty lines from output:"
+                echo "$last_lines" | while read -r l; do
+                    print_info "  $l"
+                done
+            else
+                print_info "Output file appears to be empty or contain only whitespace"
+            fi
+        fi
         return 1
     fi
     
-    line=$(echo "$line" | sed 's/^[[:space:]]*//')
+    local signal_token
+    signal_token=$(echo "$line" | grep -oE "^(TASK_COMPLETE|TASK_INCOMPLETE|TASK_FAILED|TASK_BLOCKED)_[0-9]{4}")
     
-    if echo "$line" | grep -qE "^$SIGNAL_COMPLETE($|[[:space:]]|$)"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_COMPLETE$"; then
         local task_id
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         handle_complete_signal "$task_id"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_BLOCKED"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_BLOCKED$"; then
         local task_id message
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         message=$(echo "$line" | sed 's/^[^:]*: //' | sed 's/[[:space:]]*$//')
         handle_blocked_signal "$task_id" "$message"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_FAILED"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_FAILED$"; then
         local task_id message
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         message=$(echo "$line" | sed 's/^[^:]*: //' | sed 's/[[:space:]]*$//')
         handle_failed_signal "$task_id" "$message"
         return 0
     fi
     
-    if echo "$line" | grep -qE "^$SIGNAL_INCOMPLETE($|[[:space:]]|$)"; then
+    if echo "$signal_token" | grep -qE "^$SIGNAL_INCOMPLETE$"; then
         local task_id
-        task_id=$(extract_task_id "$line")
+        task_id=$(extract_task_id "$signal_token")
         handle_incomplete_signal "$task_id"
         return 0
     fi
@@ -399,22 +516,22 @@ parse_signals() {
 parse_manager_signal() {
     local output="$1"
     
-    if echo "$output" | grep -qE "TASK_COMPLETE_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_COMPLETE_[0-9]{4}"; then
         echo "COMPLETE"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_INCOMPLETE_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_INCOMPLETE_[0-9]{4}"; then
         echo "INCOMPLETE"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_FAILED_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_FAILED_[0-9]{4}"; then
         echo "FAILED"
         return 0
     fi
     
-    if echo "$output" | grep -qE "TASK_BLOCKED_[0-9]{4}"; then
+    if echo "$output" | grep -qE "^TASK_BLOCKED_[0-9]{4}"; then
         echo "BLOCKED"
         return 0
     fi
@@ -424,41 +541,46 @@ parse_manager_signal() {
 }
 
 main_loop() {
+    local loop_start_time=$(date +%s)
+    
     if [ "$MAX_ITERATIONS" -gt 0 ]; then
-        print_info "Starting Ralph Loop (iteration $ITERATION, max: $MAX_ITERATIONS)"
+        log_message INFO "Starting Ralph Loop (iteration: $ITERATION, max: $MAX_ITERATIONS)"
     else
-        print_info "Starting Ralph Loop (iteration $ITERATION, max: unlimited)"
+        log_message INFO "Starting Ralph Loop (iteration: $ITERATION, max: unlimited)"
     fi
     
     while true; do
         check_for_conflicts
         if [ $? -eq 1 ]; then
-            print_error "Conflict detected - terminating loop"
+            log_message ERROR "Conflict detected - terminating loop (iteration: $ITERATION)"
             break
         fi
         
         if should_terminate; then
-            print_info "Termination conditions met - exiting loop"
+            log_message INFO "Termination conditions met - exiting loop (iteration: $ITERATION)"
             break
         fi
         
-        print_info "=== Iteration $ITERATION ==="
+        log_message INFO "=== Iteration $ITERATION ==="
         
         invoke_manager
         MANAGER_EXIT_CODE=$?
         
         if [ -n "$MANAGER_OUTPUT" ] && [ -f "$MANAGER_OUTPUT" ]; then
             if parse_signals "$MANAGER_OUTPUT"; then
-                print_info "Signal processed successfully"
+                log_message INFO "Signal processed successfully (iteration: $ITERATION)"
             else
-                print_warning "No valid signal found in Manager output"
+                log_message WARNING "No valid signal found in Manager output (iteration: $ITERATION, see above for details)"
             fi
         else
-            print_warning "No Manager output file available"
+            log_message WARNING "No Manager output file available (iteration: $ITERATION)"
+            if [ -n "$MANAGER_OUTPUT" ]; then
+                log_message WARNING "Output path was: $MANAGER_OUTPUT (file does not exist)"
+            fi
         fi
         
         if [ "$SHOULD_TERMINATE" -eq 1 ]; then
-            print_info "Termination flag set - exiting loop"
+            log_message INFO "Termination flag set - exiting loop (iteration: $ITERATION)"
             break
         fi
         
@@ -467,31 +589,36 @@ main_loop() {
         sleep_with_backoff "$ITERATION"
     done
     
-    print_success "Ralph Loop finished after $ITERATION iterations"
+    local total_duration=$(($(date +%s) - loop_start_time))
+    log_message SUCCESS "Ralph Loop finished after $ITERATION iterations (total duration: ${total_duration}s)"
 }
 
 parse_arguments() {
     CLI_TOOL=""
     while [[ $# -gt 0 ]]; do
         case $1 in
-            --tool)
+            --tool|-t)
                 CLI_TOOL="$2"
                 shift 2
                 ;;
-            --max-iterations)
+            --max-iterations|-m)
                 MAX_ITERATIONS="$2"
                 shift 2
                 ;;
-            --skip-sync)
+            --skip-sync|-s)
                 SKIP_SYNC=1
                 shift
                 ;;
-            --no-delay)
+            --no-delay|-n)
                 NO_DELAY=1
                 shift
                 ;;
-            --dry-run)
+            --dry-run|-d)
                 DRY_RUN=true
+                shift
+                ;;
+            --verbose|-v)
+                VERBOSE=1
                 shift
                 ;;
             --help|-h)
@@ -531,19 +658,26 @@ Usage: ralph-loop.sh [OPTIONS]
 Ralph Loop - Autonomous AI task execution
 
 Options:
-    --tool {opencode|claude}    Select AI tool (default: opencode)
-    --max-iterations N          Maximum iterations (default: 100, 0=unlimited)
-    --skip-sync                 Skip pre-loop agent synchronization
-    --no-delay                  Disable backoff delays
-    --dry-run                   Print commands without executing
-    --help, -h                  Show this help message
+    -t, --tool {opencode|claude}    Select AI tool (default: opencode)
+    -m, --max-iterations N          Maximum iterations (default: 100, 0=unlimited)
+    -s, --skip-sync                 Skip pre-loop agent synchronization
+    -n, --no-delay                  Disable backoff delays
+    -d, --dry-run                   Print commands without executing
+    -v, --verbose                   Enable JSON format output in OpenCode
+    -h, --help                      Show this help message
 
 Environment Variables:
     RALPH_TOOL                  Default tool selection
     RALPH_MAX_ITERATIONS        Maximum loop iterations
     RALPH_BACKOFF_BASE          Backoff base delay (default: 2)
     RALPH_BACKOFF_MAX           Backoff max delay (default: 60)
-    RALPH_MANAGER_MODEL         Override Manager model
+    RALPH_MANAGER_MODEL         Override Manager model (optional;
+                                OpenCode: model="" in frontmatter;
+                                Claude: model=inherit from frontmatter)
+
+Logging:
+    A log file with timestamps is automatically created at:
+    .ralph/logs/ralph-loop-YYYYMMDD-HHMMSS.log
 
 USAGE
 }
@@ -564,14 +698,20 @@ initialize() {
         exit 1
     fi
     
-    print_info "Ralph Loop initialized"
-    print_info "  Tool: $SELECTED_TOOL"
+    local log_dir="$PROJECT_ROOT/$RALPH_DIR/$LOG_DIR"
+    mkdir -p "$log_dir"
+    LOG_FILE="$log_dir/ralph-loop-$(date +%Y%m%d-%H%M%S).log"
+    touch "$LOG_FILE"
+    
+    log_message INFO "Ralph Loop initialized"
+    log_message INFO "  Tool: $SELECTED_TOOL"
     if [ "$MAX_ITERATIONS" -gt 0 ]; then
-        print_info "  Max iterations: $MAX_ITERATIONS"
+        log_message INFO "  Max iterations: $MAX_ITERATIONS"
     else
-        print_info "  Max iterations: unlimited"
+        log_message INFO "  Max iterations: unlimited"
     fi
-    print_info "  Project root: $PROJECT_ROOT"
+    log_message INFO "  Project root: $PROJECT_ROOT"
+    log_message INFO "  Log file: $LOG_FILE"
 }
 
 main() {

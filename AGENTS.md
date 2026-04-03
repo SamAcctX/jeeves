@@ -12,25 +12,41 @@
 
 ### Container Lifecycle
 ```powershell
-./jeeves.ps1 start              # Start container
+./jeeves.ps1 start              # Start container (aliases: up)
 ./jeeves.ps1 start --clean      # Clean rebuild and start
-./jeeves.ps1 stop               # Stop container
+./jeeves.ps1 start --dind       # Start with Docker-in-Docker
+./jeeves.ps1 start --port 4444  # Start on specific port
+./jeeves.ps1 stop               # Stop container (aliases: down)
 ./jeeves.ps1 stop --remove      # Stop and remove container
 ./jeeves.ps1 stop --force       # Force stop (SIGKILL)
 ./jeeves.ps1 restart            # Restart container
-./jeeves.ps1 shell              # Attach to container shell
+./jeeves.ps1 rm                 # Remove container (stops if running)
+./jeeves.ps1 shell              # Attach to container shell (aliases: attach, sh)
+./jeeves.ps1 shell --zsh        # Attach with zsh instead of bash
+./jeeves.ps1 shell --new        # Stop/remove existing container first
+./jeeves.ps1 shell --raw        # Disable tmux auto-attach
 ./jeeves.ps1 logs               # View container logs
-./jeeves.ps1 status             # Check container status
-./jeeves.ps1 clean              # Remove container and image
+./jeeves.ps1 status             # Check container status (aliases: st)
+./jeeves.ps1 status --all       # Show all jeeves instances
+./jeeves.ps1 list               # List all running instances (aliases: ls, ps)
+./jeeves.ps1 clean              # Remove container (aliases: none)
+./jeeves.ps1 clean --image      # Remove container and image
+./jeeves.ps1 clean --all        # Remove ALL jeeves containers
+./jeeves.ps1 clean --force      # Force image removal even if other containers exist
+./jeeves.ps1 help               # Show help (aliases: h, ?)
 ```
+
+Running `./jeeves.ps1` without arguments displays an interactive menu.
 
 ### Installation Scripts (Inside Container)
 ```bash
 install-mcp-servers.sh --global     # Install MCP servers globally
 install-mcp-servers.sh --dry-run    # Preview MCP installation
-install-agents.sh --global          # Install AI agents globally
+install-agents.sh --global          # Install PRD agents to OpenCode
 install-agents.sh --deepest         # Install Deepest-Thinking only
 install-agents.sh --help            # Show usage information
+install-skills.sh --all             # Install all agent skills
+fetch-opencode-models.sh --free     # Fetch free models for agents.yaml
 ```
 
 ### Testing
@@ -60,6 +76,36 @@ No formal linting configured. Follow code style guidelines below.
 
 Example:
 ```powershell
+function Write-Log {
+    param(
+        [string]$message,
+        [switch]$info,
+        [switch]$trace,
+        [switch]$error,
+        [switch]$warning,
+        [switch]$success,
+        [switch]$debug
+    )
+    $timestamp = ((Get-Date -Format "MM/dd/yyyy HH:mm:ss.fff").toString() + ": ")
+    
+    $foregroundColor = $null
+    if ($error) {
+        $foregroundColor = "Red"
+    } elseif ($warning) {
+        $foregroundColor = "Yellow"
+    } elseif ($success) {
+        $foregroundColor = "Green"
+    } elseif ($info) {
+        $foregroundColor = "White"
+    } elseif ($trace) {
+        $foregroundColor = "Gray"
+    } elseif ($debug) {
+        $foregroundColor = "Cyan"
+    }
+    
+    Write-Host -ForegroundColor $foregroundColor ($timestamp + $message)
+}
+
 function Get-ContainerStatus {
     [CmdletBinding()]
     param(
@@ -106,7 +152,7 @@ install_package() {
 ```
 
 ### Dockerfile
-- **Base Image**: Prefer specific tags (though `latest` is currently used)
+- **Base Image**: `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04` (pinned CUDA tag)
 - **Multi-stage**: Use separate base, builder, runtime stages
 - **Layer Optimization**: Combine related RUN commands
 - **Cleanup**: Always clean apt cache and temp files in same layer
@@ -116,7 +162,7 @@ install_package() {
 
 Example:
 ```dockerfile
-FROM ubuntu:22.04 AS base
+FROM nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04 AS base
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         package1 \
@@ -126,67 +172,72 @@ RUN apt-get update && \
 ```
 
 ### Agent Templates (Markdown with YAML frontmatter)
-- **Frontmatter**: Required fields: `description`, `mode`, `temperature`, `permission`, `tools`
-- **Mode**: Always `subagent`
+- **Frontmatter**: Required fields: `name`, `description`, `mode`, `model`, `permission`, `tools`
+- **Mode**: `subagent` (most agents) or `all` (manager, decomposer) for OpenCode; omitted for Claude
 - **Temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
 - **Permissions**: `ask`, `allow`, or `deny` for each tool category
-- **Tools Format**: Key-value pairs with boolean values, not arrays
+- **Tools Format**: Key-value booleans (OpenCode) or comma-separated string (Claude)
 - **No comments** unless user explicitly requests them
 
-Example:
-```yaml
----
-description: "Agent description here"
-mode: subagent
-temperature: 0.3
-permission:
-  write: ask
-  bash: ask
-  webfetch: allow
-  edit: deny
-tools:
-  read: true
-  write: true
-  grep: true
-  glob: true
-  bash: true
-  webfetch: true
-  question: true
-  sequentialthinking: true
----
-```
-
 ### MCP Server Configuration
-- **OpenCode**: `opencode.json` with `.mcp` object
-- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object
-- **Command**: Array format (e.g., `["npx", "-y", "package"]`)
-- **Environment**: Use `environment` (OpenCode) or `env` (Claude)
+- **OpenCode**: `opencode.json` with `.mcp` object, `"type": "local"` required, `environment` key, `command` as array
+- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object, `env` key, `command` as string with separate `args` array
 - **No comments** in JSON files
 
 ## File Organization
 
 ```
-/proj/                         # Working directory (mounted from host)
+<repo-root>/
 ├── jeeves.ps1                 # Main PowerShell management script
 ├── Dockerfile.jeeves          # Multi-stage Docker build file
 ├── .tmp/                      # Generated docker-compose files (git-ignored)
+├── docs/                      # Project documentation
+│   ├── guide.md               # Workflow guide (setup, phases, agents, tips)
+│   ├── reference.md           # Commands and configuration reference
+│   └── troubleshooting.md     # Problem/solution guide
 ├── jeeves/
-│   ├── bin/                   # Installation scripts
+│   ├── bin/                   # Installation and utility scripts
+│   │   ├── AGENTS.md          # Script development guide
+│   │   ├── ralph-init.sh
+│   │   ├── ralph-loop.sh
+│   │   ├── ralph-peek.sh
+│   │   ├── ralph-paths.sh
+│   │   ├── ralph-validate.sh
+│   │   ├── ralph-filter-output.sh
+│   │   ├── sync-agents.sh
+│   │   ├── apply-rules.sh
+│   │   ├── find-rules-files.sh
 │   │   ├── install-mcp-servers.sh
-│   │   └── install-agents.sh
+│   │   ├── install-agents.sh
+│   │   ├── install-skills.sh
+│   │   ├── install-skill-deps.sh
+│   │   ├── fetch-opencode-models.sh
+│   │   └── parse_skill_deps.py
 │   ├── PRD/                   # PRD Creator agent templates
-│   │   ├── prd-creator-opencode-template.md
-│   │   └── prd-creator-claude-template.md
-│   └── Deepest-Thinking/      # Research agent templates
-│       ├── deepest-thinking-opencode-template.md
-│       └── deepest-thinking-claude-template.md
-├── docs/                      # Documentation
-│   ├── commands.md
-│   ├── configuration.md
-│   └── troubleshooting.md
+│   ├── Deepest-Thinking/      # Research agent templates
+│   └── Ralph/                 # Ralph Loop Framework
+│       ├── README-Ralph.md    # Ralph overview
+│       ├── docs/
+│       │   ├── directory-structure.md
+│       │   └── rules-system.md
+│       ├── plugins/
+│       │   └── todo.ts        # OpenCode TODO plugin
+│       ├── skills/
+│       │   ├── dependency-tracking/
+│       │   ├── git-automation/
+│       │   ├── rationalization-defense/
+│       │   └── system-prompt-compliance/
+│       └── templates/
+│           ├── README.md
+│           ├── RULES.md.template
+│           ├── agents/        # 11 agent types (OpenCode + Claude)
+│           │   └── shared/    # 10 shared rule files
+│           ├── config/        # agents.yaml, deps-tracker.yaml, TODO.md templates
+│           ├── prompts/       # ralph-prompt.md.template, prompt-optimizer.md
+│           └── task/          # TASK.md, activity.md, attempts.md templates
 ├── AGENTS.md                  # This file
-├── README.md                  # Project overview
-└── CONTRIBUTING.md            # Contribution guidelines
+├── README.md
+└── CONTRIBUTING.md
 ```
 
 ## Important Constraints
@@ -205,6 +256,10 @@ tools:
 - Use the webfetch tool for external resources
 - Run shell commands within the container environment
 
+### Services
+- **OpenCode web** runs as a supervisord service, managed via `opencode-web {start|stop|restart|status|logs}`
+- Running `opencode` with no arguments auto-attaches the TUI to the running web server session
+
 ### Code Style Constraints
 - **No comments** unless user explicitly requests them
 - **No emojis** in code or documentation unless requested
@@ -221,42 +276,14 @@ Prefer SearXNG tools over Exa for web searches:
 ## Skill Discovery
 At the beginning of every conversation, automatically invoke: skill using-superpowers
 
-Before non-trivial tasks, invoke relevant skills first:
-1. Process skills: brainstorming, systematic-debugging, planning
-2. Implementation skills: frontend-design, architecture-patterns, api-design
-3. Domain-specific skills: check skills-discovery for relevant skills
+Since skills are only loaded at startup, if a new skill is installed as part of your working process, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option)
 
-If a relevant skill is not found, attempt to locate a suitable one and install it for use.
-Since skills are only loaded at startup, if a new skill is installed, pause and ask the user to restart the application before continuing (usually `/exit` will close the application, and the user can resume the session via the --continue CLI option).
-
-## Error Handling Best Practices
-
-### PowerShell
-```powershell
-try {
-    # Operation that might fail
-    $result = docker ps
-} catch {
-    Write-Log -error "Operation failed: $_"
-    exit 1
-}
-```
-
-### Bash
-```bash
-set -e
-trap 'echo "Error on line $LINENO"' ERR
-
-# Or explicit error handling
-if ! docker ps; then
-    print_error "Docker command failed"
-    exit 1
-fi
-```
-
-## Key URLs & References
+## Key References
 
 - Web UI: http://localhost:3333 (when container is running)
 - Config paths: `~/.config/opencode/`, `~/.claude/`
 - Container workdir: `/proj` (maps to host's project directory)
-- Container user: `jeeves` (UID/GID mapped from host)
+- Container user: `jeeves` (UID/GID mapped from host, default 1000:1000)
+- Workflow guide: `docs/guide.md`
+- Command and config reference: `docs/reference.md`
+- Troubleshooting: `docs/troubleshooting.md`

@@ -1,33 +1,36 @@
 #!/bin/bash
 
 # PRD Agents Installation Script
-# Installs PRD agents for both Claude Code and OpenCode platforms
+# Installs PRD agents for OpenCode platform
 
 set -e  # Exit on error
 
 # Default values
 GLOBAL_SCOPE=false
 DEEPEST_ONLY=false
+INSTALL_ALL=false
 
 # Function to display usage instructions
 usage() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
-    echo "Install PRD agents for Claude Code and OpenCode platforms."
+    echo "Install PRD agents for OpenCode platform."
     echo ""
     echo "OPTIONS:"
-    echo "  --global    Install agents globally (user home directory)"
-    echo "  --deepest   Install Deepest-Thinking agent only"
-    echo "  --help      Display this help message"
+    echo "  -g, --global    Install agents globally (user home directory)"
+    echo "  -d, --deepest   Install Deepest-Thinking agent only"
+    echo "  -a, --all       Install all agents (PRD Creator and Deepest-Thinking)"
+    echo "  -h, --help      Display this help message"
     echo ""
     echo "SCOPE:"
-    echo "  By default: Project scope (/proj/.claude/ and /proj/.opencode/)"
-    echo "  With --global: User scope (~/.claude/ and ~/.opencode/)"
+    echo "  By default: Project scope (/proj/.opencode/)"
+    echo "  With --global: User scope (~/.opencode/)"
     echo ""
     echo "EXAMPLES:"
     echo "  $0                    # Install to project scope"
-    echo "  $0 --global           # Install to user scope"
-    echo "  $0 --deepest         # Install Deepest-Thinking agent only"
+    echo "  $0 -g                 # Install to user scope"
+    echo "  $0 -d                 # Install Deepest-Thinking agent only"
+    echo "  $0 -a                 # Install all agents explicitly"
     echo ""
 }
 
@@ -55,15 +58,19 @@ warning_msg() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --global)
+        --global|-g)
             GLOBAL_SCOPE=true
             shift
             ;;
-        --deepest)
+        --deepest|-d)
             DEEPEST_ONLY=true
             shift
             ;;
-        --help)
+        --all|-a)
+            INSTALL_ALL=true
+            shift
+            ;;
+        --help|-h)
             usage
             exit 0
             ;;
@@ -77,22 +84,28 @@ done
 if [ "$GLOBAL_SCOPE" = true ]; then
     # Global scope (user home directory)
     OPENCODE_DIR="$HOME/.opencode/agents"
-    CLAUDE_DIR="$HOME/.claude/agents"
     SCOPE_DESCRIPTION="global (user home directory)"
 else
     # Project scope (workspace directory)
     OPENCODE_DIR="/proj/.opencode/agents"
-    CLAUDE_DIR="/proj/.claude/agents"
     SCOPE_DESCRIPTION="project (/proj)"
 fi
 
-# Template source paths
+# PRD Creator OpenCode template path
 OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-creator-opencode-template.md"
-CLAUDE_TEMPLATE="/opt/jeeves/PRD/prd-creator-claude-template.md"
 
-# Deepest-Thinking template paths
+# PRD Researcher template path
+PRD_RESEARCHER_OPENCODE_TEMPLATE="/opt/jeeves/PRD/prd-researcher-opencode-template.md"
+
+# PRD Advisor OpenCode template paths
+PRD_ADVISOR_API_TEMPLATE="/opt/jeeves/PRD/prd-advisor-api-opencode-template.md"
+PRD_ADVISOR_CLI_TEMPLATE="/opt/jeeves/PRD/prd-advisor-cli-opencode-template.md"
+PRD_ADVISOR_DATA_TEMPLATE="/opt/jeeves/PRD/prd-advisor-data-opencode-template.md"
+PRD_ADVISOR_LIBRARY_TEMPLATE="/opt/jeeves/PRD/prd-advisor-library-opencode-template.md"
+PRD_ADVISOR_UI_TEMPLATE="/opt/jeeves/PRD/prd-advisor-ui-opencode-template.md"
+
+# Deepest-Thinking template path
 DEEPEST_OPENCODE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-opencode-template.md"
-DEEPEST_CLAUDE_TEMPLATE="/opt/jeeves/Deepest-Thinking/deepest-thinking-claude-template.md"
 
 # Main installation function
 install_agents() {
@@ -103,8 +116,28 @@ install_agents() {
         error_exit "OpenCode template not found at: $OPENCODE_TEMPLATE"
     fi
     
-    if [ ! -f "$CLAUDE_TEMPLATE" ]; then
-        error_exit "Claude Code template not found at: $CLAUDE_TEMPLATE"
+    if [ ! -f "$PRD_RESEARCHER_OPENCODE_TEMPLATE" ]; then
+        error_exit "PRD Researcher OpenCode template not found at: $PRD_RESEARCHER_OPENCODE_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_ADVISOR_API_TEMPLATE" ]; then
+        error_exit "PRD Advisor API template not found at: $PRD_ADVISOR_API_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_ADVISOR_CLI_TEMPLATE" ]; then
+        error_exit "PRD Advisor CLI template not found at: $PRD_ADVISOR_CLI_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_ADVISOR_DATA_TEMPLATE" ]; then
+        error_exit "PRD Advisor Data template not found at: $PRD_ADVISOR_DATA_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_ADVISOR_LIBRARY_TEMPLATE" ]; then
+        error_exit "PRD Advisor Library template not found at: $PRD_ADVISOR_LIBRARY_TEMPLATE"
+    fi
+    
+    if [ ! -f "$PRD_ADVISOR_UI_TEMPLATE" ]; then
+        error_exit "PRD Advisor UI template not found at: $PRD_ADVISOR_UI_TEMPLATE"
     fi
     
     # Create directories if they don't exist
@@ -117,14 +150,7 @@ install_agents() {
         info_msg "Directory already exists: $OPENCODE_DIR"
     fi
     
-    if [ ! -d "$CLAUDE_DIR" ]; then
-        mkdir -p "$CLAUDE_DIR" || error_exit "Failed to create directory: $CLAUDE_DIR"
-        success_msg "Created directory: $CLAUDE_DIR"
-    else
-        info_msg "Directory already exists: $CLAUDE_DIR"
-    fi
-    
-    # Install OpenCode agent
+    # Install OpenCode PRD agent
     info_msg "Installing OpenCode PRD agent..."
     if cp "$OPENCODE_TEMPLATE" "$OPENCODE_DIR/prd-creator.md"; then
         success_msg "OpenCode PRD agent installed to: $OPENCODE_DIR/prd-creator.md"
@@ -132,27 +158,97 @@ install_agents() {
         error_exit "Failed to install OpenCode PRD agent"
     fi
     
-    # Install Claude Code agent
-    info_msg "Installing Claude Code PRD agent..."
-    if cp "$CLAUDE_TEMPLATE" "$CLAUDE_DIR/prd-creator.md"; then
-        success_msg "Claude Code PRD agent installed to: $CLAUDE_DIR/prd-creator.md"
+    # Install PRD Researcher OpenCode agent
+    info_msg "Installing PRD Researcher OpenCode agent..."
+    if cp "$PRD_RESEARCHER_OPENCODE_TEMPLATE" "$OPENCODE_DIR/prd-researcher.md"; then
+        success_msg "PRD Researcher OpenCode agent installed to: $OPENCODE_DIR/prd-researcher.md"
     else
-        error_exit "Failed to install Claude Code PRD agent"
+        error_exit "Failed to install PRD Researcher OpenCode agent"
+    fi
+    
+    # Install PRD Advisor API OpenCode agent
+    info_msg "Installing PRD Advisor API OpenCode agent..."
+    if cp "$PRD_ADVISOR_API_TEMPLATE" "$OPENCODE_DIR/prd-advisor-api.md"; then
+        success_msg "PRD Advisor API OpenCode agent installed to: $OPENCODE_DIR/prd-advisor-api.md"
+    else
+        error_exit "Failed to install PRD Advisor API OpenCode agent"
+    fi
+    
+    # Install PRD Advisor CLI OpenCode agent
+    info_msg "Installing PRD Advisor CLI OpenCode agent..."
+    if cp "$PRD_ADVISOR_CLI_TEMPLATE" "$OPENCODE_DIR/prd-advisor-cli.md"; then
+        success_msg "PRD Advisor CLI OpenCode agent installed to: $OPENCODE_DIR/prd-advisor-cli.md"
+    else
+        error_exit "Failed to install PRD Advisor CLI OpenCode agent"
+    fi
+    
+    # Install PRD Advisor Data OpenCode agent
+    info_msg "Installing PRD Advisor Data OpenCode agent..."
+    if cp "$PRD_ADVISOR_DATA_TEMPLATE" "$OPENCODE_DIR/prd-advisor-data.md"; then
+        success_msg "PRD Advisor Data OpenCode agent installed to: $OPENCODE_DIR/prd-advisor-data.md"
+    else
+        error_exit "Failed to install PRD Advisor Data OpenCode agent"
+    fi
+    
+    # Install PRD Advisor Library OpenCode agent
+    info_msg "Installing PRD Advisor Library OpenCode agent..."
+    if cp "$PRD_ADVISOR_LIBRARY_TEMPLATE" "$OPENCODE_DIR/prd-advisor-library.md"; then
+        success_msg "PRD Advisor Library OpenCode agent installed to: $OPENCODE_DIR/prd-advisor-library.md"
+    else
+        error_exit "Failed to install PRD Advisor Library OpenCode agent"
+    fi
+    
+    # Install PRD Advisor UI OpenCode agent
+    info_msg "Installing PRD Advisor UI OpenCode agent..."
+    if cp "$PRD_ADVISOR_UI_TEMPLATE" "$OPENCODE_DIR/prd-advisor-ui.md"; then
+        success_msg "PRD Advisor UI OpenCode agent installed to: $OPENCODE_DIR/prd-advisor-ui.md"
+    else
+        error_exit "Failed to install PRD Advisor UI OpenCode agent"
     fi
     
     # Verify installations
     info_msg "Verifying installations..."
     
     if [ -f "$OPENCODE_DIR/prd-creator.md" ]; then
-        success_msg "OpenCode agent verification: PASSED"
+        success_msg "OpenCode PRD agent verification: PASSED"
     else
-        warning_msg "OpenCode agent verification: FAILED"
+        warning_msg "OpenCode PRD agent verification: FAILED"
     fi
     
-    if [ -f "$CLAUDE_DIR/prd-creator.md" ]; then
-        success_msg "Claude Code agent verification: PASSED"
+    if [ -f "$OPENCODE_DIR/prd-researcher.md" ]; then
+        success_msg "PRD Researcher OpenCode agent verification: PASSED"
     else
-        warning_msg "Claude Code agent verification: FAILED"
+        warning_msg "PRD Researcher OpenCode agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-advisor-api.md" ]; then
+        success_msg "PRD Advisor API OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Advisor API OpenCode agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-advisor-cli.md" ]; then
+        success_msg "PRD Advisor CLI OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Advisor CLI OpenCode agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-advisor-data.md" ]; then
+        success_msg "PRD Advisor Data OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Advisor Data OpenCode agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-advisor-library.md" ]; then
+        success_msg "PRD Advisor Library OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Advisor Library OpenCode agent verification: FAILED"
+    fi
+    
+    if [ -f "$OPENCODE_DIR/prd-advisor-ui.md" ]; then
+        success_msg "PRD Advisor UI OpenCode agent verification: PASSED"
+    else
+        warning_msg "PRD Advisor UI OpenCode agent verification: FAILED"
     fi
     
     info_msg "PRD agents installation completed successfully!"
@@ -165,27 +261,13 @@ install_agents() {
         error_exit "Failed to install Deepest-Thinking OpenCode agent"
     fi
     
-    # Install Deepest-Thinking Claude Code agent
-    info_msg "Installing Deepest-Thinking Claude Code agent..."
-    if cp "$DEEPEST_CLAUDE_TEMPLATE" "$CLAUDE_DIR/deepest-thinking.md"; then
-        success_msg "Deepest-Thinking Claude Code agent installed to: $CLAUDE_DIR/deepest-thinking.md"
-    else
-        error_exit "Failed to install Deepest-Thinking Claude Code agent"
-    fi
-    
-    # Verify Deepest-Thinking installations
-    info_msg "Verifying Deepest-Thinking installations..."
+    # Verify Deepest-Thinking installation
+    info_msg "Verifying Deepest-Thinking installation..."
     
     if [ -f "$OPENCODE_DIR/deepest-thinking.md" ]; then
         success_msg "Deepest-Thinking OpenCode agent verification: PASSED"
     else
         warning_msg "Deepest-Thinking OpenCode agent verification: FAILED"
-    fi
-    
-    if [ -f "$CLAUDE_DIR/deepest-thinking.md" ]; then
-        success_msg "Deepest-Thinking Claude Code agent verification: PASSED"
-    else
-        warning_msg "Deepest-Thinking Claude Code agent verification: FAILED"
     fi
 }
 
@@ -198,10 +280,6 @@ install_deepest_agents() {
         error_exit "Deepest-Thinking OpenCode template not found at: $DEEPEST_OPENCODE_TEMPLATE"
     fi
     
-    if [ ! -f "$DEEPEST_CLAUDE_TEMPLATE" ]; then
-        error_exit "Deepest-Thinking Claude Code template not found at: $DEEPEST_CLAUDE_TEMPLATE"
-    fi
-    
     # Create directories if they don't exist
     info_msg "Creating directories..."
     
@@ -212,13 +290,6 @@ install_deepest_agents() {
         info_msg "Directory already exists: $OPENCODE_DIR"
     fi
     
-    if [ ! -d "$CLAUDE_DIR" ]; then
-        mkdir -p "$CLAUDE_DIR" || error_exit "Failed to create directory: $CLAUDE_DIR"
-        success_msg "Created directory: $CLAUDE_DIR"
-    else
-        info_msg "Directory already exists: $CLAUDE_DIR"
-    fi
-    
     # Install Deepest-Thinking OpenCode agent
     info_msg "Installing Deepest-Thinking OpenCode agent..."
     if cp "$DEEPEST_OPENCODE_TEMPLATE" "$OPENCODE_DIR/deepest-thinking.md"; then
@@ -227,16 +298,8 @@ install_deepest_agents() {
         error_exit "Failed to install Deepest-Thinking OpenCode agent"
     fi
     
-    # Install Deepest-Thinking Claude Code agent
-    info_msg "Installing Deepest-Thinking Claude Code agent..."
-    if cp "$DEEPEST_CLAUDE_TEMPLATE" "$CLAUDE_DIR/deepest-thinking.md"; then
-        success_msg "Deepest-Thinking Claude Code agent installed to: $CLAUDE_DIR/deepest-thinking.md"
-    else
-        error_exit "Failed to install Deepest-Thinking Claude Code agent"
-    fi
-    
-    # Verify installations
-    info_msg "Verifying installations..."
+    # Verify installation
+    info_msg "Verifying Deepest-Thinking installation..."
     
     if [ -f "$OPENCODE_DIR/deepest-thinking.md" ]; then
         success_msg "Deepest-Thinking OpenCode agent verification: PASSED"
@@ -244,18 +307,17 @@ install_deepest_agents() {
         warning_msg "Deepest-Thinking OpenCode agent verification: FAILED"
     fi
     
-    if [ -f "$CLAUDE_DIR/deepest-thinking.md" ]; then
-        success_msg "Deepest-Thinking Claude Code agent verification: PASSED"
-    else
-        warning_msg "Deepest-Thinking Claude Code agent verification: FAILED"
-    fi
-    
-    info_msg "Deepest-Thinking agents installation completed successfully!"
+    info_msg "Deepest-Thinking agent installation completed successfully!"
 }
 
 # Check if running as root (for global installations)
 if [ "$GLOBAL_SCOPE" = true ] && [ "$(id -u)" -ne 0 ]; then
     warning_msg "Installing globally without root privileges. Some operations may fail."
+fi
+
+# Handle --all flag (install all agents)
+if [ "$INSTALL_ALL" = true ]; then
+    DEEPEST_ONLY=false
 fi
 
 # Check if Deepest-Thinking only installation

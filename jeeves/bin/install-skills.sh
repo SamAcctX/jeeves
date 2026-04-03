@@ -9,6 +9,7 @@ set -e  # Exit on error
 GLOBAL_SCOPE=false
 DOC_SKILLS=false
 N8N_SKILLS=false
+INSTALL_ALL=false
 
 # Function to display usage instructions
 usage() {
@@ -17,18 +18,20 @@ usage() {
     echo "Install Agent Skills for Claude Code and OpenCode platforms."
     echo ""
     echo "OPTIONS:"
-    echo "  --doc-skills    Install document creation skills (docx, pdf, xlsx, pptx, markitdown)"
-    echo "  --n8n-skills    Install n8n automation skills (7 skills for workflow development)"
-    echo "  --global        Install skills globally (user scope instead of project scope)"
-    echo "  --help          Display this help message"
+    echo "  -d, --doc-skills    Install document creation skills (docx, pdf, xlsx, pptx, markitdown)"
+    echo "  -n, --n8n-skills    Install n8n automation skills (7 skills for workflow development)"
+    echo "  -a, --all           Install all skill sets (doc-skills and n8n-skills)"
+    echo "  -g, --global        Install skills globally (user scope instead of project scope)"
+    echo "  -h, --help          Display this help message"
     echo ""
     echo "SCOPE:"
     echo "  By default: Project scope (requires .claude/ and .opencode/ directories)"
     echo "  With --global: User scope (installs to user home directory)"
     echo ""
     echo "EXAMPLES:"
-    echo "  $0 --doc-skills              # Install document skills to project scope"
-    echo "  $0 --n8n-skills --global     # Install n8n skills to user scope"
+    echo "  $0 -d                       # Install document skills to project scope"
+    echo "  $0 -n -g                    # Install n8n skills to user scope"
+    echo "  $0 -a                       # Install all skills to project scope"
     echo "  $0 --doc-skills --n8n-skills # Install all skills to project scope"
     echo ""
 }
@@ -270,19 +273,23 @@ install_n8n_skills() {
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
-        --doc-skills)
+        --doc-skills|-d)
             DOC_SKILLS=true
             shift
             ;;
-        --n8n-skills)
+        --n8n-skills|-n)
             N8N_SKILLS=true
             shift
             ;;
-        --global)
+        --all|-a)
+            INSTALL_ALL=true
+            shift
+            ;;
+        --global|-g)
             GLOBAL_SCOPE=true
             shift
             ;;
-        --help)
+        --help|-h)
             usage
             exit 0
             ;;
@@ -291,6 +298,12 @@ while [[ $# -gt 0 ]]; do
             ;;
     esac
 done
+
+# Handle --all flag (install all skill sets)
+if [ "$INSTALL_ALL" = true ]; then
+    DOC_SKILLS=true
+    N8N_SKILLS=true
+fi
 
 # Validate that at least one skill set is selected
 if [ "$DOC_SKILLS" = false ] && [ "$N8N_SKILLS" = false ]; then
