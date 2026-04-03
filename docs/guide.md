@@ -273,7 +273,7 @@ Tester (RED: writes failing tests)
       -> TASK_COMPLETE (only Tester can emit this)
 ```
 
-If the Tester finds defects during validation, it hands back to the Developer with `HANDOFF_DEFECT_FOUND`. If refactoring is needed, the Developer hands back with `HANDOFF_READY_FOR_TEST_REFACTOR` for a safety check. The cycle continues until the Tester is satisfied.
+If the Tester finds defects during validation, it emits `TASK_INCOMPLETE_XXXX` with a handoff note directing the Manager to re-assign to the Developer. The Developer fixes the issues and hands back for re-testing. The cycle continues until the Tester is satisfied.
 
 #### Multi-Disciplinary Tasks
 
