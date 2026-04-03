@@ -208,7 +208,7 @@ ralph-peek.sh           # Attach to the active session via TUI
 ralph-peek.sh --web     # Print the Web UI URL
 cat .ralph/tasks/TODO.md                  # Overall progress
 cat .ralph/tasks/0042/activity.md         # Specific task log
-ralph-filter-output.sh --signals output.json   # Show only signals (post-run)
+ralph-filter-output.sh --no-text --no-tokens --no-tools --no-cost output.json  # Show only signals
 ```
 
 #### When the Loop Stops

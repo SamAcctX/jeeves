@@ -327,8 +327,7 @@ Running `ralph-init.sh` creates the `.ralph/` directory in your project root:
 | 1 (highest) | CLI flags | `ralph-loop.sh --tool claude --max-iterations 50` |
 | 2 | Environment variables | `export RALPH_TOOL=claude` |
 | 3 | Project configuration | `.ralph/config/agents.yaml` |
-| 4 | User-global configuration | `~/.config/ralph/agents.yaml` |
-| 5 (lowest) | Default templates | `jeeves/Ralph/templates/config/` |
+| 4 (lowest) | Default templates | `jeeves/Ralph/templates/config/` |
 
 #### agents.yaml
 
@@ -464,8 +463,9 @@ Agent templates are Markdown files with YAML frontmatter. The format differs bet
 |---------|----------|-------------|
 | Tools format | Key-value booleans (`read: true`) | Comma-separated string (`Read, Write, Bash`) |
 | Permission block | Required (`ask`/`allow`/`deny` per tool) | Not used |
-| `model` field | Not used | Optional (`inherit` = use default) |
-| `mode` field | `subagent` | Not used |
+| `name` field | Required (agent identifier) | Required |
+| `model` field | `""` (empty string = use default) | Optional (`inherit` = use default) |
+| `mode` field | `subagent` or `all` (role-dependent) | Not used |
 
 #### Permission Levels (OpenCode)
 

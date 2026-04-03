@@ -172,8 +172,8 @@ RUN apt-get update && \
 ```
 
 ### Agent Templates (Markdown with YAML frontmatter)
-- **Frontmatter**: Required fields: `description`, `mode`, `permission`, `tools`
-- **Mode**: Always `subagent` (OpenCode) or omitted (Claude)
+- **Frontmatter**: Required fields: `name`, `description`, `mode`, `model`, `permission`, `tools`
+- **Mode**: `subagent` (most agents) or `all` (manager, decomposer) for OpenCode; omitted for Claude
 - **Temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
 - **Permissions**: `ask`, `allow`, or `deny` for each tool category
 - **Tools Format**: Key-value booleans (OpenCode) or comma-separated string (Claude)

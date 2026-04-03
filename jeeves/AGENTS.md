@@ -72,14 +72,14 @@ model: inherit
 ## Frontmatter Fields
 
 ### Required Fields
+- **name**: Agent identifier (both platforms)
 - **description**: Clear description of agent's purpose
-- **mode**: Always `subagent` (OpenCode only)
+- **mode**: `subagent` (most agents) or `all` (manager, decomposer) -- OpenCode only
+- **model**: `""` (empty string) for OpenCode, `inherit` for Claude
 - **permission**: Tool permission levels (OpenCode only)
 - **tools**: Available tools -- key-value boolean map for OpenCode, comma-separated string for Claude
 
 ### Optional Fields
-- **name**: Agent identifier (Claude only)
-- **model**: Model to use, typically `inherit` (Claude only)
 - **temperature**: 0.1-0.3 (focused) or 0.7-0.9 (creative)
 
 ## Platform Differences
@@ -89,8 +89,9 @@ model: inherit
 | Tools format | Key-value booleans | Comma-separated string |
 | Config file | opencode.json (`.mcp` key) | .mcp.json / ~/.claude.json (`.mcpServers` key) |
 | Permission block | Required (ask/allow/deny) | Not used |
-| Name field | Not used | Required |
-| Model field | Not used | Optional (`inherit`) |
+| Name field | Required | Required |
+| Model field | `""` (empty string) | Optional (`inherit`) |
+| Mode field | `subagent` or `all` | Not used |
 | Environment key (MCP) | `environment` | `env` |
 
 ## Testing Templates
