@@ -24,7 +24,7 @@ Inside the container, initialize Ralph in your project:
 ralph-init.sh
 ```
 
-This creates the `.ralph/` directory structure, installs agent templates to OpenCode, configures the five MCP servers, and sets up skills. The init script also runs `install-agents.sh`, `install-mcp-servers.sh`, and `install-skill-deps.sh` automatically. One important detail: `agents.yaml` is never overwritten by init, even with `--force`, protecting your model configuration from accidental resets.
+This creates the `.ralph/` directory structure, installs agent templates to both OpenCode and Claude, configures the five MCP servers, and sets up skills. The init script also runs `install-agents.sh`, `install-mcp-servers.sh`, and `install-skill-deps.sh` automatically. One important detail: `agents.yaml` is never overwritten by init, even with `--force`, protecting your model configuration from accidental resets.
 
 The OpenCode Web UI is available at `http://localhost:3333` once the container is running. Running `opencode` with no arguments from the container shell auto-attaches the TUI to the running web server session.
 
@@ -306,7 +306,7 @@ agents:
       claude: claude-sonnet-4.5
 ```
 
-General guidance: use stronger models (Opus-tier) for orchestration agents (manager, architect, decomposer) and cost-effective models (Sonnet-tier) for high-volume workers (developer, tester, writer). After editing, run `sync-agents.sh` to propagate changes to agent templates. The sync is idempotent -- running it twice with the same config makes no unnecessary changes.
+General guidance: use stronger models (Opus-tier) for orchestration agents (manager, architect, decomposer) and cost-effective models (Sonnet-tier) for high-volume workers (developer, tester, writer). After editing, run `sync-agents.sh` to propagate changes to agent templates for both platforms. The sync is idempotent -- running it twice with the same config makes no unnecessary changes.
 
 You can also override per-run with environment variables:
 

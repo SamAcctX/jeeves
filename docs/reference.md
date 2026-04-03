@@ -66,7 +66,7 @@ Initialize Ralph project scaffolding in the current directory.
 ralph-init.sh [--force|-f] [--rules] [--help|-h]
 ```
 
-Creates the `.ralph/` directory structure including config templates, agent templates, task templates, and skill definitions. Validates that `yq`, `jq`, and `git` are available. Updates `.gitignore` with Ralph exclusions. Runs `install-agents.sh`, `install-mcp-servers.sh`, and `install-skill-deps.sh` automatically.
+Creates the `.ralph/` directory structure including config templates, agent templates, task templates, and skill definitions. Validates that `yq`, `jq`, and `git` are available. Updates `.gitignore` with Ralph exclusions. Runs `install-agents.sh` (installs to both OpenCode and Claude), `install-mcp-servers.sh`, and `install-skill-deps.sh` automatically.
 
 `agents.yaml` is never overwritten (always preserved). Other files can be overwritten with `--force`.
 
@@ -115,7 +115,7 @@ Synchronize agent model configurations from `agents.yaml` to agent definition fi
 sync-agents.sh [--tool|-t {opencode|claude}] [--config|-c FILE] [--show|-s] [--dry-run|-d]
 ```
 
-Reads agent configurations from `agents.yaml` and updates the `model` field in agent markdown files' YAML frontmatter. Searches agent directories in priority order: `.ralph/agents`, `.opencode/agents`, `.claude/agents`, `$HOME/.config/opencode/agents`, `$HOME/.claude/agents` (filtered by selected tool).
+By default syncs both OpenCode and Claude platforms, detecting each agent file's platform from its path and applying the correct model. Use `--tool` to restrict to a single platform. Searches agent directories in priority order: `.ralph/agents`, `.opencode/agents`, `.claude/agents`, `$HOME/.config/opencode/agents`, `$HOME/.claude/agents`.
 
 #### ralph-filter-output.sh
 
@@ -196,13 +196,13 @@ Installs 5 MCP servers: `sequentialthinking`, `fetch`, `crawl4ai`, `searxng`, `p
 
 #### install-agents.sh
 
-Install AI agent templates (PRD Creator, PRD Advisors, PRD Researcher, Deepest-Thinking) to OpenCode.
+Install AI agent templates (PRD Creator, PRD Advisors, PRD Researcher, Deepest-Thinking) to both OpenCode and Claude.
 
 ```bash
 install-agents.sh [--all|-a] [--deepest|-d] [--global|-g] [--help|-h]
 ```
 
-Installs to OpenCode only. Use `--deepest` for Deepest-Thinking only, `--global` for user home scope.
+Installs to both OpenCode and Claude platforms. Use `--deepest` for Deepest-Thinking only, `--global` for user home scope.
 
 #### install-skills.sh
 
@@ -387,7 +387,7 @@ agents:
 | `decomposer-researcher` | Investigation, documentation analysis, knowledge synthesis for PRD decomposition |
 | `decomposer-task-handler` | Task-level decomposition and handling (OpenCode only) |
 
-**Model selection at runtime:** Ralph reads `agents.yaml`, looks up the agent type for the selected tool (`--tool` flag or `RALPH_TOOL` env var), uses `preferred.<tool>`, and falls back to `fallback.<tool>` if preferred is empty or unavailable. After modifying `agents.yaml`, run `sync-agents.sh` to propagate changes to agent template files.
+**Model selection at runtime:** Ralph reads `agents.yaml`, looks up the agent type for the selected tool (`--tool` flag or `RALPH_TOOL` env var), uses `preferred.<tool>`, and falls back to `fallback.<tool>` if preferred is empty or unavailable. After modifying `agents.yaml`, run `sync-agents.sh` to propagate changes to agent template files for both platforms.
 
 #### deps-tracker.yaml
 
