@@ -762,11 +762,55 @@ safe_create_config() {
     fi
 }
 
+install_k8s_tools() {
+  if ! is_dind_enabled; then
+    return 0
+  fi
+
+  if command -v kubectl >/dev/null 2>&1 && command -v helm >/dev/null 2>&1 && command -v kind >/dev/null 2>&1; then
+    echo "Kubernetes tools already installed"
+    return 0
+  fi
+
+  echo "Installing Kubernetes tools (kubectl, helm, kind)..."
+
+  local arch
+  arch=$(dpkg --print-architecture 2>/dev/null || echo "amd64")
+
+  if ! command -v kubectl >/dev/null 2>&1; then
+    local kubectl_version
+    kubectl_version=$(curl -fsSL https://dl.k8s.io/release/stable.txt)
+    curl -fsSL "https://dl.k8s.io/release/${kubectl_version}/bin/linux/${arch}/kubectl" -o /tmp/kubectl
+    sudo install -o root -g root -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+    rm -f /tmp/kubectl
+    echo "kubectl ${kubectl_version} installed"
+  fi
+
+  if ! command -v helm >/dev/null 2>&1; then
+    curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    echo "helm installed"
+  fi
+
+  if ! command -v kind >/dev/null 2>&1; then
+    local kind_version
+    kind_version=$(curl -fsSL https://api.github.com/repos/kubernetes-sigs/kind/releases/latest | grep '"tag_name"' | sed -E 's/.*"([^"]+)".*/\1/')
+    curl -fsSL "https://kind.sigs.k8s.io/dl/${kind_version}/kind-linux-${arch}" -o /tmp/kind
+    sudo install -o root -g root -m 0755 /tmp/kind /usr/local/bin/kind
+    rm -f /tmp/kind
+    echo "kind ${kind_version} installed"
+  fi
+
+  echo "Kubernetes tools installation complete"
+}
+
 # Docker cleanup trap
 trap cleanup EXIT
 
 # Start Docker first
 start_docker_engine
+
+# Install k8s tools if DinD is enabled
+install_k8s_tools
 
 # Pre-stage custom todo plugin for opencode
 sudo mkdir -p /home/jeeves/.config/opencode/plugins
@@ -855,9 +899,16 @@ When performing web searches, prefer searxng tools over exa tools:
 ## Containerized Limitations
 You are running in a Docker container.  While you have full access to the /proj directory, you will have limited access to any other folder
 You may ask the user to install additional Ubuntu packages if needed, but you cannot do so yourself
-You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
 "
 
+if is_dind_enabled; then
+    OPENCODE_CONFIG_CONTENT+="You have Docker-in-Docker (DinD) enabled with access to docker, kubectl, helm, and kind.
+You can build images, run containers, and manage local Kubernetes clusters.
+"
+else
+    OPENCODE_CONFIG_CONTENT+="You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
+"
+fi
 
 safe_create_config "$OPENCODE_AGENTS_MD" "$OPENCODE_CONFIG_CONTENT"
 
@@ -877,8 +928,16 @@ When performing web searches, prefer searxng tools over exa tools:
 ## Containerized Limitations
 You are running in a Docker container.  While you have full access to the /proj directory, you will have limited access to any other folder
 You may ask the user to install additional Ubuntu packages if needed, but you cannot do so yourself
-You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
 "
+
+if is_dind_enabled; then
+    CLAUDE_CONFIG_CONTENT+="You have Docker-in-Docker (DinD) enabled with access to docker, kubectl, helm, and kind.
+You can build images, run containers, and manage local Kubernetes clusters.
+"
+else
+    CLAUDE_CONFIG_CONTENT+="You do NOT have access to the docker engine, CLI, API, or socket - do not attempt any docker commands (build, compose, rm, ls, ps, etc.)
+"
+fi
 
 CLAUDE_MD="/home/jeeves/.claude/CLAUDE.md"
 safe_create_config "$CLAUDE_MD" "$CLAUDE_CONFIG_CONTENT"
