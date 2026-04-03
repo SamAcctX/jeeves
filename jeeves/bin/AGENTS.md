@@ -120,11 +120,11 @@ done
 - Installs 5 MCP servers: sequentialthinking, fetch, crawl4ai, searxng, playwright
 
 ### install-agents.sh
-- Installs PRD agents to OpenCode
+- Installs PRD and Deepest-Thinking agents to both OpenCode and Claude platforms
 - Supports `--global`, `--deepest`, and `--all` flags
 - Creates directories if they don't exist
-- Templates: PRD Creator, Deepest-Thinking
-- Installation paths: Project scope (/proj/.opencode/), Global scope (~/.config/opencode/)
+- Templates: PRD Creator, PRD Researcher, PRD Advisors (5), Deepest-Thinking
+- Installation paths: Project scope (/proj/.opencode/ and /proj/.claude/), Global scope (~/.opencode/ and ~/.claude/)
 
 ### install-skill-deps.sh
 - Discovers skills, parses dependencies from SKILL.md files, and installs required packages
@@ -150,8 +150,10 @@ done
 
 ### sync-agents.sh
 - Synchronizes agent model configurations from agents.yaml to agent files
+- Syncs both OpenCode and Claude platforms by default; use `--tool` to target one
 - Uses yq for proper YAML parsing and manipulation
 - Supports `--tool` (opencode/claude), `--config`, `--show`, and `--dry-run` flags
+- Detects platform from file path and applies the correct model per-platform
 - Handles search path prioritization (project > user > global)
 
 ### apply-rules.sh
