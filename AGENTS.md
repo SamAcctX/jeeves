@@ -12,28 +12,41 @@
 
 ### Container Lifecycle
 ```powershell
-./jeeves.ps1 start              # Start container
+./jeeves.ps1 start              # Start container (aliases: up)
 ./jeeves.ps1 start --clean      # Clean rebuild and start
-./jeeves.ps1 stop               # Stop container
+./jeeves.ps1 start --dind       # Start with Docker-in-Docker
+./jeeves.ps1 start --port 4444  # Start on specific port
+./jeeves.ps1 stop               # Stop container (aliases: down)
 ./jeeves.ps1 stop --remove      # Stop and remove container
 ./jeeves.ps1 stop --force       # Force stop (SIGKILL)
 ./jeeves.ps1 restart            # Restart container
 ./jeeves.ps1 rm                 # Remove container (stops if running)
-./jeeves.ps1 shell              # Attach to container shell
+./jeeves.ps1 shell              # Attach to container shell (aliases: attach, sh)
 ./jeeves.ps1 shell --zsh        # Attach with zsh instead of bash
+./jeeves.ps1 shell --new        # Stop/remove existing container first
+./jeeves.ps1 shell --raw        # Disable tmux auto-attach
 ./jeeves.ps1 logs               # View container logs
-./jeeves.ps1 status             # Check container status
-./jeeves.ps1 clean              # Remove container and image
+./jeeves.ps1 status             # Check container status (aliases: st)
+./jeeves.ps1 status --all       # Show all jeeves instances
+./jeeves.ps1 list               # List all running instances (aliases: ls, ps)
+./jeeves.ps1 clean              # Remove container (aliases: none)
+./jeeves.ps1 clean --image      # Remove container and image
+./jeeves.ps1 clean --all        # Remove ALL jeeves containers
+./jeeves.ps1 clean --force      # Force image removal even if other containers exist
 ./jeeves.ps1 help               # Show help (aliases: h, ?)
 ```
+
+Running `./jeeves.ps1` without arguments displays an interactive menu.
 
 ### Installation Scripts (Inside Container)
 ```bash
 install-mcp-servers.sh --global     # Install MCP servers globally
 install-mcp-servers.sh --dry-run    # Preview MCP installation
-install-agents.sh --global          # Install AI agents globally
+install-agents.sh --global          # Install PRD agents to OpenCode
 install-agents.sh --deepest         # Install Deepest-Thinking only
 install-agents.sh --help            # Show usage information
+install-skills.sh --all             # Install all agent skills
+fetch-opencode-models.sh --free     # Fetch free models for agents.yaml
 ```
 
 ### Testing
@@ -167,9 +180,8 @@ RUN apt-get update && \
 - **No comments** unless user explicitly requests them
 
 ### MCP Server Configuration
-- **OpenCode**: `opencode.json` with `.mcp` object, `"type": "local"` required, `environment` key
-- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object, `env` key
-- **Command**: Array format (e.g., `["npx", "-y", "package"]`)
+- **OpenCode**: `opencode.json` with `.mcp` object, `"type": "local"` required, `environment` key, `command` as array
+- **Claude**: `.claude.json` or `.mcp.json` with `.mcpServers` object, `env` key, `command` as string with separate `args` array
 - **No comments** in JSON files
 
 ## File Organization
@@ -179,44 +191,51 @@ RUN apt-get update && \
 ├── jeeves.ps1                 # Main PowerShell management script
 ├── Dockerfile.jeeves          # Multi-stage Docker build file
 ├── .tmp/                      # Generated docker-compose files (git-ignored)
+├── docs/                      # Project documentation
+│   ├── guide.md               # Workflow guide (setup, phases, agents, tips)
+│   ├── reference.md           # Commands and configuration reference
+│   └── troubleshooting.md     # Problem/solution guide
 ├── jeeves/
 │   ├── bin/                   # Installation and utility scripts
-│   │   ├── install-mcp-servers.sh
-│   │   ├── install-agents.sh
-│   │   ├── install-skill-deps.sh
-│   │   ├── install-skills.sh
-│   │   ├── apply-rules.sh
-│   │   ├── sync-agents.sh
+│   │   ├── AGENTS.md          # Script development guide
+│   │   ├── README.md          # Script reference
 │   │   ├── ralph-init.sh
 │   │   ├── ralph-loop.sh
 │   │   ├── ralph-peek.sh
 │   │   ├── ralph-paths.sh
 │   │   ├── ralph-validate.sh
 │   │   ├── ralph-filter-output.sh
+│   │   ├── sync-agents.sh
+│   │   ├── apply-rules.sh
 │   │   ├── find-rules-files.sh
+│   │   ├── install-mcp-servers.sh
+│   │   ├── install-agents.sh
+│   │   ├── install-skills.sh
+│   │   ├── install-skill-deps.sh
+│   │   ├── fetch-opencode-models.sh
 │   │   └── parse_skill_deps.py
 │   ├── PRD/                   # PRD Creator agent templates
 │   ├── Deepest-Thinking/      # Research agent templates
-│   └── Ralph/                 # Ralph Rules System
-│       ├── templates/
-│       │   ├── agents/        # Ralph agent templates (per-role, per-platform)
-│       │   │   ├── shared/    # 10 shared rule files included by all agents
-│       │   │   ├── architect-*.md
-│       │   │   ├── decomposer-*.md
-│       │   │   ├── decomposer-architect-*.md
-│       │   │   ├── decomposer-researcher-*.md
-│       │   │   ├── developer-*.md
-│       │   │   ├── manager-*.md
-│       │   │   ├── researcher-*.md
-│       │   │   ├── tester-*.md
-│       │   │   ├── ui-designer-*.md
-│       │   │   └── writer-*.md
-│       │   ├── prompts/
-│       │   ├── config/
-│       │   └── task/
+│   └── Ralph/                 # Ralph Loop Framework
+│       ├── README-Ralph.md    # Ralph overview
+│       ├── docs/
+│       │   ├── directory-structure.md
+│       │   └── rules-system.md
+│       ├── plugins/
+│       │   └── todo.ts        # OpenCode TODO plugin
 │       ├── skills/
-│       └── docs/
-├── docs/                      # Full documentation (commands, config, troubleshooting)
+│       │   ├── dependency-tracking/
+│       │   ├── git-automation/
+│       │   ├── rationalization-defense/
+│       │   └── system-prompt-compliance/
+│       └── templates/
+│           ├── README.md
+│           ├── RULES.md.template
+│           ├── agents/        # 10 agent types x 2 platforms
+│           │   └── shared/    # 10 shared rule files
+│           ├── config/        # agents.yaml, deps-tracker.yaml, TODO.md templates
+│           ├── prompts/       # ralph-prompt.md, prompt-optimizer.md
+│           └── task/          # TASK.md, activity.md, attempts.md templates
 ├── AGENTS.md                  # This file
 ├── README.md
 └── CONTRIBUTING.md
@@ -266,6 +285,6 @@ Since skills are only loaded at startup, if a new skill is installed as part of 
 - Config paths: `~/.config/opencode/`, `~/.claude/`
 - Container workdir: `/proj` (maps to host's project directory)
 - Container user: `jeeves` (UID/GID mapped from host, default 1000:1000)
-- Full command reference: `docs/commands.md`
-- Configuration details: `docs/configuration.md`
+- Workflow guide: `docs/guide.md`
+- Command and config reference: `docs/reference.md`
 - Troubleshooting: `docs/troubleshooting.md`

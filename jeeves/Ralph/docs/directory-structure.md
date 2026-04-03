@@ -11,8 +11,6 @@ The Ralph Loop organizes project work using a standardized `.ralph/` directory s
 ├── .ralph/                      # Ralph scaffolding directory
 │   ├── config/                  # Configuration files
 │   │   └── agents.yaml          # Agent-to-model mapping configuration
-│   ├── prompts/                  # Prompt templates
-│   │   └── ralph-prompt.md      # Loop invocation instructions
 │   ├── tasks/                   # Task management
 │   │   ├── deps-tracker.yaml    # Dependency tracking across all tasks
 │   │   ├── TODO.md              # Master task checklist
@@ -55,13 +53,6 @@ Contains configuration files that control Ralph Loop behavior.
 
 #### `agents.yaml`
 Maps agent types to specific LLM models for optimal performance and cost efficiency. Each agent type (architect, developer, tester, etc.) can have preferred and fallback models for different tools (opencode, claude).
-
-### `.ralph/prompts/` - Prompt Templates
-
-Stores prompt templates used by the Ralph Loop.
-
-#### `ralph-prompt.md`
-Instructions for invoking the Ralph Loop, including task selection criteria and orchestration guidance for the Manager agent.
 
 ### `.ralph/tasks/` - Task Management
 

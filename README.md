@@ -24,7 +24,7 @@ Ralph is the autonomous task execution framework that runs inside Jeeves. It dec
 - **Signal-Based State Machine** -- Structured signals (COMPLETE, INCOMPLETE, FAILED, BLOCKED) drive task state transitions
 - **Skills System** -- Pluggable skills for dependency tracking, git automation, and system prompt compliance
 - **Multi-Platform AI Support** -- Works with OpenCode (default) or Claude Code
-- **Pre-configured MCP Servers** -- Sequential Thinking, Fetch, SearXNG, Playwright
+- **Pre-configured MCP Servers** -- Sequential Thinking, Fetch, Crawl4AI, SearXNG, Playwright
 - **Safety Limits** -- Configurable iteration caps, exponential backoff, and automatic loop detection
 
 ## Quick Start
@@ -124,6 +124,7 @@ jeeves/
 │   │   ├── install-agents.sh         #   Install AI agent templates
 │   │   ├── install-skills.sh         #   Install Ralph skills
 │   │   ├── install-skill-deps.sh     #   Install skill dependencies (pip/npm/apt)
+│   │   ├── fetch-opencode-models.sh  #   Fetch free models for agents.yaml
 │   │   └── parse_skill_deps.py       #   Parse skill dependency manifests
 │   ├── PRD/                            # PRD Creator agent
 │   │   ├── prd-creator-opencode-template.md
@@ -143,6 +144,7 @@ jeeves/
 │       ├── skills/
 │       │   ├── dependency-tracking/   #   Task dependency management and cycle detection
 │       │   ├── git-automation/        #   Branch management, commits, squash merges
+│       │   ├── rationalization-defense/ # Detect/correct rationalization patterns
 │       │   └── system-prompt-compliance/  # Prompt compliance verification
 │       └── templates/
 │           ├── agents/                #   10 agent types x 2 platforms + shared rules
@@ -151,13 +153,9 @@ jeeves/
 │           ├── prompts/               #   Prompt templates
 │           └── task/                  #   Task file templates (TASK.md, activity.md, etc.)
 ├── docs/                               # Project documentation
-│   ├── commands.md                    #   Complete command reference
-│   ├── configuration.md              #   Configuration options
-│   ├── troubleshooting.md            #   Common issues and solutions
-│   ├── how-to-guide.md               #   Step-by-step tutorials
-│   ├── example-walkthrough.md        #   End-to-end example
-│   ├── phase2-decomposition-guide.md #   Decomposition phase guide
-│   └── agent-selection-guide.md      #   Agent choice recommendations
+│   ├── guide.md                       #   Workflow guide (setup, phases, agents, tips)
+│   ├── reference.md                   #   Commands and configuration reference
+│   └── troubleshooting.md            #   Common issues and solutions
 ├── AGENTS.md                           # Agent development guidelines
 ├── CONTRIBUTING.md                     # Contribution guidelines
 └── LICENSE                             # AGPL-3.0
@@ -176,27 +174,23 @@ jeeves/
 | `rm` | `remove` | Remove container |
 | `shell` | `attach`, `sh` | Attach to container shell (flags: `--new`, `--raw`, `--zsh`) |
 | `logs` | `log` | View container logs |
-| `status` | `st`, `ps` | Check container status |
-| `clean` | | Remove container and image |
+| `status` | `st` | Check container status (flag: `--all`) |
+| `list` | `ls`, `ps` | List all running jeeves instances |
+| `clean` | | Remove container (flags: `--image`, `--all`, `--force`) |
 | `help` | `h`, `?` | Show help |
 
-See [docs/commands.md](docs/commands.md) for the complete reference.
+See [docs/reference.md](docs/reference.md) for the complete command and configuration reference.
 
 ## Documentation
 
 | Document | Description |
 |----------|-------------|
-| [Command Reference](docs/commands.md) | Complete jeeves.ps1 and Ralph command documentation |
-| [Configuration Guide](docs/configuration.md) | Container and Ralph configuration options |
-| [How-to Guide](docs/how-to-guide.md) | Step-by-step tutorials |
-| [Example Walkthrough](docs/example-walkthrough.md) | End-to-end project example |
-| [Phase 2 Decomposition Guide](docs/phase2-decomposition-guide.md) | Decomposition phase details |
-| [Agent Selection Guide](docs/agent-selection-guide.md) | Choosing the right agent |
+| [Guide](docs/guide.md) | Workflow guide: setup, Ralph phases, agent selection, decomposition, tips |
+| [Reference](docs/reference.md) | Commands, flags, configuration, agents.yaml, environment variables |
 | [Troubleshooting](docs/troubleshooting.md) | Common issues and solutions |
-| [Ralph Deep Dive](jeeves/Ralph/README-Ralph.md) | Detailed Ralph Loop documentation |
+| [Ralph Overview](jeeves/Ralph/README-Ralph.md) | Ralph Loop architecture and component index |
 | [Rules System](jeeves/Ralph/docs/rules-system.md) | RULES.md hierarchical learning system |
-| [Directory Structure](jeeves/Ralph/docs/directory-structure.md) | Ralph directory organization |
-| [AGENTS.md](AGENTS.md) | Agent development guidelines |
+| [AGENTS.md](AGENTS.md) | AI agent development guidelines |
 | [CONTRIBUTING.md](CONTRIBUTING.md) | Contribution guidelines |
 
 ## Prerequisites

@@ -160,6 +160,7 @@ Ralph skills live in `jeeves/Ralph/skills/`. Each skill is a directory containin
 
 - `dependency-tracking/` -- Task dependency management and cycle detection
 - `git-automation/` -- Branch management, commits, squash merges
+- `rationalization-defense/` -- Detect and correct rationalization patterns
 - `system-prompt-compliance/` -- Prompt compliance verification
 
 When adding a new skill:
@@ -194,13 +195,9 @@ Project documentation lives in `docs/`:
 
 | File | Content |
 |------|---------|
-| `commands.md` | Complete command reference |
-| `configuration.md` | Configuration options |
+| `guide.md` | Workflow guide: setup, Ralph phases, agent selection, tips |
+| `reference.md` | Commands, flags, configuration, environment variables |
 | `troubleshooting.md` | Common issues and solutions |
-| `how-to-guide.md` | Step-by-step tutorials |
-| `example-walkthrough.md` | End-to-end project example |
-| `phase2-decomposition-guide.md` | Decomposition phase guide |
-| `agent-selection-guide.md` | Agent choice recommendations |
 
 When updating documentation:
 
@@ -311,7 +308,7 @@ jeeves/
 ├── jeeves.ps1                     # Host-side container management
 ├── Dockerfile.jeeves              # Multi-stage Docker build
 ├── jeeves/
-│   ├── bin/                       # All scripts (14 total)
+│   ├── bin/                       # All scripts (15 total)
 │   ├── PRD/                       # PRD Creator agent
 │   ├── Deepest-Thinking/          # Research agent
 │   └── Ralph/                     # Ralph Loop framework
@@ -322,7 +319,7 @@ jeeves/
 │           ├── config/            #   Configuration templates
 │           ├── prompts/           #   Prompt templates
 │           └── task/              #   Task file templates
-├── docs/                          # Project documentation (7 files)
+├── docs/                          # Project documentation (3 files)
 ├── AGENTS.md                      # Code style and agent guidelines
 └── CONTRIBUTING.md                # This file
 ```

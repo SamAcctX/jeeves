@@ -6,14 +6,15 @@ This directory contains AI agent templates for OpenCode and Claude Code platform
 ## Directory Structure
 ```
 jeeves/
-├── PRD/                    # PRD Creator agent
-│   ├── prd-creator-opencode-template.md
-│   ├── prd-creator-claude-template.md
-│   └── prd-creator-prompt.md
+├── PRD/                    # PRD Creator agent pipeline
+│   ├── README-PRD.md
+│   ├── prd-creator-{opencode,claude}-template.md
+│   ├── prd-researcher-{opencode,claude}-template.md
+│   └── prd-advisor-{api,cli,data,library,ui}-{opencode,claude}-template.md
 ├── Deepest-Thinking/       # Research agent
+│   ├── README-Deepest-Thinking.md
 │   ├── deepest-thinking-opencode-template.md
-│   ├── deepest-thinking-claude-template.md
-│   └── deepest-thinking-prompt.md
+│   └── deepest-thinking-claude-template.md
 └── Ralph/
     └── templates/
         └── agents/         # Ralph agent templates ({role}-{platform}.md)

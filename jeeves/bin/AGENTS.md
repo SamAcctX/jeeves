@@ -117,14 +117,14 @@ done
 - Supports `--global` and `--dry-run` flags
 - Modifies JSON files (opencode.json, .mcp.json, ~/.claude.json)
 - Prompts for SEARXNG_URL if not set
-- Installs 4 MCP servers: sequentialthinking, fetch, searxng, playwright
+- Installs 5 MCP servers: sequentialthinking, fetch, crawl4ai, searxng, playwright
 
 ### install-agents.sh
-- Installs PRD agents for both Claude Code and OpenCode platforms
+- Installs PRD agents to OpenCode
 - Supports `--global`, `--deepest`, and `--all` flags
 - Creates directories if they don't exist
 - Templates: PRD Creator, Deepest-Thinking
-- Installation paths: Project scope (/proj/.claude/ and /proj/.opencode/), Global scope (~/.claude/ and ~/.config/opencode/)
+- Installation paths: Project scope (/proj/.opencode/), Global scope (~/.config/opencode/)
 
 ### install-skill-deps.sh
 - Discovers skills, parses dependencies from SKILL.md files, and installs required packages
@@ -214,6 +214,12 @@ done
 ### ralph-validate.sh
 - Sourceable validation utilities library for Ralph operations
 - Key functions: validate_task_id, validate_yaml, validate_file_exists, validate_dir_exists, validate_git_repo
+
+### fetch-opencode-models.sh
+- Fetches free models from OpenCode Zen API
+- Assigns models to agents by tier (complex reasoning, coding, general-purpose)
+- Supports `--free`, `--output`, `--dry-run`, `--list`, `--model`, and `--include` flags
+- Reads from agents.yaml template, writes to project agents.yaml
 
 ## Common Patterns
 

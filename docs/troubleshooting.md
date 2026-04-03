@@ -2,7 +2,7 @@
 
 Solutions to common issues with the Jeeves container and the Ralph Loop system.
 
-For command usage, see [commands.md](commands.md). For configuration details and environment variables, see [configuration.md](configuration.md).
+For command usage and configuration details, see [reference.md](reference.md).
 
 ---
 
@@ -14,7 +14,7 @@ Run these checks first when something goes wrong.
 ```bash
 ls -la .ralph/                          # Ralph directory exists?
 cat .ralph/tasks/TODO.md                # Current task state
-cat .ralph/config/deps-tracker.yaml      # Dependency graph
+cat .ralph/tasks/deps-tracker.yaml      # Dependency graph
 git status                              # Uncommitted changes or conflicts?
 grep "ABORT" .ralph/tasks/TODO.md       # Blocked task?
 tail -n 30 .ralph/tasks/*/activity.md   # Recent agent activity
@@ -144,7 +144,7 @@ Check these in order:
 
 1. **ABORT sentinel:** `grep "ABORT: HELP NEEDED" .ralph/tasks/TODO.md` -- If found, a task previously signaled TASK_BLOCKED. Fix the issue, then remove the line: `sed -i '/^ABORT:/d' .ralph/tasks/TODO.md`
 2. **Completion sentinel:** `grep "ALL TASKS COMPLETE" .ralph/tasks/TODO.md`
-3. **Invalid deps file:** `yq eval '.' .ralph/config/deps-tracker.yaml`
+3. **Invalid deps file:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
 
 ### Loop Appears Stuck
 
@@ -212,7 +212,7 @@ This is a non-critical warning. The loop continues regardless.
 **Solutions:**
 
 1. Inspect configurations: `sync-agents.sh --show`
-2. Verify agents.yaml maps the correct models (see [configuration.md](configuration.md)).
+2. Verify agents.yaml maps the correct models (see [reference.md](reference.md)).
 3. Re-sync after editing: `sync-agents.sh`
 
 ### Tool Command Not Found
@@ -288,7 +288,7 @@ Only the first valid signal is used. This is usually caused by copy-paste artifa
 
 **Problem:** Tasks cannot proceed because of a dependency cycle.
 
-**Diagnosis:** `cat .ralph/config/deps-tracker.yaml`
+**Diagnosis:** `cat .ralph/tasks/deps-tracker.yaml`
 
 **Solution:** Break the cycle by removing one dependency edge:
 ```yaml
@@ -307,7 +307,7 @@ tasks:
 
 **Cause:** Unmet dependencies in deps-tracker.yaml.
 
-**Diagnosis:** `yq eval '.tasks."XXXX".depends_on' .ralph/config/deps-tracker.yaml`
+**Diagnosis:** `yq eval '.tasks."XXXX".depends_on' .ralph/tasks/deps-tracker.yaml`
 
 **Solutions:** Complete the blocking tasks, remove the dependency if no longer needed, or check for circular dependencies.
 
@@ -324,7 +324,7 @@ tasks:
     blocks: []
 ```
 
-**Validate:** `yq eval '.' .ralph/config/deps-tracker.yaml`
+**Validate:** `yq eval '.' .ralph/tasks/deps-tracker.yaml`
 
 Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets.
 
@@ -412,7 +412,7 @@ Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets
 
 ### Shell Selection
 
-The container supports both bash and zsh. See [configuration.md](configuration.md) for `DISABLE_WELCOME` and `DISABLE_TMUX` details.
+The container supports both bash and zsh. See [reference.md](reference.md) for `DISABLE_WELCOME` and `DISABLE_TMUX` details.
 
 ---
 
@@ -451,7 +451,7 @@ A sourceable library of validation functions:
 ```bash
 source ralph-validate.sh
 validate_task_id "0042"                         # Task ID format
-validate_yaml ".ralph/config/deps-tracker.yaml"  # YAML syntax
+validate_yaml ".ralph/tasks/deps-tracker.yaml"  # YAML syntax
 validate_file_exists ".ralph/tasks/TODO.md"     # File existence
 validate_dir_exists ".ralph/tasks/0042"         # Directory existence
 validate_git_repo                               # Git repository check
@@ -491,7 +491,7 @@ Enables JSON format output in OpenCode for detailed agent interaction logs.
 | File | Purpose |
 |------|---------|
 | `.ralph/tasks/TODO.md` | Task list and completion status |
-| `.ralph/config/deps-tracker.yaml` | Task dependency graph |
+| `.ralph/tasks/deps-tracker.yaml` | Task dependency graph |
 | `.ralph/tasks/XXXX/activity.md` | Per-task execution log |
 | `.ralph/tasks/XXXX/attempts.md` | Per-task attempt history |
 | `.ralph/tasks/XXXX/TASK.md` | Task requirements and acceptance criteria |
@@ -514,7 +514,7 @@ done
 ```bash
 cp -r .ralph .ralph.backup.$(date +%Y%m%d)
 rm -rf .ralph/tasks/*
-git checkout HEAD -- .ralph/tasks/TODO.md .ralph/config/deps-tracker.yaml
+git checkout HEAD -- .ralph/tasks/TODO.md .ralph/tasks/deps-tracker.yaml
 ralph-init.sh --force
 ```
 
@@ -548,7 +548,7 @@ docker version && docker info
 
 # Container-side
 cat .ralph/tasks/TODO.md
-cat .ralph/config/deps-tracker.yaml
+cat .ralph/tasks/deps-tracker.yaml
 cat .ralph/config/agents.yaml
 ```
 
@@ -589,5 +589,4 @@ When filing issues on [GitHub](https://github.com/SamAcctX/jeeves/issues), inclu
 
 - [GitHub Issues](https://github.com/SamAcctX/jeeves/issues) -- Report bugs
 - [GitHub Discussions](https://github.com/SamAcctX/jeeves/discussions) -- Ask questions
-- [Command Reference](commands.md)
-- [Configuration Reference](configuration.md)
+- [Reference](reference.md)
