@@ -12,20 +12,19 @@ Jeeves is a containerized AI development environment built on NVIDIA CUDA. It pr
 
 Ralph is the autonomous task execution framework that runs inside Jeeves. It decomposes product requirements into atomic tasks, then executes them through an iterative Manager-Worker loop where every iteration starts with fresh context. The core philosophy: **iteration beats perfection** -- failures become data for the next attempt, and eventual consistency replaces brittle long-running sessions.
 
-## Key Features
+### Key Features
 
-- **Containerized Environment** -- NVIDIA CUDA base image with GPU support, web UI on port 3333, cross-platform (Windows, macOS, Linux)
+- **Containerized Environment** -- NVIDIA CUDA base image, web UI on port 3333, cross-platform (Windows, macOS, Linux)
 - **Autonomous Task Execution** -- Ralph Loop orchestrates task completion with minimal human intervention
-- **Fresh Context Per Iteration** -- Every task runs with a clean slate; no conversation history accumulates between iterations
-- **11 Specialized Agent Types** -- Manager, Architect, Developer, Tester, UI Designer, Researcher, Writer, Decomposer, Decomposer-Architect, Decomposer-Researcher, Decomposer-Task-Handler
-- **Standalone Agents** -- PRD Creator for requirements documents, Deepest-Thinking for deep research
-- **TDD Enforcement** -- Test-Driven Development is built into the workflow; Tester validates before Developer implements
-- **Dependency Tracking** -- Automatic task dependency management via deps-tracker.yaml with cycle detection
+- **Fresh Context Per Iteration** -- Every task runs with a clean slate; no conversation history accumulates
+- **11 Specialized Agent Types** -- Manager, Architect, Developer, Tester, UI Designer, Researcher, Writer, Decomposer, and 3 decomposer variants
+- **Standalone Agents** -- PRD Creator pipeline for requirements documents, Deepest-Thinking for deep research
+- **TDD Enforcement** -- Tester writes tests before Developer implements
+- **Dependency Tracking** -- Automatic task dependency management with cycle detection
 - **Signal-Based State Machine** -- Structured signals (COMPLETE, INCOMPLETE, FAILED, BLOCKED) drive task state transitions
-- **Skills System** -- Pluggable skills for dependency tracking, git automation, and system prompt compliance
+- **4 Built-in Skills** -- Dependency tracking, git automation, rationalization defense, system prompt compliance
 - **Multi-Platform AI Support** -- Works with OpenCode (default) or Claude Code
-- **Pre-configured MCP Servers** -- Sequential Thinking, Fetch, Crawl4AI, SearXNG, Playwright
-- **Safety Limits** -- Configurable iteration caps, exponential backoff, and automatic loop detection
+- **5 Pre-configured MCP Servers** -- Sequential Thinking, Fetch, Crawl4AI, SearXNG, Playwright
 
 ## Quick Start
 
@@ -49,137 +48,40 @@ ralph-init.sh
 ralph-loop.sh --max-iterations 50
 ```
 
-## Architecture Overview
+Running `./jeeves.ps1` without arguments opens an interactive menu for all container operations.
 
-### Jeeves Container
+## How It Works
 
-Jeeves builds a Docker image in three stages (base, opencode-builder, runtime) from `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04`. The container runs as user `jeeves`, exposes a web UI on port 3333, and manages the OpenCode web server as a supervisord service (`opencode-web {start|stop|restart|status|logs}`). Running `opencode` with no arguments auto-attaches the TUI to the running web server.
-
-### Ralph Loop
+Jeeves builds a Docker image in three stages (base, opencode-builder, runtime) from `nvidia/cuda:12.9.1-cudnn-devel-ubuntu24.04`. The container runs as user `jeeves`, exposes a web UI on port 3333, and manages the OpenCode web server via supervisord.
 
 Ralph operates in three phases:
 
-1. **PRD Generation** -- Define project scope and requirements using the `@prd-creator` agent
+1. **PRD Generation** -- Define project scope using the `@prd-creator` agent pipeline (Creator, domain Advisors, Researcher)
 2. **Decomposition** -- Break requirements into atomic tasks (<2 hours each) using the `@decomposer` agent, producing `TODO.md` and `deps-tracker.yaml`
 3. **Execution** -- `ralph-loop.sh` runs an autonomous Manager-Worker loop:
-   - Manager reads `TODO.md` + `deps-tracker.yaml`, selects the next unblocked task, invokes a specialist Worker agent
+   - Manager reads `TODO.md` + `deps-tracker.yaml`, selects the next unblocked task, invokes a specialist Worker
    - Worker executes with fresh context and emits a signal
    - Manager parses the signal, updates state, and exits
    - The loop script restarts the cycle with a new Manager instance
 
-### Signal System
-
-Workers communicate results through structured signals:
-
-| Signal | Format | Meaning |
-|--------|--------|---------|
-| TASK_COMPLETE_XXXX | No message | Task finished, all criteria met |
-| TASK_INCOMPLETE_XXXX | No message | Partial progress, will retry |
-| TASK_FAILED_XXXX | Colon + message | Error encountered, recoverable |
-| TASK_BLOCKED_XXXX | Colon + message | Requires human intervention |
-
-### Agent Types
-
-**Ralph Agents** (11 types, with OpenCode and Claude Code templates):
-
-| Agent | Role |
-|-------|------|
-| Manager | Task orchestration and agent selection |
-| Architect | System design and architecture planning |
-| Developer | Code implementation and debugging |
-| Tester | QA, test creation, and validation |
-| UI Designer | Interface design and responsive layout |
-| Researcher | Investigation and analysis |
-| Writer | Documentation and content creation |
-| Decomposer | Task breakdown and TODO management |
-| Decomposer-Architect | Architecture-focused decomposition |
-| Decomposer-Researcher | Research-focused decomposition |
-| Decomposer-Task-Handler | Task-level decomposition (OpenCode only) |
-
-**Standalone Agents** (outside the Ralph Loop):
-
-| Agent | Role |
-|-------|------|
-| PRD Creator | Product Requirements Document generation |
-| Deepest-Thinking | Comprehensive research and investigation |
-
-## Repository Structure
-
-```
-jeeves/
-├── jeeves.ps1                          # Main PowerShell management script
-├── Dockerfile.jeeves                   # Multi-stage Docker build (base, opencode-builder, runtime)
-├── .tmp/                               # Generated docker-compose files (git-ignored)
-├── jeeves/
-│   ├── bin/                            # Installation and utility scripts
-│   │   ├── ralph-init.sh              #   Initialize Ralph scaffolding
-│   │   ├── ralph-loop.sh             #   Main autonomous loop orchestrator
-│   │   ├── ralph-peek.sh             #   Inspect loop state
-│   │   ├── ralph-paths.sh            #   Path resolution utilities
-│   │   ├── ralph-validate.sh         #   Validate Ralph configuration
-│   │   ├── ralph-filter-output.sh    #   Filter agent output for signals
-│   │   ├── sync-agents.sh            #   Sync agent model configurations
-│   │   ├── apply-rules.sh            #   Apply RULES.md hierarchy
-│   │   ├── find-rules-files.sh       #   Walk directory tree for RULES.md files
-│   │   ├── install-mcp-servers.sh    #   Install MCP servers
-│   │   ├── install-agents.sh         #   Install AI agent templates
-│   │   ├── install-skills.sh         #   Install Ralph skills
-│   │   ├── install-skill-deps.sh     #   Install skill dependencies (pip/npm/apt)
-│   │   ├── fetch-opencode-models.sh  #   Fetch free models for agents.yaml
-│   │   └── parse_skill_deps.py       #   Parse skill dependency manifests
-│   ├── PRD/                            # PRD Creator agent pipeline
-│   │   ├── README-PRD.md
-│   │   ├── prd-creator-*-template.md   #   Creator templates (OpenCode + Claude)
-│   │   ├── prd-researcher-*-template.md #  Researcher templates
-│   │   └── prd-advisor-*-template.md   #   5 domain advisor templates
-│   ├── Deepest-Thinking/               # Deepest-Thinking research agent
-│   │   ├── README-Deepest-Thinking.md
-│   │   ├── deepest-thinking-opencode-template.md
-│   │   └── deepest-thinking-claude-template.md
-│   └── Ralph/                          # Ralph Loop framework
-│       ├── README-Ralph.md
-│       ├── docs/
-│       │   ├── directory-structure.md
-│       │   └── rules-system.md
-│       ├── skills/
-│       │   ├── dependency-tracking/   #   Task dependency management and cycle detection
-│       │   ├── git-automation/        #   Branch management, commits, squash merges
-│       │   ├── rationalization-defense/ # Detect/correct rationalization patterns
-│       │   └── system-prompt-compliance/  # Prompt compliance verification
-│       └── templates/
-│           ├── agents/                #   11 agent types (OpenCode + Claude) + shared rules
-│           │   └── shared/            #   10 shared rule files included by all agents
-│           ├── config/                #   Configuration file templates
-│           ├── prompts/               #   Prompt templates
-│           └── task/                  #   Task file templates (TASK.md, activity.md, etc.)
-├── docs/                               # Project documentation
-│   ├── guide.md                       #   Workflow guide (setup, phases, agents, tips)
-│   ├── reference.md                   #   Commands and configuration reference
-│   └── troubleshooting.md            #   Common issues and solutions
-├── AGENTS.md                           # Agent development guidelines
-├── CONTRIBUTING.md                     # Contribution guidelines
-└── LICENSE                             # AGPL-3.0
-```
+Only `TASK_BLOCKED` and `ALL TASKS COMPLETE` terminate the loop. All other signals (COMPLETE, INCOMPLETE, FAILED) continue to the next iteration.
 
 ## Container Management
 
-`jeeves.ps1` manages the full container lifecycle:
+`jeeves.ps1` manages the full container lifecycle. Most users interact through the interactive menu (`./jeeves.ps1` with no arguments). CLI commands are also available:
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
-| `build` | `b` | Build Docker image (flags: `--no-cache`, `--desktop`, `--install-claude-code`) |
-| `start` | `up` | Start container (flags: `--clean`, `--dind`, `--port <n>`, `--ports <mappings>`) |
-| `stop` | `down` | Stop container (flags: `--force`, `--remove`) |
-| `restart` | | Restart container |
-| `rm` | `remove` | Remove container |
-| `shell` | `attach`, `sh` | Attach to container shell (flags: `--new`, `--raw`, `--zsh`) |
-| `logs` | `log` | View container logs |
-| `status` | `st` | Check container status (flag: `--all`) |
-| `list` | `ls`, `ps` | List all running jeeves instances |
-| `clean` | | Remove container (flags: `--image`, `--all`, `--force`) |
+| `build` | `b` | Build Docker image |
+| `start` | `up` | Start container |
+| `stop` | `down` | Stop container |
+| `shell` | `attach`, `sh` | Attach to container shell |
+| `status` | `st` | Show container status |
+| `list` | `ls`, `ps` | List all running instances |
+| `clean` | | Remove container |
 | `help` | `h`, `?` | Show help |
 
-See [docs/reference.md](docs/reference.md) for the complete command and configuration reference.
+See [docs/reference.md](docs/reference.md) for all flags and configuration options.
 
 ## Documentation
 
@@ -197,10 +99,6 @@ See [docs/reference.md](docs/reference.md) for the complete command and configur
 
 - **Docker**: Docker Desktop (Windows/Mac) or Docker Engine (Linux)
 - **PowerShell**: 7.0+
-- **bash**: 4.0+
-- **yq**: 4.x
-- **jq**: 1.6+
-- **git**: 2.x+
 - **GPU** (optional): NVIDIA GPU with CUDA support for GPU-accelerated workloads
 
 ### Windows (WSL2) Requirements
