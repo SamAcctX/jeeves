@@ -233,7 +233,7 @@ The loop is always safe to restart. It reads state from files, not memory. A `TA
 
 ## Agent Types
 
-Ralph uses 10 specialized agent types in the loop, plus 2 standalone agents.
+Ralph uses 11 specialized agent types in the loop, plus 2 standalone agents.
 
 ### Ralph Loop Agents
 
@@ -249,6 +249,7 @@ Ralph uses 10 specialized agent types in the loop, plus 2 standalone agents.
 | decomposer | PRD decomposition, task planning, dependency analysis | decompose, plan, organize, TODO |
 | decomposer-architect | Architecture consulting during decomposition (sub-assistant to decomposer) | N/A (invoked by decomposer) |
 | decomposer-researcher | Research consulting during decomposition (sub-assistant to decomposer) | N/A (invoked by decomposer) |
+| decomposer-task-handler | Task-level decomposition and handling (OpenCode only) | N/A (invoked by decomposer) |
 
 The Manager selects agents at runtime. TDD phase signals (handoffs between Developer and Tester) always take priority over keyword matching.
 

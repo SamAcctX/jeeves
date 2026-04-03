@@ -191,7 +191,7 @@ Check these in order:
 2. Run sync: `sync-agents.sh`
 3. Re-initialize: `ralph-init.sh --force`
 
-All 10 agent types should be present: manager, architect, developer, ui-designer, tester, researcher, writer, decomposer, decomposer-architect, decomposer-researcher.
+All 11 agent types should be present: manager, architect, developer, ui-designer, tester, researcher, writer, decomposer, decomposer-architect, decomposer-researcher, decomposer-task-handler.
 
 ### Agent Sync Failed
 

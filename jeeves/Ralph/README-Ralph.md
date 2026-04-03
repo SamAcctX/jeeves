@@ -76,7 +76,7 @@ Ralph/
 │   ├── rationalization-defense/ # Detect/correct rationalization patterns
 │   └── system-prompt-compliance/ # Prompt compliance enforcement
 └── templates/
-    ├── agents/                # 10 agent types x 2 platforms + shared rules
+    ├── agents/                # 11 agent types (OpenCode + Claude) + shared rules
     ├── config/                # agents.yaml, deps-tracker.yaml, TODO.md templates
     ├── prompts/               # ralph-prompt.md, prompt-optimizer.md
     └── task/                  # TASK.md, activity.md, attempts.md templates
@@ -96,6 +96,7 @@ Ralph/
 | Decomposer | Task breakdown and TODO management |
 | Decomposer-Architect | Architecture-focused decomposition |
 | Decomposer-Researcher | Research-focused decomposition |
+| Decomposer-Task-Handler | Task-level decomposition (OpenCode only) |
 
 ## Signal System
 

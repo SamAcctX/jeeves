@@ -11,6 +11,7 @@ The Ralph Loop organizes project work using a standardized `.ralph/` directory s
 ├── .ralph/                      # Ralph scaffolding directory
 │   ├── config/                  # Configuration files
 │   │   └── agents.yaml          # Agent-to-model mapping configuration
+│   ├── logs/                    # Loop execution logs
 │   ├── tasks/                   # Task management
 │   │   ├── deps-tracker.yaml    # Dependency tracking across all tasks
 │   │   ├── TODO.md              # Master task checklist

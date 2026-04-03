@@ -372,7 +372,7 @@ agents:
       claude: claude-sonnet-4.5
 ```
 
-**Agent Types (10 total):**
+**Agent Types (11 total):**
 
 | Agent Type | Description |
 |------------|-------------|
@@ -386,6 +386,7 @@ agents:
 | `decomposer` | Task decomposition, TODO management, agent coordination |
 | `decomposer-architect` | System design, patterns, integration design for PRD decomposition |
 | `decomposer-researcher` | Investigation, documentation analysis, knowledge synthesis for PRD decomposition |
+| `decomposer-task-handler` | Task-level decomposition and handling (OpenCode only) |
 
 **Model selection at runtime:** Ralph reads `agents.yaml`, looks up the agent type for the selected tool (`--tool` flag or `RALPH_TOOL` env var), uses `preferred.<tool>`, and falls back to `fallback.<tool>` if preferred is empty or unavailable. After modifying `agents.yaml`, run `sync-agents.sh` to propagate changes to agent template files.
 

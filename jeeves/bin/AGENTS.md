@@ -15,7 +15,7 @@ bash -n install-skills.sh
 
 # Run with dry-run to test logic without side effects
 ./install-mcp-servers.sh --dry-run
-./install-agents.sh --global --dry-run
+./install-agents.sh --global
 ./install-skill-deps.sh --dry-run
 
 # Test with verbose output

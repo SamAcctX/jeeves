@@ -23,6 +23,7 @@ jeeves/
             ├── decomposer-{opencode,claude}.md
             ├── decomposer-architect-{opencode,claude}.md
             ├── decomposer-researcher-{opencode,claude}.md
+            ├── decomposer-task-handler-opencode.md
             ├── developer-{opencode,claude}.md
             ├── manager-{opencode,claude}.md
             ├── researcher-{opencode,claude}.md

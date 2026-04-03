@@ -17,7 +17,7 @@ Ralph is the autonomous task execution framework that runs inside Jeeves. It dec
 - **Containerized Environment** -- NVIDIA CUDA base image with GPU support, web UI on port 3333, cross-platform (Windows, macOS, Linux)
 - **Autonomous Task Execution** -- Ralph Loop orchestrates task completion with minimal human intervention
 - **Fresh Context Per Iteration** -- Every task runs with a clean slate; no conversation history accumulates between iterations
-- **10 Specialized Agent Types** -- Manager, Architect, Developer, Tester, UI Designer, Researcher, Writer, Decomposer, Decomposer-Architect, Decomposer-Researcher
+- **11 Specialized Agent Types** -- Manager, Architect, Developer, Tester, UI Designer, Researcher, Writer, Decomposer, Decomposer-Architect, Decomposer-Researcher, Decomposer-Task-Handler
 - **Standalone Agents** -- PRD Creator for requirements documents, Deepest-Thinking for deep research
 - **TDD Enforcement** -- Test-Driven Development is built into the workflow; Tester validates before Developer implements
 - **Dependency Tracking** -- Automatic task dependency management via deps-tracker.yaml with cycle detection
@@ -80,7 +80,7 @@ Workers communicate results through structured signals:
 
 ### Agent Types
 
-**Ralph Agents** (10 types, each with OpenCode and Claude Code templates):
+**Ralph Agents** (11 types, with OpenCode and Claude Code templates):
 
 | Agent | Role |
 |-------|------|
@@ -94,6 +94,7 @@ Workers communicate results through structured signals:
 | Decomposer | Task breakdown and TODO management |
 | Decomposer-Architect | Architecture-focused decomposition |
 | Decomposer-Researcher | Research-focused decomposition |
+| Decomposer-Task-Handler | Task-level decomposition (OpenCode only) |
 
 **Standalone Agents** (outside the Ralph Loop):
 
@@ -126,16 +127,15 @@ jeeves/
 │   │   ├── install-skill-deps.sh     #   Install skill dependencies (pip/npm/apt)
 │   │   ├── fetch-opencode-models.sh  #   Fetch free models for agents.yaml
 │   │   └── parse_skill_deps.py       #   Parse skill dependency manifests
-│   ├── PRD/                            # PRD Creator agent
-│   │   ├── prd-creator-opencode-template.md
-│   │   ├── prd-creator-claude-template.md
-│   │   ├── prd-creator-prompt.md
-│   │   └── README-PRD.md
+│   ├── PRD/                            # PRD Creator agent pipeline
+│   │   ├── README-PRD.md
+│   │   ├── prd-creator-*-template.md   #   Creator templates (OpenCode + Claude)
+│   │   ├── prd-researcher-*-template.md #  Researcher templates
+│   │   └── prd-advisor-*-template.md   #   5 domain advisor templates
 │   ├── Deepest-Thinking/               # Deepest-Thinking research agent
+│   │   ├── README-Deepest-Thinking.md
 │   │   ├── deepest-thinking-opencode-template.md
-│   │   ├── deepest-thinking-claude-template.md
-│   │   ├── deepest-thinking-prompt.md
-│   │   └── README-Deepest-Thinking.md
+│   │   └── deepest-thinking-claude-template.md
 │   └── Ralph/                          # Ralph Loop framework
 │       ├── README-Ralph.md
 │       ├── docs/
@@ -147,7 +147,7 @@ jeeves/
 │       │   ├── rationalization-defense/ # Detect/correct rationalization patterns
 │       │   └── system-prompt-compliance/  # Prompt compliance verification
 │       └── templates/
-│           ├── agents/                #   10 agent types x 2 platforms + shared rules
+│           ├── agents/                #   11 agent types (OpenCode + Claude) + shared rules
 │           │   └── shared/            #   10 shared rule files included by all agents
 │           ├── config/                #   Configuration file templates
 │           ├── prompts/               #   Prompt templates

@@ -146,7 +146,7 @@ Ralph is the autonomous task execution framework. Its source lives in `jeeves/Ra
 
 ### Agent Templates
 
-Each of Ralph's 10 agent types has two templates (OpenCode and Claude Code) in `jeeves/Ralph/templates/agents/`. When contributing a new agent or modifying an existing one:
+Each of Ralph's 11 agent types has templates (OpenCode and Claude Code) in `jeeves/Ralph/templates/agents/`. When contributing a new agent or modifying an existing one:
 
 - Follow the naming convention: `{role}-opencode.md` and `{role}-claude.md`
 - Include proper YAML frontmatter with `description`, `mode`, `permission`, and `tools`
@@ -187,7 +187,7 @@ Changes to loop scripts should preserve the signal-based state machine (COMPLETE
 
 ### Standalone Agents
 
-PRD Creator (`jeeves/PRD/`) and Deepest-Thinking (`jeeves/Deepest-Thinking/`) operate outside the Ralph Loop. Each has an OpenCode template, a Claude Code template, a prompt file, and a README.
+PRD Creator (`jeeves/PRD/`) and Deepest-Thinking (`jeeves/Deepest-Thinking/`) operate outside the Ralph Loop. Each has OpenCode and Claude Code templates and a README.
 
 ## Contributing to Documentation
 
@@ -314,7 +314,7 @@ jeeves/
 │   └── Ralph/                     # Ralph Loop framework
 │       ├── skills/                #   Pluggable skills
 │       └── templates/
-│           ├── agents/            #   10 agent types x 2 platforms
+│           ├── agents/            #   11 agent types (OpenCode + Claude)
 │           │   └── shared/        #   Shared rules (10 files)
 │           ├── config/            #   Configuration templates
 │           ├── prompts/           #   Prompt templates

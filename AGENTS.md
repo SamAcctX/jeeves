@@ -198,7 +198,6 @@ RUN apt-get update && \
 ├── jeeves/
 │   ├── bin/                   # Installation and utility scripts
 │   │   ├── AGENTS.md          # Script development guide
-│   │   ├── README.md          # Script reference
 │   │   ├── ralph-init.sh
 │   │   ├── ralph-loop.sh
 │   │   ├── ralph-peek.sh
@@ -231,10 +230,10 @@ RUN apt-get update && \
 │       └── templates/
 │           ├── README.md
 │           ├── RULES.md.template
-│           ├── agents/        # 10 agent types x 2 platforms
+│           ├── agents/        # 11 agent types (OpenCode + Claude)
 │           │   └── shared/    # 10 shared rule files
 │           ├── config/        # agents.yaml, deps-tracker.yaml, TODO.md templates
-│           ├── prompts/       # ralph-prompt.md, prompt-optimizer.md
+│           ├── prompts/       # ralph-prompt.md.template, prompt-optimizer.md
 │           └── task/          # TASK.md, activity.md, attempts.md templates
 ├── AGENTS.md                  # This file
 ├── README.md
