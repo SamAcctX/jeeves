@@ -213,6 +213,9 @@ RUN apt-get update && \
 │   │   ├── install-skill-deps.sh
 │   │   ├── fetch-opencode-models.sh
 │   │   └── parse_skill_deps.py
+│   ├── config/
+│   │   └── searxng/
+│   │       └── settings.yml   # SearXNG sidecar configuration
 │   ├── PRD/                   # PRD Creator agent templates
 │   ├── Deepest-Thinking/      # Research agent templates
 │   └── Ralph/                 # Ralph Loop Framework

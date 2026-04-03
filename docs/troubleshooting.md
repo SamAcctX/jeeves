@@ -349,9 +349,13 @@ Common issues: tabs instead of spaces, unquoted task IDs, missing array brackets
 
 **Problem:** SearXNG MCP server cannot connect to the search service.
 
+By default, a bundled SearXNG sidecar runs alongside the jeeves container. To use an external instance instead, set `SEARXNG_URL` on the host before starting.
+
 1. Verify the URL: `echo $SEARXNG_URL`
 2. Test connectivity: `curl -I "$SEARXNG_URL"`
-3. Find a public instance at [https://searx.space/](https://searx.space/) if needed.
+3. Check the sidecar is running: `docker ps --filter "name=jeeves-*-searxng"`
+4. To override after creation, edit the MCP config inside the container (`opencode.json` or `.mcp.json`) and update the `SEARXNG_URL` value.
+5. To fully switch to an external instance, stop and restart with `$env:SEARXNG_URL` set on the host.
 
 ### Playwright Browser Issues
 

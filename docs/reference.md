@@ -547,7 +547,7 @@ All environment variables in one table, grouped by context.
 | `PLAYWRIGHT_MCP_NO_SANDBOX` | `1` | Disable browser sandbox (required in container) |
 | `PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS` | `1` | Allow Playwright file access |
 | `OPENCODE_ENABLE_EXA` | `false` | Disable Exa web search |
-| `SEARXNG_URL` | (empty) | SearXNG search service URL |
+| `SEARXNG_URL` | (auto) | SearXNG search service URL. When unset, a bundled SearXNG sidecar container is started automatically. Set this to use an external instance instead (the sidecar is omitted). |
 
 #### ralph-filter-output.sh
 
