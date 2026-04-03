@@ -483,6 +483,15 @@ function New-DockerComposeFile {
     $mountSpec = Get-UserMountSpec
     $currentDir = (Get-Location).Path
     $networkName = "jeeves-$($Script:PROJECT_SLUG)-network"
+    $useBundledSearxng = -not $env:SEARXNG_URL
+
+    if ($useBundledSearxng) {
+        $searxngUrl = "http://searxng:8080"
+        Write-Log "Using bundled SearXNG sidecar" -trace
+    } else {
+        $searxngUrl = $env:SEARXNG_URL
+        Write-Log "Using external SearXNG: $searxngUrl" -trace
+    }
 
     $composeContent = @"
 services:
@@ -508,6 +517,7 @@ services:
       - PLAYWRIGHT_MCP_ALLOW_UNRESTRICTED_FILE_ACCESS=1
       - OPENCODE_ENABLE_EXA=false
       - UV_USE_IO_URING=0
+      - SEARXNG_URL=$searxngUrl
 "@
 
     if ($Dind) {
@@ -555,9 +565,35 @@ services:
         }
     }
 
+    if ($useBundledSearxng) {
+        $composeContent += "    depends_on:`n"
+        $composeContent += "      searxng:`n"
+        $composeContent += "        condition: service_started`n"
+    }
+
     $composeContent += @"
     networks:
       - $networkName
+"@
+
+    if ($useBundledSearxng) {
+        $composeContent += @"
+
+  searxng:
+    image: searxng/searxng:latest
+    container_name: $($Script:CONTAINER_NAME)-searxng
+    labels:
+      - "jeeves.managed=true"
+      - "jeeves.project=$($Script:PROJECT_SLUG)"
+      - "jeeves.directory=$($currentDir -replace '\\', '/')"
+    volumes:
+      - ../../jeeves/config/searxng/settings.yml:/etc/searxng/settings.yml:ro
+    networks:
+      - $networkName
+"@
+    }
+
+    $composeContent += @"
 
 networks:
   $($networkName):
