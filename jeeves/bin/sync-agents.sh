@@ -469,6 +469,7 @@ sync_all_agents() {
         
         [ -z "$agent_type" ] && continue
         
+        local IFS=' '
         local file
         for file in $agent_files; do
             [ -z "$file" ] && continue
