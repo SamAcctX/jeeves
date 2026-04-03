@@ -169,10 +169,10 @@ Agents emit signals to communicate task status to the Ralph loop.
 
 | Signal | Format | Loop Action |
 |--------|--------|-------------|
-| Complete | `TASK_COMPLETE_XXXX` | Terminates loop |
-| Incomplete | `TASK_INCOMPLETE_XXXX` | Continues loop |
-| Failed | `TASK_FAILED_XXXX: message` | Continues with warning |
-| Blocked | `TASK_BLOCKED_XXXX: message` | Terminates loop |
+| Complete | `TASK_COMPLETE_XXXX` | Continues loop (task done, pick next) |
+| Incomplete | `TASK_INCOMPLETE_XXXX` | Continues loop (retry or pick next) |
+| Failed | `TASK_FAILED_XXXX: message` | Continues loop with warning |
+| Blocked | `TASK_BLOCKED_XXXX: message` | Terminates loop (requires intervention) |
 | All Complete | `ALL TASKS COMPLETE, EXIT LOOP` | Terminates loop (sentinel in TODO.md) |
 | Abort | `ABORT: HELP NEEDED` | Terminates loop (sentinel in TODO.md) |
 
@@ -308,17 +308,17 @@ Running `ralph-init.sh` creates the `.ralph/` directory in your project root:
 │   └── agents.yaml              # Agent-to-model mapping
 ├── specs/
 │   └── PRD-*.md                 # Product Requirements Documents
-├── tasks/
-│   ├── TODO.md                  # Master task checklist
-│   ├── deps-tracker.yaml        # Task dependency graph
-│   ├── done/                    # Completed task folders (preserved)
-│   └── XXXX/                    # Individual task folders
-│       ├── TASK.md              # Task definition (created by Decomposer)
-│       ├── activity.md          # Execution log (created by Decomposer)
-│       └── attempts.md          # Attempt history (created by Decomposer)
-└── logs/
-    └── ralph-loop-YYYYMMDD-HHMMSS.log
+└── tasks/
+    ├── TODO.md                  # Master task checklist
+    ├── deps-tracker.yaml        # Task dependency graph
+    ├── done/                    # Completed task folders (preserved)
+    └── XXXX/                    # Individual task folders
+        ├── TASK.md              # Task definition (created by Decomposer)
+        ├── activity.md          # Execution log (created by Decomposer)
+        └── attempts.md          # Attempt history (created by Decomposer)
 ```
+
+The `logs/` subdirectory is created at runtime by `ralph-loop.sh` (not by init).
 
 #### Configuration Precedence
 

@@ -104,9 +104,9 @@ Workers communicate results through structured signals: `SIGNAL_TYPE_XXXX[: mess
 
 | Signal | Meaning | Loop Action |
 |--------|---------|-------------|
-| `TASK_COMPLETE_XXXX` | Task finished | Terminates loop |
-| `TASK_INCOMPLETE_XXXX` | Needs more work | Continues loop |
-| `TASK_FAILED_XXXX: msg` | Error encountered | Continues with warning |
+| `TASK_COMPLETE_XXXX` | Task finished | Continues loop (pick next task) |
+| `TASK_INCOMPLETE_XXXX` | Needs more work | Continues loop (retry or pick next) |
+| `TASK_FAILED_XXXX: msg` | Error encountered | Continues loop with warning |
 | `TASK_BLOCKED_XXXX: msg` | Requires intervention | Terminates loop |
 | `ALL TASKS COMPLETE, EXIT LOOP` | All done | Terminates loop (sentinel in TODO.md) |
 

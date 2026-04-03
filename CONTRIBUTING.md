@@ -146,7 +146,7 @@ Ralph is the autonomous task execution framework. Its source lives in `jeeves/Ra
 
 ### Agent Templates
 
-Each of Ralph's 11 agent types has templates (OpenCode and Claude Code) in `jeeves/Ralph/templates/agents/`. When contributing a new agent or modifying an existing one:
+Ralph has 11 agent types with 11 OpenCode and 10 Claude Code templates (OpenCode and Claude Code) in `jeeves/Ralph/templates/agents/`. When contributing a new agent or modifying an existing one:
 
 - Follow the naming convention: `{role}-opencode.md` and `{role}-claude.md`
 - Include proper YAML frontmatter with `description`, `mode`, `permission`, and `tools`
