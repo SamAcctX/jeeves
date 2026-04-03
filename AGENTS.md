@@ -42,7 +42,7 @@ Running `./jeeves.ps1` without arguments displays an interactive menu.
 ```bash
 install-mcp-servers.sh --global     # Install MCP servers globally
 install-mcp-servers.sh --dry-run    # Preview MCP installation
-install-agents.sh --global          # Install PRD agents to OpenCode
+install-agents.sh --global          # Install PRD agents to OpenCode and Claude
 install-agents.sh --deepest         # Install Deepest-Thinking only
 install-agents.sh --help            # Show usage information
 install-skills.sh --all             # Install all agent skills
@@ -213,6 +213,9 @@ RUN apt-get update && \
 │   │   ├── install-skill-deps.sh
 │   │   ├── fetch-opencode-models.sh
 │   │   └── parse_skill_deps.py
+│   ├── config/
+│   │   └── searxng/
+│   │       └── settings.yml   # SearXNG sidecar configuration
 │   ├── PRD/                   # PRD Creator agent templates
 │   ├── Deepest-Thinking/      # Research agent templates
 │   └── Ralph/                 # Ralph Loop Framework

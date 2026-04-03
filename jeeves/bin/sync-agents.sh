@@ -8,6 +8,7 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 RALPH_DIR="${RALPH_DIR:-.ralph}"
 AGENTS_YAML="${AGENTS_YAML:-$RALPH_DIR/config/agents.yaml}"
+SYNC_BOTH=true
 TOOL="${RALPH_TOOL:-opencode}"
 VALID_TOOLS=("opencode" "claude")
 
@@ -413,7 +414,19 @@ update_agent() {
     fi
 }
 
-# Filter search paths based on tool
+detect_tool_for_path() {
+    local file_path="$1"
+    if [[ "$file_path" == *"claude"* ]]; then
+        echo "claude"
+    elif [[ "$file_path" == *"opencode"* ]]; then
+        echo "opencode"
+    elif [[ "$file_path" == *".ralph"* ]]; then
+        echo "opencode"
+    else
+        echo "opencode"
+    fi
+}
+
 filter_paths_by_tool() {
     local tool="$1"
     local filtered_paths=()
@@ -456,29 +469,29 @@ sync_all_agents() {
         
         [ -z "$agent_type" ] && continue
         
-        local new_model
-        if ! new_model=$(get_agent_model "$agent_type"); then
-            print_warning "No model configured for $agent_type, skipping"
-            continue
-        fi
-        
-        # For opencode, empty model is valid (inherit from parent)
-        if [ "$TOOL" = "opencode" ]; then
-            if [ -z "$new_model" ]; then
-                print_info "Setting empty model for $agent_type (inherit from parent)"
-            fi
-        elif [ -z "$new_model" ]; then
-            print_warning "No model configured for $agent_type, skipping"
-            continue
-        fi
-        
-        # Process each file for this agent (always update)
+        local IFS=' '
         local file
         for file in $agent_files; do
             [ -z "$file" ] && continue
-            if [ -f "$file" ]; then
-                update_agent "$file" "$agent_type" "$new_model"
+            [ -f "$file" ] || continue
+
+            local file_tool
+            file_tool=$(detect_tool_for_path "$file")
+
+            local new_model
+            if ! new_model=$(get_agent_model "$agent_type" "$file_tool"); then
+                print_warning "No $file_tool model configured for $agent_type, skipping $file"
+                continue
             fi
+
+            if [ "$file_tool" = "opencode" ] && [ -z "$new_model" ]; then
+                print_info "Setting empty model for $agent_type (inherit from parent) in $file"
+            elif [ -z "$new_model" ]; then
+                print_warning "No $file_tool model configured for $agent_type, skipping $file"
+                continue
+            fi
+
+            update_agent "$file" "$agent_type" "$new_model"
         done
     done
     
@@ -508,11 +521,13 @@ show_parsed_agents() {
 
 # Main function
 main() {
-    # Check for yq
     check_yq
     
-    # Validate tool
-    validate_tool "$TOOL"
+    if [ "$SYNC_BOTH" = true ]; then
+        print_info "Syncing both opencode and claude platforms"
+    else
+        validate_tool "$TOOL"
+    fi
     
     # Validate agents.yaml
     validate_agents_yaml
@@ -520,8 +535,9 @@ main() {
     # Load agent types
     load_agent_types
     
-    # Filter paths by tool for multi-tool support
-    filter_paths_by_tool "$TOOL"
+    if [ "$SYNC_BOTH" = false ]; then
+        filter_paths_by_tool "$TOOL"
+    fi
     
     # List search paths
     list_search_paths
@@ -538,7 +554,11 @@ main() {
     # Sync all agents
     sync_all_agents "$agent_mappings"
     
-    print_success "Agent synchronization complete for tool: $TOOL"
+    if [ "$SYNC_BOTH" = true ]; then
+        print_success "Agent synchronization complete for both opencode and claude"
+    else
+        print_success "Agent synchronization complete for tool: $TOOL"
+    fi
 }
 
 # Show usage
@@ -547,22 +567,24 @@ usage() {
 Usage: sync-agents [OPTIONS]
 
 Synchronize agent model configurations from agents.yaml to agent definition files.
+By default, syncs both OpenCode and Claude agents. Use --tool to target a single platform.
 
 Options:
   -h, --help          Show this help message
-  -t, --tool TOOL     Specify tool (opencode|claude) [default: opencode]
+  -t, --tool TOOL     Sync only the specified tool (opencode|claude) [default: both]
   -c, --config FILE   Specify agents.yaml path [default: .ralph/config/agents.yaml]
   -s, --show          Show parsed agents (don't sync)
   -d, --dry-run       Show what would be updated (don't modify files)
 
 Environment Variables:
-  RALPH_TOOL          Tool to use (opencode|claude)
+  RALPH_TOOL          Tool to use (opencode|claude); overrides default both-platform sync
   AGENTS_YAML         Path to agents.yaml file
 
 Examples:
-  sync-agents                              # Sync for OpenCode (default)
-  RALPH_TOOL=claude sync-agents           # Sync for Claude
-  sync-agents -t claude                   # Sync for Claude
+  sync-agents                              # Sync both OpenCode and Claude
+  sync-agents -t opencode                 # Sync OpenCode only
+  sync-agents -t claude                   # Sync Claude only
+  RALPH_TOOL=claude sync-agents           # Sync Claude only
   sync-agents -c /path/to/agents.yaml     # Use custom config
   sync-agents -s                          # Show parsed agents
 EOF
@@ -580,6 +602,7 @@ while [[ $# -gt 0 ]]; do
             ;;
         -t|--tool)
             TOOL="$2"
+            SYNC_BOTH=false
             shift 2
             ;;
         -c|--config)
@@ -602,9 +625,9 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-# Override with environment variable if set
 if [ -n "$RALPH_TOOL" ]; then
     TOOL="$RALPH_TOOL"
+    SYNC_BOTH=false
 fi
 
 # Run main or show only
