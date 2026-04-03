@@ -14,7 +14,7 @@
 ```powershell
 ./jeeves.ps1 start              # Start container (aliases: up)
 ./jeeves.ps1 start --clean      # Clean rebuild and start
-./jeeves.ps1 start --dind       # Start with Docker-in-Docker
+./jeeves.ps1 start --dind       # Start with Docker-in-Docker (includes kubectl, helm, kind)
 ./jeeves.ps1 start --port 4444  # Start on specific port
 ./jeeves.ps1 stop               # Stop container (aliases: down)
 ./jeeves.ps1 stop --remove      # Stop and remove container
