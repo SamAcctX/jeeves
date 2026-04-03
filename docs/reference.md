@@ -17,7 +17,7 @@ Running `./jeeves.ps1` with no arguments opens an interactive menu with submenus
 
 | Command | Aliases | Key Flags | Description |
 |---------|---------|-----------|-------------|
-| `build` | `b` | `--no-cache`, `--desktop`, `--install-claude-code`, `--clean` | Build Docker image |
+| `build` | `b` | `--no-cache`, `--desktop`, `--install-claude-code` | Build Docker image |
 | `start` | `up` | `--clean`, `--dind`, `--port <n>`, `--ports <mappings>` | Start container |
 | `stop` | `down` | `--force`, `--remove` | Stop container |
 | `restart` | (none) | Passes through build and start flags | Stop then start container |
@@ -36,7 +36,7 @@ Running `./jeeves.ps1` with no arguments opens an interactive menu with submenus
 | `--no-cache` | `build` | Build without Docker layer cache |
 | `--desktop` | `build` | Include desktop application binaries (sets BUILD_DESKTOP=true) |
 | `--install-claude-code` | `build` | Install Claude Code CLI in the container |
-| `--clean` | `build`, `start` | Stop + remove + no-cache rebuild (then start, if on `start`) |
+| `--clean` | `start` | Stop + remove + no-cache rebuild, then start |
 | `--dind` | `start` | Enable Docker-in-Docker mode (privileged container) |
 | `--port <n>` | `start` | Use specific host port (default: auto-assigned from 3333) |
 | `--ports <mappings>` | `start` | Additional port mappings (e.g., `8080:8080,9090:9090`) |
@@ -54,7 +54,7 @@ Running `./jeeves.ps1` with no arguments opens an interactive menu with submenus
 
 ## Ralph Loop
 
-All Ralph scripts are installed to `/usr/local/bin/` inside the container.
+All Ralph scripts are installed to `/usr/local/bin/` inside the container. All scripts support `--help` (or `-h`) for usage information.
 
 ### Commands
 
@@ -112,7 +112,7 @@ Requires `opencode` and `jq`. Finds the newest session and either attaches to it
 Synchronize agent model configurations from `agents.yaml` to agent definition files.
 
 ```bash
-sync-agents.sh [--tool {opencode|claude}] [--config FILE] [--show|-s] [--dry-run|-d]
+sync-agents.sh [--tool|-t {opencode|claude}] [--config|-c FILE] [--show|-s] [--dry-run|-d]
 ```
 
 Reads agent configurations from `agents.yaml` and updates the `model` field in agent markdown files' YAML frontmatter. Searches agent directories in priority order: `.ralph/agents`, `.opencode/agents`, `.claude/agents`, `$HOME/.config/opencode/agents`, `$HOME/.claude/agents` (filtered by selected tool).

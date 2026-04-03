@@ -167,7 +167,7 @@ jeeves/
 
 | Command | Aliases | Description |
 |---------|---------|-------------|
-| `build` | `b` | Build Docker image (flags: `--no-cache`, `--desktop`, `--install-claude-code`, `--clean`) |
+| `build` | `b` | Build Docker image (flags: `--no-cache`, `--desktop`, `--install-claude-code`) |
 | `start` | `up` | Start container (flags: `--clean`, `--dind`, `--port <n>`, `--ports <mappings>`) |
 | `stop` | `down` | Stop container (flags: `--force`, `--remove`) |
 | `restart` | | Restart container |

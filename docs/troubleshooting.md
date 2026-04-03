@@ -154,7 +154,7 @@ Check these in order:
 
 1. Check the process: `ps aux | grep -E "opencode|claude"`
 2. Monitor activity: `tail -f .ralph/tasks/*/activity.md`
-3. Use `ralph-peek.sh` to attach to the active session (see [Debugging Tools](#10-debugging-tools--techniques)).
+3. Use `ralph-peek.sh` to attach to the active session (see [Debugging Tools](#10-debugging-tools-and-techniques)).
 4. Interrupt with Ctrl+C and restart if needed. The loop is safe to restart.
 
 ### Iteration Limit Reached
