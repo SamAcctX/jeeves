@@ -25,7 +25,7 @@ declare -A MCP_ENV_VARS=(
 )
 
 # Global variables to store environment values
-SEARXNG_URL=""
+SEARXNG_URL="${SEARXNG_URL:-}"
 
 # Default Paths
 declare -A OPENCODE_PATHS=(

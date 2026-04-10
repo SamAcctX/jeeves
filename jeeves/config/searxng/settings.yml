@@ -12,8 +12,8 @@ search:
   autocomplete_min: 4
   favicon_resolver: ""
   default_lang: "auto"
-  ban_time_on_fail: 5
-  max_ban_time_on_fail: 120
+  ban_time_on_fail: 30
+  max_ban_time_on_fail: 300
   formats:
     - html
     - json
@@ -34,6 +34,8 @@ server:
     X-Robots-Tag: noindex, nofollow
     Referrer-Policy: no-referrer
 
+brand: {}
+
 valkey:
   url: false
 
@@ -44,18 +46,22 @@ ui:
   default_theme: simple
   center_alignment: false
   default_locale: ""
+  search_on_category_select: true
+  hotkeys: default
+  url_formatting: pretty
   theme_args:
     simple_style: auto
-    search_on_category_select: true
-    hotkeys: default
-    url_formatting: pretty
 
 outgoing:
-  request_timeout: 5.0
+  request_timeout: 6.0
+  max_request_timeout: 15.0
   useragent_suffix: ""
-  pool_connections: 100
-  pool_maxsize: 20
+  pool_connections: 20
+  pool_maxsize: 10
+  keepalive_expiry: 10.0
   enable_http2: true
+  retries: 1
+  max_redirects: 10
 
 plugins:
   searx.plugins.calculator.SXNGPlugin:
