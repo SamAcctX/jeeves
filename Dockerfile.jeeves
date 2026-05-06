@@ -163,8 +163,8 @@ RUN \
 
 
 # Some branding overrides, just because...
-RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
-RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
+#RUN sed -i 's/"productName": "OpenCode"/"productName": "OpenCode Jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
+#RUN sed -i 's/"identifier": "ai.opencode.desktop"/"identifier": "ai.opencode.desktop.jeeves"/g' /app/opencode/packages/desktop/src-tauri/tauri.prod.conf.json
 
 # CLI/TUI/WebUI build
 RUN  set -eux; bun install
@@ -820,48 +820,114 @@ echo "Installing using-superpowers for opencode and claude code..."
 npx skills-installer install @obra/superpowers/using-superpowers --client opencode
 npx skills-installer install @obra/superpowers/using-superpowers --client claude-code
 
-# Due to https://github.com/anomalyco/opencode/pull/18186, Claude Code OAuth was officially
-# removed from Opencode.  However, community-maintained plugins have replaced this loss of this
-# once-OOB provider, so manually install that specific community plugin.
-# Repo link:  https://github.com/griffinmartin/opencode-claude-auth
-# Note: This plugin is dependent on Claude Code being installed and authenticated,
-# and updating the opencode config to include this plugin.  See the repo's README
+# --- DEPRECATED: legacy Claude Max bridge via @ex-machina/opencode-anthropic-auth ---
+# Replaced by opencode-with-claude (which spawns Meridian per OpenCode instance).
+# Kept commented out as a fallback in case the new path needs to be reverted.
+# Repo: https://github.com/griffinmartin/opencode-claude-auth
+#
+# if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
+#     echo "Installing opencode-claude-auth plugin..."
+#     sudo npm install -g @ex-machina/opencode-anthropic-auth
+#
+#     OPENCODE_CONFIG="/home/jeeves/.config/opencode/opencode.jsonc"
+#
+#     if [ -f "$OPENCODE_CONFIG" ]; then
+#         echo "Updating existing opencode configuration..."
+#         temp_file=$(mktemp)
+#         jq '
+#           .plugin = (if has("plugin") then
+#                       try (if (.plugin | type == "array") then .plugin else [] end) catch []
+#                     else
+#                       []
+#                     end)
+#           | if (.plugin | index("@ex-machina/opencode-anthropic-auth")) then
+#               .
+#             else
+#               .plugin |= . + ["@ex-machina/opencode-anthropic-auth"]
+#             end
+#         ' "$OPENCODE_CONFIG" > "$temp_file" && mv "$temp_file" "$OPENCODE_CONFIG"
+#         sudo chown jeeves:jeeves "$OPENCODE_CONFIG"
+#         echo "opencode-claude-auth plugin added to configuration"
+#     else
+#         echo "Warning: opencode.jsonc not found at $OPENCODE_CONFIG"
+#         echo "Plugin configuration will not be updated"
+#     fi
+# else
+#     echo "opencode-claude-auth installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
+# fi
+# --- end DEPRECATED block ---
+
+# Install opencode-with-claude (Meridian-backed Claude Max provider for OpenCode).
+# Replaces the deprecated @ex-machina/opencode-anthropic-auth path above.
+# - opencode-with-claude spawns Meridian (https://github.com/rynfar/meridian) per
+#   OpenCode instance on a free OS-assigned port and shuts it down on exit.
+# - meridian-plugin-opencode-scrub strips OpenCode identifying fingerprints from
+#   the system prompt before Meridian forwards to Claude. Idempotent and scoped
+#   to the opencode adapter only.
+# Note: We do NOT auto-install @anthropic-ai/claude-code due to its TOS/licensing.
+# Users must install it themselves and run `claude login` once before OpenCode
+# can authenticate. The plugin will report "Claude Code CLI not found" otherwise.
 if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
-    echo "Installing opencode-claude-auth plugin..."
-    sudo npm install -g @ex-machina/opencode-anthropic-auth
-    
-    # Update opencode.jsonc to include the claude-auth plugin
+    echo "Installing opencode-with-claude plugin..."
+    sudo npm install -g opencode-with-claude
+
+    echo "Installing meridian-plugin-opencode-scrub..."
+    MERIDIAN_DIR="/home/jeeves/.config/meridian"
+    sudo mkdir -p "$MERIDIAN_DIR"
+    if [ ! -f "$MERIDIAN_DIR/package.json" ]; then
+        (cd "$MERIDIAN_DIR" && sudo npm init -y >/dev/null)
+    fi
+    (cd "$MERIDIAN_DIR" && sudo npm install @rynfar/meridian-plugin-opencode-scrub)
+
+    SCRUB_PATH="$MERIDIAN_DIR/node_modules/@rynfar/meridian-plugin-opencode-scrub/dist/index.js"
+    if [ -f "$SCRUB_PATH" ]; then
+        sudo tee "$MERIDIAN_DIR/plugins.json" >/dev/null <<JSON
+{
+  "plugins": [
+    { "path": "$SCRUB_PATH", "enabled": true }
+  ]
+}
+JSON
+        echo "meridian-plugin-opencode-scrub registered at $SCRUB_PATH"
+    else
+        echo "Warning: scrub plugin dist not found at $SCRUB_PATH; plugins.json not written"
+    fi
+
     OPENCODE_CONFIG="/home/jeeves/.config/opencode/opencode.jsonc"
-    
-    # Check if config file exists
     if [ -f "$OPENCODE_CONFIG" ]; then
-        echo "Updating existing opencode configuration..."
-        # Use jq to add the plugin to the config file
-        # Handle all edge cases: plugin key missing, empty, already exists, etc.
+        echo "Updating existing opencode configuration for opencode-with-claude..."
         temp_file=$(mktemp)
         jq '
-          # Ensure plugin field exists and is an array
-          .plugin = (if has("plugin") then 
-                      # Check if plugin is an array using try/catch (compatible with jq 1.7)
+          .plugin = (if has("plugin") then
                       try (if (.plugin | type == "array") then .plugin else [] end) catch []
-                    else 
-                      [] 
+                    else
+                      []
                     end)
-          # Check if plugin is already installed
-          | if (.plugin | index("@ex-machina/opencode-anthropic-auth")) then
+          | .plugin |= map(select(. != "@ex-machina/opencode-anthropic-auth"))
+          | if (.plugin | index("opencode-with-claude")) then
               .
             else
-              .plugin |= . + ["@ex-machina/opencode-anthropic-auth"]
+              .plugin |= . + ["opencode-with-claude"]
             end
+          | .provider = (.provider // {})
+          | .provider.anthropic = (.provider.anthropic // {})
+          | .provider.anthropic.options = (.provider.anthropic.options // {})
+          | .provider.anthropic.options.apiKey = (.provider.anthropic.options.apiKey // "dummy")
         ' "$OPENCODE_CONFIG" > "$temp_file" && mv "$temp_file" "$OPENCODE_CONFIG"
         sudo chown jeeves:jeeves "$OPENCODE_CONFIG"
-        echo "✅ opencode-claude-auth plugin added to configuration"
+        echo "opencode-with-claude plugin and Anthropic provider configured"
     else
         echo "Warning: opencode.jsonc not found at $OPENCODE_CONFIG"
         echo "Plugin configuration will not be updated"
     fi
+
+    sudo chown -R jeeves:jeeves "$MERIDIAN_DIR"
+
+    echo "NOTE: opencode-with-claude requires @anthropic-ai/claude-code to be installed"
+    echo "      and authenticated via 'claude login'. See:"
+    echo "      https://github.com/ianjwhite99/opencode-with-claude#quick-start"
 else
-    echo "opencode-claude-auth installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
+    echo "opencode-with-claude installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
 fi
 
 
