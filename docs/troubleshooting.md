@@ -220,18 +220,18 @@ This is a non-critical warning. The loop continues regardless.
 **Problem:** `opencode: command not found` or `claude: command not found`
 
 - OpenCode: verify with `which opencode`
-- Claude Code: **not** auto-installed even with `--install-claude-code` (TOS reasons). Install manually: `sudo npm install -g @anthropic-ai/claude-code`. Verify with `which claude`.
+- Claude Code: only available if built with `--install-claude-code`. The official native installer (`curl -fsSL https://claude.ai/install.sh | bash`) runs at image build time and symlinks `claude` to `/usr/local/bin/claude`. Verify with `which claude`. If missing, rebuild with `./jeeves.ps1 build --install-claude-code`.
 
 ### Claude Max Auth Issues
 
 **Problem:** OpenCode says "Claude Code CLI not found" when starting.
 
-**Cause:** `opencode-with-claude` requires the Claude Code CLI to be installed and authenticated.
+**Cause:** `opencode-with-claude` cannot find the `claude` binary on `$PATH`. This means the image was built without `--install-claude-code`.
 
-**Fix:**
+**Fix:** Rebuild with the flag:
 ```bash
-sudo npm install -g @anthropic-ai/claude-code
-claude login
+./jeeves.ps1 build --install-claude-code
+./jeeves.ps1 start --clean
 ```
 
 **Problem:** OpenCode says "Claude not authenticated" or "Proxy failed to start".

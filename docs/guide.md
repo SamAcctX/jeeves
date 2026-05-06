@@ -32,30 +32,34 @@ See the [root README](../README.md) for the full quick start and prerequisites.
 
 ### Claude Max Authentication
 
-If the image was built with `--install-claude-code`, OpenCode routes Anthropic traffic through [Meridian](https://github.com/rynfar/meridian) via the [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) plugin, letting you use your Claude Max subscription instead of a paid API key. The flow:
+If the image was built with `--install-claude-code`, OpenCode routes Anthropic traffic through [Meridian](https://github.com/rynfar/meridian) via the [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) plugin, letting you use your Claude Max subscription instead of a paid API key.
 
-1. **Install Claude Code CLI** (one time, manual due to TOS/licensing):
-   ```bash
-   sudo npm install -g @anthropic-ai/claude-code
-   ```
-2. **Authenticate** (one time, opens a browser for OAuth):
+The image build already installs everything needed:
+
+- **Claude Code CLI** -- installed via Anthropic's official native installer (`curl -fsSL https://claude.ai/install.sh | bash`) at image build time. The binary lives at `~/.local/bin/claude` and is symlinked to `/usr/local/bin/claude` on `$PATH`.
+- **opencode-with-claude** (npm global) -- installed at container start. Pulls in `@rynfar/meridian` and `@anthropic-ai/claude-agent-sdk` transitively.
+- **meridian-plugin-opencode-scrub** -- installed under `~/.config/meridian/` at container start and registered in `~/.config/meridian/plugins.json`.
+
+So the only thing you need to do is authenticate:
+
+1. **Authenticate** (one time, opens a browser for OAuth):
    ```bash
    claude login
    ```
-3. **Run OpenCode** -- the plugin auto-spawns Meridian on a free port, forwards requests through your Claude Max session, and shuts Meridian down when OpenCode exits:
+2. **Run OpenCode** -- the plugin starts Meridian in-process, forwards requests through your Claude Max session, and shuts Meridian down when OpenCode exits:
    ```bash
    opencode
    ```
 
 Credentials live in `~/.claude/` and Meridian state (sessions, profiles, telemetry) lives in `~/.config/meridian/`; both are bind-mounted from the host so they persist across container rebuilds.
 
-The [meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) plugin is pre-installed and registered in `~/.config/meridian/plugins.json`. It strips OpenCode-identifying fingerprints (the `"You are OpenCode"` identity line, feedback links, the `You are powered by...` model line, etc.) from outgoing system prompts. The scrub is idempotent and scoped to the OpenCode adapter only.
+The scrub plugin strips OpenCode-identifying fingerprints (the `"You are OpenCode"` identity line, feedback links, the `You are powered by...` model line, etc.) from outgoing system prompts. The scrub is idempotent and scoped to the OpenCode adapter only.
 
 **Headless / CI alternative:** if you cannot open a browser, generate a long-lived token with `claude setup-token`, then pass it via `CLAUDE_CODE_OAUTH_TOKEN` or register a Meridian profile (`meridian profile add ci --oauth-token <token>`).
 
 **Verify auth:** `claude auth status` confirms the OAuth session. While `opencode` is running, `curl http://127.0.0.1:3456/health` reports Meridian's view of auth status.
 
-**Build without Claude Max?** If you do not pass `--install-claude-code`, opencode-with-claude / Meridian / scrub are not installed and OpenCode uses whichever provider you configure manually in `~/.config/opencode/opencode.jsonc`.
+**Build without Claude Max?** If you do not pass `--install-claude-code`, none of the above (claude CLI, opencode-with-claude, Meridian, scrub) is installed, and OpenCode uses whichever provider you configure manually in `~/.config/opencode/opencode.jsonc`.
 
 ---
 

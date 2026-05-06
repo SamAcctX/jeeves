@@ -266,24 +266,25 @@ Handles uncommitted changes by stashing, creates the branch from the primary bra
 | `UID` | `1000` | Container user UID (mapped from host) |
 | `GID` | `1000` | Container user GID (mapped from host) |
 | `BUILD_DESKTOP` | (unset) | Include desktop binaries in OpenCode build |
-| `INSTALL_CLAUDE_CODE` | `false` | Enable the Claude Max plugin stack (opencode-with-claude + meridian-plugin-opencode-scrub). Does **not** install `@anthropic-ai/claude-code` itself -- users must install that manually due to TOS/licensing. |
+| `INSTALL_CLAUDE_CODE` | `false` | Enable the Claude Max plugin stack: install the official Claude Code CLI (via `https://claude.ai/install.sh`) at build time, plus opencode-with-claude and meridian-plugin-opencode-scrub at container start. |
 
 #### Claude Max Plugin Stack
 
-When built with `--install-claude-code` (sets `INSTALL_CLAUDE_CODE=true`), the entrypoint installs three pieces:
+When built with `--install-claude-code` (sets `INSTALL_CLAUDE_CODE=true`), the build/start sequence puts four pieces in place:
 
-| Component | Where | Purpose |
-|-----------|-------|---------|
-| [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) | global npm | OpenCode plugin that spawns [Meridian](https://github.com/rynfar/meridian) per OpenCode instance and shuts it down on exit |
-| [@rynfar/meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) | `~/.config/meridian/node_modules/` | Meridian plugin that strips OpenCode identifying fingerprints from system prompts |
-| `~/.config/meridian/plugins.json` | written by entrypoint | Registers the scrub plugin with Meridian |
+| Component | Where | When | Purpose |
+|-----------|-------|------|---------|
+| Claude Code CLI | `~/.local/bin/claude` (symlinked to `/usr/local/bin/claude`) | image build | Official Anthropic native installer. Required for `claude login` OAuth. |
+| [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) | global npm | container start | OpenCode plugin that runs [Meridian](https://github.com/rynfar/meridian) in-process per OpenCode instance and shuts it down on exit. Pulls in `@rynfar/meridian` and `@anthropic-ai/claude-agent-sdk` as transitive deps. |
+| [@rynfar/meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) | `~/.config/meridian/node_modules/` | container start | Meridian plugin that strips OpenCode identifying fingerprints from system prompts |
+| `~/.config/meridian/plugins.json` | written by entrypoint | container start | Registers the scrub plugin with Meridian |
 
 The entrypoint also edits `~/.config/opencode/opencode.jsonc` to:
 - Remove any leftover `@ex-machina/opencode-anthropic-auth` plugin reference
 - Add `opencode-with-claude` to the `plugin[]` array
 - Seed `provider.anthropic.options.apiKey = "dummy"` (placeholder; opencode-with-claude manages the real `baseURL` per-instance at runtime)
 
-`@anthropic-ai/claude-code` is intentionally **not** auto-installed. Users must install it themselves and run `claude login` once. See [guide.md](guide.md#claude-max-authentication) for the full auth flow.
+After the container starts, run `claude login` once to OAuth against your Claude Max subscription. Credentials persist in `~/.claude/` (bind-mounted). See [guide.md](guide.md#claude-max-authentication) for the full auth flow.
 
 The legacy `@ex-machina/opencode-anthropic-auth` install block is preserved (commented out) in the entrypoint as a fallback path.
 

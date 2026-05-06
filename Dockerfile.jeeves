@@ -859,14 +859,16 @@ npx skills-installer install @obra/superpowers/using-superpowers --client claude
 
 # Install opencode-with-claude (Meridian-backed Claude Max provider for OpenCode).
 # Replaces the deprecated @ex-machina/opencode-anthropic-auth path above.
-# - opencode-with-claude spawns Meridian (https://github.com/rynfar/meridian) per
-#   OpenCode instance on a free OS-assigned port and shuts it down on exit.
+# - opencode-with-claude runs Meridian (https://github.com/rynfar/meridian) in
+#   the OpenCode plugin process per OpenCode instance and shuts it down on exit.
+#   @rynfar/meridian and @anthropic-ai/claude-agent-sdk come along as transitive
+#   npm dependencies; nothing else needs explicit installation here.
 # - meridian-plugin-opencode-scrub strips OpenCode identifying fingerprints from
 #   the system prompt before Meridian forwards to Claude. Idempotent and scoped
 #   to the opencode adapter only.
-# Note: We do NOT auto-install @anthropic-ai/claude-code due to its TOS/licensing.
-# Users must install it themselves and run `claude login` once before OpenCode
-# can authenticate. The plugin will report "Claude Code CLI not found" otherwise.
+# The official Claude Code CLI is installed earlier in the image (see the
+# `claude.ai/install.sh` step gated by INSTALL_CLAUDE_CODE). Users still need to
+# run `claude login` once inside the container to authenticate.
 if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
     echo "Installing opencode-with-claude plugin..."
     sudo npm install -g opencode-with-claude
@@ -923,9 +925,9 @@ JSON
 
     sudo chown -R jeeves:jeeves "$MERIDIAN_DIR"
 
-    echo "NOTE: opencode-with-claude requires @anthropic-ai/claude-code to be installed"
-    echo "      and authenticated via 'claude login'. See:"
-    echo "      https://github.com/ianjwhite99/opencode-with-claude#quick-start"
+    echo "NOTE: run 'claude login' once to authenticate against your Claude Max"
+    echo "      subscription. The 'claude' CLI was installed at image build time"
+    echo "      via Anthropic's native installer."
 else
     echo "opencode-with-claude installation skipped (INSTALL_CLAUDE_CODE is not 'true')"
 fi
