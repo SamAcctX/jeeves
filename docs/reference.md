@@ -266,7 +266,26 @@ Handles uncommitted changes by stashing, creates the branch from the primary bra
 | `UID` | `1000` | Container user UID (mapped from host) |
 | `GID` | `1000` | Container user GID (mapped from host) |
 | `BUILD_DESKTOP` | (unset) | Include desktop binaries in OpenCode build |
-| `INSTALL_CLAUDE_CODE` | `false` | Install Claude Code CLI in the container |
+| `INSTALL_CLAUDE_CODE` | `false` | Enable the Claude Max plugin stack (opencode-with-claude + meridian-plugin-opencode-scrub). Does **not** install `@anthropic-ai/claude-code` itself -- users must install that manually due to TOS/licensing. |
+
+#### Claude Max Plugin Stack
+
+When built with `--install-claude-code` (sets `INSTALL_CLAUDE_CODE=true`), the entrypoint installs three pieces:
+
+| Component | Where | Purpose |
+|-----------|-------|---------|
+| [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) | global npm | OpenCode plugin that spawns [Meridian](https://github.com/rynfar/meridian) per OpenCode instance and shuts it down on exit |
+| [@rynfar/meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) | `~/.config/meridian/node_modules/` | Meridian plugin that strips OpenCode identifying fingerprints from system prompts |
+| `~/.config/meridian/plugins.json` | written by entrypoint | Registers the scrub plugin with Meridian |
+
+The entrypoint also edits `~/.config/opencode/opencode.jsonc` to:
+- Remove any leftover `@ex-machina/opencode-anthropic-auth` plugin reference
+- Add `opencode-with-claude` to the `plugin[]` array
+- Seed `provider.anthropic.options.apiKey = "dummy"` (placeholder; opencode-with-claude manages the real `baseURL` per-instance at runtime)
+
+`@anthropic-ai/claude-code` is intentionally **not** auto-installed. Users must install it themselves and run `claude login` once. See [guide.md](guide.md#claude-max-authentication) for the full auth flow.
+
+The legacy `@ex-machina/opencode-anthropic-auth` install block is preserved (commented out) in the entrypoint as a fallback path.
 
 ### Docker Compose
 
@@ -279,8 +298,9 @@ Key settings: build context is `../..` (relative to the generated compose file),
 | Host Path | Container Path | Purpose |
 |-----------|----------------|---------|
 | Current working directory | `/proj` | Project workspace (read-write) |
-| `~/.claude` | `/home/jeeves/.claude` | Claude Code configuration and settings |
+| `~/.claude` | `/home/jeeves/.claude` | Claude Code OAuth credentials and settings |
 | `~/.config/opencode` | `/home/jeeves/.config/opencode` | OpenCode configuration |
+| `~/.config/meridian` | `/home/jeeves/.config/meridian` | Meridian state (sessions, profiles, plugins, telemetry DB) |
 | `~/.opencode` | `/home/jeeves/.opencode` | OpenCode agent directory |
 | `~/.local/share/opencode` | `/home/jeeves/.local/share/opencode` | OpenCode session data |
 | `~/.local/state/opencode` | `/home/jeeves/.local/state/opencode` | OpenCode state data |

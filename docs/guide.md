@@ -30,6 +30,33 @@ The OpenCode Web UI is available at `http://localhost:3333` once the container i
 
 See the [root README](../README.md) for the full quick start and prerequisites.
 
+### Claude Max Authentication
+
+If the image was built with `--install-claude-code`, OpenCode routes Anthropic traffic through [Meridian](https://github.com/rynfar/meridian) via the [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) plugin, letting you use your Claude Max subscription instead of a paid API key. The flow:
+
+1. **Install Claude Code CLI** (one time, manual due to TOS/licensing):
+   ```bash
+   sudo npm install -g @anthropic-ai/claude-code
+   ```
+2. **Authenticate** (one time, opens a browser for OAuth):
+   ```bash
+   claude login
+   ```
+3. **Run OpenCode** -- the plugin auto-spawns Meridian on a free port, forwards requests through your Claude Max session, and shuts Meridian down when OpenCode exits:
+   ```bash
+   opencode
+   ```
+
+Credentials live in `~/.claude/` and Meridian state (sessions, profiles, telemetry) lives in `~/.config/meridian/`; both are bind-mounted from the host so they persist across container rebuilds.
+
+The [meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) plugin is pre-installed and registered in `~/.config/meridian/plugins.json`. It strips OpenCode-identifying fingerprints (the `"You are OpenCode"` identity line, feedback links, the `You are powered by...` model line, etc.) from outgoing system prompts. The scrub is idempotent and scoped to the OpenCode adapter only.
+
+**Headless / CI alternative:** if you cannot open a browser, generate a long-lived token with `claude setup-token`, then pass it via `CLAUDE_CODE_OAUTH_TOKEN` or register a Meridian profile (`meridian profile add ci --oauth-token <token>`).
+
+**Verify auth:** `claude auth status` confirms the OAuth session. While `opencode` is running, `curl http://127.0.0.1:3456/health` reports Meridian's view of auth status.
+
+**Build without Claude Max?** If you do not pass `--install-claude-code`, opencode-with-claude / Meridian / scrub are not installed and OpenCode uses whichever provider you configure manually in `~/.config/opencode/opencode.jsonc`.
+
 ---
 
 ## Ralph Workflow

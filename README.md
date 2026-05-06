@@ -32,11 +32,15 @@ Ralph is the autonomous task execution framework that runs inside Jeeves. It dec
 # Clone and build
 git clone https://github.com/SamAcctX/jeeves.git
 cd jeeves
-./jeeves.ps1 build
+./jeeves.ps1 build --install-claude-code   # builds with Claude Max auth path
 ./jeeves.ps1 start
 
 # Enter the container
 ./jeeves.ps1 shell
+
+# One-time Claude Max auth (only if built with --install-claude-code)
+sudo npm install -g @anthropic-ai/claude-code
+claude login
 
 # Inside the container: initialize a project
 cd /proj/my-project
@@ -49,6 +53,12 @@ ralph-loop.sh --max-iterations 50
 ```
 
 Running `./jeeves.ps1` without arguments opens an interactive menu for all container operations.
+
+### Claude Max via Meridian
+
+When built with `--install-claude-code`, OpenCode is wired to use your Claude Max subscription through [Meridian](https://github.com/rynfar/meridian) via the [opencode-with-claude](https://github.com/ianjwhite99/opencode-with-claude) plugin. The plugin spawns Meridian as a child process per OpenCode instance and tears it down on exit -- no separate proxy CLI to manage. The [meridian-plugin-opencode-scrub](https://github.com/rynfar/meridian-plugin-opencode-scrub) plugin is also installed to strip OpenCode identifying fingerprints from outgoing requests.
+
+`@anthropic-ai/claude-code` is intentionally **not** auto-installed (TOS/licensing). Install it yourself once per host (`sudo npm install -g @anthropic-ai/claude-code`) and run `claude login` to authenticate. Credentials persist in `~/.claude/` across container rebuilds via bind mount.
 
 ## How It Works
 

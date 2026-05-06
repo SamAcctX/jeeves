@@ -220,7 +220,54 @@ This is a non-critical warning. The loop continues regardless.
 **Problem:** `opencode: command not found` or `claude: command not found`
 
 - OpenCode: verify with `which opencode`
-- Claude Code: only available if built with `--install-claude-code`. Check with `which claude`.
+- Claude Code: **not** auto-installed even with `--install-claude-code` (TOS reasons). Install manually: `sudo npm install -g @anthropic-ai/claude-code`. Verify with `which claude`.
+
+### Claude Max Auth Issues
+
+**Problem:** OpenCode says "Claude Code CLI not found" when starting.
+
+**Cause:** `opencode-with-claude` requires the Claude Code CLI to be installed and authenticated.
+
+**Fix:**
+```bash
+sudo npm install -g @anthropic-ai/claude-code
+claude login
+```
+
+**Problem:** OpenCode says "Claude not authenticated" or "Proxy failed to start".
+
+**Diagnosis:**
+```bash
+claude auth status                     # confirms OAuth session
+ls ~/.claude/                          # should contain credentials
+curl http://127.0.0.1:3456/health      # only works while opencode is running
+```
+
+**Fix:** Re-run `claude login`. If the OAuth session expired, the SDK can usually refresh automatically; otherwise login again.
+
+**Problem:** Meridian state seems to disappear between container rebuilds.
+
+**Cause:** `~/.config/meridian` not bind-mounted, or the host directory was deleted.
+
+**Fix:** Confirm the mount exists:
+```bash
+docker inspect <container_name> | grep -A 2 'meridian'
+```
+If missing, ensure you are using the current `jeeves.ps1` (the mount was added in the same change that introduced opencode-with-claude). Rebuild with `./jeeves.ps1 start --clean`.
+
+**Problem:** OpenCode opens but immediately reports `provider 'anthropic' has no apiKey`.
+
+**Cause:** `opencode.jsonc` was hand-edited and the placeholder `apiKey` got removed. OpenCode requires the field to be present even though `opencode-with-claude` overrides it at runtime.
+
+**Fix:** Add `"apiKey": "dummy"` back to `provider.anthropic.options` in `~/.config/opencode/opencode.jsonc`, or delete the file and let the entrypoint regenerate the relevant fields on next container start.
+
+**Problem:** Multiple OpenCode instances fight over port 3456.
+
+**Cause:** This should not happen -- `opencode-with-claude` assigns a free OS-assigned port to instances after the first. If it does, something else is binding to a free port the plugin chose.
+
+**Fix:** Quit all OpenCode instances (`pkill opencode`), then start them one at a time. Check with `lsof -i :3456` for stale processes.
+
+**Reverting to the legacy auth path:** the previous `@ex-machina/opencode-anthropic-auth` install is preserved as a commented-out block in the entrypoint script (`/usr/local/bin/entrypoint.sh`, search for `DEPRECATED`). Uncomment that block, comment out the `opencode-with-claude` block, and rebuild to revert.
 
 ---
 
