@@ -395,6 +395,7 @@ function Get-UserMountSpec {
     $configMounts = @(
         "$($userHome)/.claude:/home/jeeves/.claude:rw",
         "$($userHome)/.config/opencode:/home/jeeves/.config/opencode:rw",
+        "$($userHome)/.config/meridian:/home/jeeves/.config/meridian:rw",
         "$($userHome)/.opencode:/home/jeeves/.opencode:rw",
         "$($userHome)/.local/share/opencode:/home/jeeves/.local/share/opencode:rw"
         "$($userHome)/.local/state/opencode:/home/jeeves/.local/state/opencode:rw"
