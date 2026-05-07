@@ -343,11 +343,15 @@ if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
   echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
   echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
   if command -v claude >/dev/null 2>&1; then
+    echo -e "\033[1;34m--------------------------------------------- \033[0m"
     if claude auth status >/dev/null 2>&1; then
-      echo -e "\033[0;37mClaude:    \033[1;32mauthenticated\033[0;37m  (OpenCode → Claude Max via Meridian)\033[0m"
+      echo -e "\033[0;37mClaude Max: \033[1;32mauthenticated\033[0m"
     else
-      echo -e "\033[0;37mClaude:    \033[1;33mrun 'claude login'\033[0;37m once for Claude Max  (or 'claude setup-token' if headless)\033[0m"
+      echo -e "\033[0;37mClaude Max: \033[1;33mnot authenticated\033[0;37m — run \033[1;36mclaude login\033[0;37m once (or \033[1;36mclaude setup-token\033[0;37m for headless)\033[0m"
+      echo -e "\033[0;37m            one auth covers both 'claude' (CLI) and 'opencode' (via Meridian)\033[0m"
     fi
+    echo -e "\033[0;37m  • \033[1;36mclaude\033[0;37m     — direct Claude Code CLI session (uses your Max subscription)\033[0m"
+    echo -e "\033[0;37m  • \033[1;36mopencode\033[0;37m   — OpenCode TUI/Web; routes Anthropic calls through Meridian → Claude Max\033[0m"
   fi
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
@@ -391,11 +395,15 @@ if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
   echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
   echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
   if command -v claude >/dev/null 2>&1; then
+    echo -e "\033[1;34m--------------------------------------------- \033[0m"
     if claude auth status >/dev/null 2>&1; then
-      echo -e "\033[0;37mClaude:    \033[1;32mauthenticated\033[0;37m  (OpenCode → Claude Max via Meridian)\033[0m"
+      echo -e "\033[0;37mClaude Max: \033[1;32mauthenticated\033[0m"
     else
-      echo -e "\033[0;37mClaude:    \033[1;33mrun 'claude login'\033[0;37m once for Claude Max  (or 'claude setup-token' if headless)\033[0m"
+      echo -e "\033[0;37mClaude Max: \033[1;33mnot authenticated\033[0;37m — run \033[1;36mclaude login\033[0;37m once (or \033[1;36mclaude setup-token\033[0;37m for headless)\033[0m"
+      echo -e "\033[0;37m            one auth covers both 'claude' (CLI) and 'opencode' (via Meridian)\033[0m"
     fi
+    echo -e "\033[0;37m  • \033[1;36mclaude\033[0;37m     — direct Claude Code CLI session (uses your Max subscription)\033[0m"
+    echo -e "\033[0;37m  • \033[1;36mopencode\033[0;37m   — OpenCode TUI/Web; routes Anthropic calls through Meridian → Claude Max\033[0m"
   fi
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
