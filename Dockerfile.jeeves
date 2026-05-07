@@ -342,7 +342,13 @@ if [ -t 1 ] && [ -z "$DISABLE_WELCOME" ]; then
   echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
   echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
   echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
-  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  if command -v claude >/dev/null 2>&1; then
+    if claude auth status >/dev/null 2>&1; then
+      echo -e "\033[0;37mClaude:    \033[1;32mauthenticated\033[0;37m  (OpenCode → Claude Max via Meridian)\033[0m"
+    else
+      echo -e "\033[0;37mClaude:    \033[1;33mrun 'claude login'\033[0;37m once for Claude Max  (or 'claude setup-token' if headless)\033[0m"
+    fi
+  fi
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
   echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
@@ -384,7 +390,13 @@ if [[ -t 1 && -z "$DISABLE_WELCOME" ]]; then
   echo -e "\033[0;37mOpenCode:  \033[1;36mRun 'opencode' to start TUI\033[0m"
   echo -e "\033[0;37mWeb UI:    \033[1;36mhttp://localhost:3333 (auto-started)\033[0m"
   echo -e "\033[0;37mService:   \033[1;36mopencode-web {start|stop|restart|status|logs}\033[0m"
-  echo -e "\033[0;37mCLAUDE:    \033[1;36mRun 'claude' to start\033[0m"
+  if command -v claude >/dev/null 2>&1; then
+    if claude auth status >/dev/null 2>&1; then
+      echo -e "\033[0;37mClaude:    \033[1;32mauthenticated\033[0;37m  (OpenCode → Claude Max via Meridian)\033[0m"
+    else
+      echo -e "\033[0;37mClaude:    \033[1;33mrun 'claude login'\033[0;37m once for Claude Max  (or 'claude setup-token' if headless)\033[0m"
+    fi
+  fi
   echo -e "\033[1;34m--------------------------------------------- \033[0m"
   echo -e "\033[0;37mQuick Tips:\033[0m"
   echo -e "\033[0;37m  • Initialize workspace: \033[1;36minstall-mcp-servers.sh && install-agents.sh -a\033[0m"
