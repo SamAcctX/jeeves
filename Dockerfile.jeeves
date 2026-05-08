@@ -893,6 +893,18 @@ if [ "$INSTALL_CLAUDE_CODE" = "true" ]; then
     echo "Installing opencode-with-claude plugin..."
     sudo npm install -g opencode-with-claude
 
+    # The Bun-bundled /app/dist/opencode resolves plugins from
+    # ~/.config/opencode/node_modules, not the global npm prefix. Without this
+    # local install the "opencode-with-claude" reference in opencode.jsonc fails
+    # to resolve and Meridian never starts.
+    OPENCODE_CONFIG_DIR="/home/jeeves/.config/opencode"
+    sudo mkdir -p "$OPENCODE_CONFIG_DIR"
+    if [ ! -f "$OPENCODE_CONFIG_DIR/package.json" ]; then
+        (cd "$OPENCODE_CONFIG_DIR" && sudo npm init -y >/dev/null)
+    fi
+    (cd "$OPENCODE_CONFIG_DIR" && sudo npm install opencode-with-claude)
+    sudo chown -R jeeves:jeeves "$OPENCODE_CONFIG_DIR"
+
     echo "Installing meridian-plugin-opencode-scrub..."
     MERIDIAN_DIR="/home/jeeves/.config/meridian"
     sudo mkdir -p "$MERIDIAN_DIR"
