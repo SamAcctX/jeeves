@@ -984,6 +984,10 @@ if [ -n "$GIT_AUTHOR_EMAIL" ]; then
     git config --global user.email "$GIT_AUTHOR_EMAIL"
 fi
 
+# Set the mapped /proj as a git safe dir (needed to create commits)
+echo "Setting /proj as git safe directory..."
+git config --global --add safe.directory /proj
+
 # If no arguments provided, start supervisord and the opencode-web service
 if [ $# -eq 0 ]; then
     echo "Starting supervisord..."
